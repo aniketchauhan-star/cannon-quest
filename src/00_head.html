@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Cannon Quest</title>
+<meta name="description" content="Cannon Quest — load operations into the cannon, fire, and free x!">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#1a1740;--gold:#ffcb3d;--orange:#ff9418;--plum:#2a1c5c}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:#3cb8f6;font-family:'Fredoka',ui-rounded,'Arial Rounded MT Bold',system-ui,sans-serif;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:none;color:var(--ink)}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
+img{-webkit-user-drag:none;user-select:none}
+#viewport{position:fixed;inset:0;overflow:hidden;background:linear-gradient(#36b3f5,#9ad9ff)}
+#stage{position:absolute;left:0;top:0;width:1672px;height:941px;transform-origin:0 0}
+#world{position:absolute;left:0;top:0;width:1672px;height:941px;transform-origin:0 0;will-change:transform}
+.spr{position:absolute;display:block;pointer-events:none}
+#bg{position:absolute;display:block;pointer-events:none;max-width:none}
+.mini{position:absolute;width:190px;opacity:.9;pointer-events:none;will-change:transform}
+
+/* ---------- the equation cloud ---------- */
+#cloud{position:absolute;left:398px;top:12px;width:860px;height:352px;transform-origin:50% 62%;will-change:transform,opacity}
+#cloud .cl{position:absolute;inset:0;width:100%;height:100%}
+#eqBox{position:absolute;left:430px;top:170px;width:0;height:0}
+#eq{position:absolute;left:0;top:0;transform:translate(-50%,-50%);display:flex;align-items:center;white-space:nowrap;font-weight:700;font-size:116px;line-height:1;color:var(--ink);-webkit-text-stroke:3px var(--ink);transform-origin:0 0}
+#eq.wob{animation:eqwob .45s ease-in-out 3}
+@keyframes eqwob{25%{rotate:-3deg}75%{rotate:3deg}}
+.tk{display:inline-flex;align-items:center;justify-content:center;position:relative;flex:none}
+.op{margin:0 .17em}
+.eqs{margin:0 .24em}
+.paren{font-weight:600;transform:scaleY(1.15);margin:0 .02em}
+.frac{display:inline-flex;flex-direction:column;align-items:center;font-size:.78em;margin:0 .06em}
+.frac>.fn,.frac>.fd{display:flex;align-items:center;justify-content:center;padding:0 .12em}
+.frac>.fb{align-self:stretch;height:.1em;min-height:5px;border-radius:9px;background:currentColor;margin:.07em 0}
+.ng{margin-right:.04em}
+.dv{display:inline-block;position:relative;width:.58em;height:.68em;flex:none}
+.dv::before{content:'';position:absolute;left:0;right:0;top:calc(50% - .07em);height:.14em;background:currentColor;border-radius:1em}
+.dv::after{content:'';position:absolute;left:50%;top:.02em;width:.17em;height:.17em;margin-left:-.085em;border-radius:50%;background:currentColor;box-shadow:0 .47em 0 currentColor}
+.inc{color:var(--tok);-webkit-text-stroke:3px var(--tok)}
+.inc .op{margin:0 .12em 0 .17em}
+.hid{opacity:0;transform:scale(.2)}
+.pop{animation:pop .5s cubic-bezier(.2,1.7,.45,1) both}
+@keyframes pop{0%{opacity:0;transform:scale(.15)}100%{opacity:1;transform:scale(1)}}
+.van{animation:van .46s ease-in forwards}
+@keyframes van{0%{opacity:1;transform:scale(1)}35%{opacity:1;transform:scale(1.3) translateY(-.06em);filter:brightness(1.6) drop-shadow(0 0 .2em #fff38a)}100%{opacity:0;transform:scale(.05)}}
+.msg{display:flex;flex-direction:column;align-items:center;color:#7b2ff0;-webkit-text-stroke:3px #7b2ff0}
+.msg .m1{font-size:.56em}
+.msg .m2{font-size:1em;margin-top:.06em}
+/* the cage around x */
+.cage{height:1.95em;margin:0 .02em;-webkit-text-stroke:0}
+.cage img{height:100%;width:auto;display:block;transform-origin:50% 90%}
+.cage.push img{animation:cpush 1.2s ease-in-out 2}
+@keyframes cpush{0%,100%{transform:none}20%{transform:translateX(-4%) rotate(-5deg)}35%{transform:translateX(-5%) scaleX(.96)}55%{transform:translateX(4%) rotate(5deg)}70%{transform:translateX(5%) scaleX(.96)}}
+.cage.rattle img{animation:rattle .09s linear 16}
+@keyframes rattle{25%{transform:translateX(-6%) rotate(-6deg)}75%{transform:translateX(6%) rotate(6deg)}}
+.cage.glowx img{filter:drop-shadow(0 0 10px #fff) drop-shadow(0 0 24px #c58bff)}
+.cage.open img{animation:copen .5s ease-out}
+/* freed: the happy x replaces the cage so the cloud reads “x = 2” */
+.cage.free img{height:78%;animation:xfree .6s cubic-bezier(.2,1.7,.45,1) both,xhop .8s .6s ease-in-out infinite;filter:drop-shadow(0 0 8px #fff) drop-shadow(0 0 18px rgba(197,139,255,.85))}
+@keyframes xfree{0%{transform:scale(.2) rotate(-25deg)}100%{transform:none}}
+@keyframes xhop{50%{transform:translateY(-9%) rotate(5deg)}}
+.tk.eqs.win{margin-left:.42em}
+.tk.win{color:#7a22d6;-webkit-text-stroke-color:#7a22d6;animation:winpop .65s cubic-bezier(.2,1.7,.45,1) both,winglow 1.1s .65s ease-in-out infinite alternate}
+@keyframes winpop{0%{transform:scale(1)}50%{transform:scale(1.4)}100%{transform:scale(1.18)}}
+@keyframes winglow{from{transform:scale(1.18);text-shadow:0 0 10px rgba(255,214,70,.6)}to{transform:scale(1.26);text-shadow:0 0 22px rgba(255,214,70,.95),0 0 40px rgba(255,180,30,.6)}}
+#eq.fadeout{opacity:0 !important;transition:opacity .4s !important}
+@keyframes copen{40%{transform:scale(1.15) rotate(-6deg)}}
+
+/* ---------- cannon, sockets, FIRE ---------- */
+#cannon{position:absolute;left:0;top:0}
+#cannonBody,#cannonFrontBody{position:absolute;width:0;height:0;transform-origin:0 0;will-change:transform}
+#cannonBody img,#cannonFrontBody img{position:absolute;bottom:0;transform:translateX(-50%);left:0}
+#cannonFront{position:absolute;left:0;top:0;pointer-events:none}
+.sglow{position:absolute;border-radius:50%;pointer-events:none;opacity:0;box-shadow:0 0 0 7px rgba(255,236,120,.95),0 0 34px 16px rgba(255,196,40,.9),inset 0 0 26px 8px rgba(255,220,90,.7);transition:opacity .2s}
+.sglow.on{opacity:1;animation:sg .5s ease-in-out infinite alternate}
+@keyframes sg{to{transform:scale(1.08)}}
+.stag{position:absolute;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:12px;background:#3d2a6b;border:4px solid var(--gold);color:#fff;font-weight:700;font-size:27px;display:grid;place-items:center;box-shadow:0 4px 0 rgba(0,0,0,.2);transition:transform .3s}
+.stag.pulse{animation:tagp 1s ease-in-out 2}
+@keyframes tagp{50%{transform:scale(1.4)}}
+#fireBtn{position:absolute;cursor:pointer;transition:filter .35s,transform .12s;transform-origin:50% 60%}
+#fireBtn img{width:100%;height:100%;display:block;pointer-events:none}
+#fireBtn.off{filter:grayscale(1) brightness(1.06) contrast(.85);cursor:default}
+#fireBtn.glow{animation:fglow .9s ease-out 1}
+@keyframes fglow{30%{transform:scale(1.14);filter:drop-shadow(0 0 22px #ffd04d) drop-shadow(0 0 40px #ff6a1f) brightness(1.15)}}
+#fireBtn.hint{animation:fhint .9s ease-in-out 3}
+@keyframes fhint{50%{transform:scale(1.1);filter:drop-shadow(0 0 18px #ffe066) brightness(1.12)}}
+#fireBtn.press{transform:scale(.9)}
+
+/* ---------- rack + balls ---------- */
+.hglow{position:absolute;width:116px;height:54px;margin:-27px 0 0 -58px;border-radius:50%;pointer-events:none;opacity:0;box-shadow:0 0 0 5px #ffe46b,0 0 28px 12px rgba(255,205,50,.85)}
+.hglow.on{animation:hg 1s ease-out 1}
+@keyframes hg{25%{opacity:1}100%{opacity:0}}
+.ball{position:absolute;left:0;top:0;width:112px;height:112px;margin:-56px 0 0 -56px;cursor:pointer;will-change:transform;touch-action:none}
+.ball img{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.ball b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:52px;letter-spacing:-1px;color:var(--ink);-webkit-text-stroke:2.4px var(--ink);padding-bottom:4px;pointer-events:none;text-shadow:0 3px 0 rgba(255,255,255,.3)}
+.ball b .dv{margin-right:.03em}
+.ball.guide img{filter:drop-shadow(0 0 9px #fff6a0) drop-shadow(0 0 20px #ffc800);animation:guide .9s ease-in-out infinite}
+@keyframes guide{50%{filter:drop-shadow(0 0 18px #fffbd0) drop-shadow(0 0 40px #ffc400) brightness(1.18)}}
+.ball.hov img{filter:brightness(1.12)}
+.ball.gone{display:none}
+.ball .ao{position:absolute;inset:3%;border-radius:50%;background:radial-gradient(ellipse 72% 46% at 50% 97%,rgba(24,14,58,.62),rgba(24,14,58,.28) 55%,rgba(24,14,58,0) 100%);opacity:0;transition:opacity .25s;pointer-events:none}
+.ball.seated .ao{opacity:1}
+.bshadow{position:absolute;width:98px;height:36px;margin:-18px 0 0 -49px;border-radius:50%;background:radial-gradient(ellipse at center,rgba(18,22,70,.5) 0,rgba(18,22,70,.25) 45%,rgba(18,22,70,0) 72%);opacity:0;transition:opacity .25s;pointer-events:none}
+.bshadow.on{opacity:1}
+.xfly{position:absolute;left:0;top:0;width:112px;height:107px;margin:-53.5px 0 0 -56px;pointer-events:none;will-change:transform,opacity}
+.xfly img{width:100%;height:100%;display:block;filter:drop-shadow(0 0 10px rgba(255,255,255,.9)) drop-shadow(0 0 22px rgba(197,139,255,.8))}
+/* ---------- ground contact: shadow groups multiply onto the plaza; light + ring groups paint normally so colour reads on bright sand ---------- */
+#ground{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none}
+.gsh{position:absolute;left:0;top:0;width:0;height:0;transform-origin:0 0;pointer-events:none}
+.gsh.shadow{mix-blend-mode:multiply}
+.gsh i{position:absolute;display:block;border-radius:50%}
+.gsh .soft{background:radial-gradient(closest-side,rgba(52,30,78,.7),rgba(52,30,78,.42) 45%,rgba(52,30,78,0));filter:blur(6px)}
+.gsh .cast{background:radial-gradient(closest-side,rgba(52,30,78,.45),rgba(52,30,78,.24) 50%,rgba(52,30,78,0));filter:blur(9px)}
+.gsh .contact{background:radial-gradient(closest-side,rgba(26,14,40,.95),rgba(26,14,40,.62) 50%,rgba(26,14,40,0));filter:blur(2px)}
+.gsh .glow{background:radial-gradient(closest-side,rgba(90,236,255,.62),rgba(90,236,255,.28) 50%,rgba(90,236,255,0));filter:blur(2px)}
+.gsh .gold{border:3px solid rgba(255,248,205,.95);box-shadow:0 0 6px 2px rgba(255,214,70,.95),0 0 18px 7px rgba(255,176,20,.65),inset 0 0 8px 2px rgba(255,214,70,.8)}
+
+/* ---------- caption bubble (temporary VO) ---------- */
+#overlay{position:absolute;inset:0;pointer-events:none}
+#cap{position:absolute;left:58px;top:420px;width:440px;padding:22px 26px 22px 70px;border-radius:28px;background:rgba(30,20,82,.9);color:#fff;font-weight:600;font-size:30px;line-height:1.25;box-shadow:0 0 0 4px var(--gold),0 14px 30px rgba(0,0,0,.25);opacity:0;transform:translateY(24px) scale(.92);transition:opacity .35s,transform .35s}
+#cap.on{opacity:1;transform:none}
+#cap svg{position:absolute;left:22px;top:24px;width:34px;height:34px}
+
+/* ---------- HUD (from the art: pause, sound) ---------- */
+#hud{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .5s,filter .45s}
+/* ---------- spotlight tutorial: blur + dim everything except the focus ---------- */
+#spot{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none;opacity:0;transition:opacity .45s;--x:0px;--y:0px;--rx:100px;--ry:100px;
+  background:rgba(14,10,42,.36);-webkit-backdrop-filter:blur(7px) saturate(.8);backdrop-filter:blur(7px) saturate(.8);
+  -webkit-mask-image:radial-gradient(ellipse var(--rx) var(--ry) at var(--x) var(--y),transparent 0,transparent 78%,#000 100%);
+  mask-image:radial-gradient(ellipse var(--rx) var(--ry) at var(--x) var(--y),transparent 0,transparent 78%,#000 100%)}
+#spot.on{opacity:1}
+#spotRing{position:absolute;left:0;top:0;width:0;height:0;border-radius:50%;pointer-events:none;opacity:0;transition:opacity .35s;
+  border:5px solid rgba(255,228,120,.95);box-shadow:0 0 16px 5px rgba(255,196,50,.55),inset 0 0 12px 3px rgba(255,220,100,.35)}
+#spotRing.on{opacity:1}
+#spotHand{position:absolute;left:0;top:0;width:96px;height:116px;margin-left:-40px;pointer-events:none;opacity:0;transition:opacity .3s;transform-origin:40px 0;overflow:visible;filter:drop-shadow(0 6px 7px rgba(20,10,60,.35))}
+#spotHand.on{opacity:1}
+body.spot #hud{filter:blur(3px) brightness(.62)}
+#hud.on{opacity:1}
+.hbtn{position:absolute;top:max(10px,2.4vh);width:clamp(46px,5.3vw,96px);aspect-ratio:125/120;pointer-events:auto;transition:transform .12s;filter:drop-shadow(0 4px 6px rgba(0,0,0,.18))}
+.hbtn img{width:100%;height:100%;display:block}
+.hbtn:active{transform:scale(.9)}
+#pauseBtn{left:max(10px,2vw)}
+#sndBtn{left:calc(max(10px,2vw) + clamp(46px,5.3vw,96px) + max(8px,1vw))}
+#sndBtn.muted::after{content:'';position:absolute;left:14%;right:14%;top:47%;height:9%;background:#e8132b;border-radius:9px;transform:rotate(-40deg);box-shadow:0 0 0 3px #fff}
+#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none}
+
+/* ---------- start screen (thumbnail from the art) ---------- */
+#world.title #cloud,#world.title #cannon,#world.title #rack,#world.title #rackFront,#world.title #balls,#world.title #bshadows,#world.title #hglows,#world.title #ground,#world.title #cannonFront{visibility:hidden}
+#thumb{position:absolute;inset:0;pointer-events:none}
+#thumb.gone{display:none}
+.tp{position:absolute;display:block;transform-origin:50% 50%;will-change:transform,opacity;pointer-events:none}
+#rays{position:absolute;left:836px;top:560px;width:2700px;height:2700px;border-radius:50%;opacity:0;pointer-events:none;will-change:transform,opacity;
+  background:repeating-conic-gradient(from 0deg,rgba(255,255,255,.36) 0deg 5deg,rgba(255,255,255,0) 5deg 15deg);
+  -webkit-mask:radial-gradient(circle,#000 0,rgba(0,0,0,.7) 16%,transparent 58%);mask:radial-gradient(circle,#000 0,rgba(0,0,0,.7) 16%,transparent 58%)}
+#sunGlow{position:absolute;left:836px;top:560px;width:720px;height:720px;border-radius:50%;opacity:0;pointer-events:none;will-change:transform,opacity;
+  background:radial-gradient(circle,rgba(255,255,240,1) 0,rgba(255,250,215,.75) 16%,rgba(255,246,200,.25) 36%,rgba(255,255,255,0) 62%)}
+#playBtn{position:absolute;pointer-events:auto;cursor:pointer;transform-origin:50% 50%;will-change:transform,opacity}
+#playBtn img{position:relative;width:100%;height:100%;display:block;pointer-events:none}
+#playBtn .rp{position:absolute;inset:6%;border-radius:50%;border:5px solid rgba(255,232,140,.9);opacity:0;pointer-events:none}
+#playBtn.live .rp{animation:ripple 2.2s ease-out infinite}
+@keyframes ripple{0%{transform:scale(.95);opacity:.8}100%{transform:scale(1.45);opacity:0}}
+#credits{position:fixed;right:10px;bottom:6px;font-size:11px;font-weight:500;color:rgba(255,255,255,.95);text-shadow:0 1px 2px rgba(20,10,60,.8);pointer-events:none;transition:opacity .6s}
+#credits.hide{opacity:0}
+
+/* ---------- end ---------- */
+#endUI{position:fixed;left:50%;bottom:5vh;transform:translate(-50%,30px);display:flex;gap:3vmin;align-items:center;opacity:0;pointer-events:none;transition:opacity .5s,transform .5s}
+#endUI.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.rbtn{width:clamp(76px,14vmin,124px);aspect-ratio:1;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 34% 26%,#ffe1a1 0 7%,#ffb03b 26%,#ff8a0d 58%,#ef6400 100%);box-shadow:0 0 0 .6vmin #fff,0 1vmin 0 .6vmin #b84e00,0 2.2vmin 4vmin rgba(20,10,60,.4)}
+.rbtn svg{width:48%;height:48%}
+
+/* ---------- rotate hint + loading ---------- */
+#rotate{position:fixed;inset:0;display:none;place-items:center;text-align:center;background:rgba(20,12,60,.88);color:#fff;font-weight:700;font-size:22px;padding:30px;z-index:20}
+#rotate .ph{width:70px;height:110px;border:6px solid #fff;border-radius:16px;margin:0 auto 20px;animation:rot 2s ease-in-out infinite}
+@keyframes rot{40%,70%{transform:rotate(90deg)}}
+#rotate button{margin-top:22px;padding:10px 22px;border-radius:99px;background:#fff;color:#4a2a8a;font-weight:700;font-size:17px}
+@media (orientation:portrait) and (max-aspect-ratio:3/4){#rotate:not(.dismissed){display:grid}}
+#loading{position:fixed;inset:0;display:grid;place-items:center;background:linear-gradient(#36b3f5,#9ad9ff);color:#fff;font-weight:700;font-size:22px;text-align:center;z-index:30;transition:opacity .7s}
+#loading.hide{opacity:0;pointer-events:none}
+.spinner{width:58px;height:58px;border-radius:50%;border:7px solid rgba(255,255,255,.35);border-top-color:#ffcb3d;animation:spin 1s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+#flash{position:fixed;inset:0;background:radial-gradient(circle at 50% 25%,rgba(255,255,240,.85),rgba(255,255,255,0) 60%);opacity:0;transition:opacity .5s;pointer-events:none}
+#flash.on{opacity:1;transition:opacity .08s}
+</style>
+</head>
+<body>
+<div id="viewport">
+  <div id="stage">
+    <div id="world" class="title">
+      <img id="bg" src="assets/img/bg.jpg" alt="">
+      <div id="minis"></div>
+      <div id="cloud"><img class="cl" src="assets/img/cloud.png" alt=""><div id="eqBox"><div id="eq"></div></div></div>
+      <div id="ground"></div>
+      <div id="cannon">
+        <div id="cannonBody"><img id="c1" src="assets/img/cannon1.png" alt=""><img id="c2" src="assets/img/cannon2.png" alt="" style="display:none"></div>
+        <div id="sockFx"></div>
+        <button id="fireBtn" class="off" aria-label="Fire"><img src="assets/img/fire.png" alt="FIRE"></button>
+      </div>
+      <img id="rack" class="spr" src="assets/img/rack.png" alt="">
+      <div id="bshadows"></div>
+      <div id="balls"></div>
+      <div id="cannonFront"><div id="cannonFrontBody"><img id="c1f" src="assets/img/cannon1_front.png" alt=""><img id="c2f" src="assets/img/cannon2_front.png" alt="" style="display:none"></div></div>
+      <img id="rackFront" class="spr" src="assets/img/rack_front.png" alt="">
+      <div id="hglows"></div>
+      <div id="fly"></div>
+    </div>
+    <div id="thumb"><div id="sunGlow"></div><div id="rays"></div><button id="playBtn" aria-label="Play"><span class="rp"></span><img src="assets/img/playbtn.png" alt="Play"></button></div>
+    <div id="spot"></div>
+    <div id="overlay">
+      <div id="spotRing"></div>
+      <svg id="spotHand" viewBox="0 0 96 116" aria-hidden="true">
+        <g fill="#1b1240" stroke="#1b1240" stroke-width="7" stroke-linejoin="round"><rect x="31" y="2" width="18" height="60" rx="9"/><rect x="22" y="44" width="56" height="50" rx="20"/><circle cx="57" cy="49" r="9"/><circle cx="67" cy="57" r="9"/><circle cx="72" cy="69" r="8"/><ellipse cx="23" cy="64" rx="12" ry="8" transform="rotate(-35 23 64)"/><rect x="26" y="88" width="48" height="22" rx="7"/></g>
+        <g fill="#fff"><rect x="31" y="2" width="18" height="60" rx="9"/><rect x="22" y="44" width="56" height="50" rx="20"/><circle cx="57" cy="49" r="9"/><circle cx="67" cy="57" r="9"/><circle cx="72" cy="69" r="8"/><ellipse cx="23" cy="64" rx="12" ry="8" transform="rotate(-35 23 64)"/></g>
+        <rect x="26" y="88" width="48" height="22" rx="7" fill="#e7deff"/><path d="M29 97h42" stroke="#c4b6f0" stroke-width="3" stroke-linecap="round"/>
+        <path d="M50 50q5 5 0 10M60 59q5 4 1 10M68 70q4 3 0 8" fill="none" stroke="#1b1240" stroke-width="2.6" stroke-linecap="round"/>
+      </svg>
+      <div id="cap"><svg viewBox="0 0 24 24" fill="none" stroke="#ffd23d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h3l5-4v14l-5-4H4z" fill="#ffd23d"/><path d="M16 8.5a5 5 0 0 1 0 7"/></svg><span class="txt"></span></div>
+    </div>
+  </div>
+  <canvas id="fx"></canvas>
+  <div id="flash"></div>
+  <div id="hud">
+    <button id="pauseBtn" class="hbtn" aria-label="Pause"><img src="assets/img/pause.png" alt=""></button>
+    <button id="sndBtn" class="hbtn" aria-label="Sound on/off"><img src="assets/img/sound.png" alt=""></button>
+  </div>
+  <div id="credits">Music: &ldquo;Chill Wave&rdquo; by Kevin MacLeod (incompetech.com) &middot; CC BY 4.0 &nbsp;|&nbsp; Sound effects: Kenney.nl &amp; rubberduck (CC0)</div>
+  <div id="endUI"><button id="againBtn" class="rbtn" aria-label="Play again"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg></button></div>
+  <div id="rotate"><div><div class="ph"></div>Turn your device sideways<br>for the best view<br><button id="rotateOk">Play anyway</button></div></div>
+  <div id="loading"><div><div class="spinner"></div>Loading Cannon Quest&hellip;</div></div>
+</div>
+<script>
