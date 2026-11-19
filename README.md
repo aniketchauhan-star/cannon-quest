@@ -59,7 +59,7 @@ It is based on the *Cannon Quest* deck, the POD A stand-up brief (16 Nov 2026), 
   - Slower devices automatically get fewer particles and a simpler tutorial dim, changed only between shots.
 - **Words by key:** every line of text and every voice clip is looked up by a key (`T('key')`), with the English in `locales/locales.json`. `index.html?lan=xx` picks a language once one is added.
 - **Type and UI:** one typeface at one weight, **Poppins SemiBold (600)**, with no outlines on text. Skip and the socket markers (1, 2) share one look: a dark-glass chip with a thin gold edge. Play again sits under the score cloud.
-  - **Caption (what the voice says):** a simple wooden board on the left, halfway down: one dark-brown stroke, plain wood inside, cream words with a soft shadow so they always read. It hugs its words (as wide as its longest line, one or two lines) and stays centred on its spot. A one-letter word (x) never ends a line (`#cap` in `src/00_head.html`, CSS only).
+  - **Caption (what the voice says):** your question template `art/ui/question_template.png` (an orange wooden frame with a dark-brown outline and a cream panel) on the left, halfway down, with dark-brown words on the cream so they always read. It is a 9-slice (`assets/img/question_board.webp`, `#cap` in `src/00_head.html`): the corners stay as drawn and the frame stretches to the words. It hugs its words (as wide as its longest line, one or two lines) and stays centred on its spot. A one-letter word (x) never ends a line.
   - When a new line comes in, the old words fade out, the board glides to its new size and place, and the new words fade in (`Caption` in `src/20_audio.js`).
 
 ## Files
