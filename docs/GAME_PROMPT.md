@@ -422,7 +422,7 @@ Because the shake amount is trauma², a trauma under about 0.3 is barely visible
 |---|---|
 | Rounds, maths engine, equation → HTML | `src/10_core.js` |
 | Motion timings, `Motion`, `drive`, `tween`, Skip | `src/12_motion.js` |
-| Sound + music | `src/15_sfxdata.js`, `src/20_audio.js` |
+| Sound + music | `js/sfx.js` (built from `assets/sfx/`), `src/15_vodata.js`, `src/20_audio.js` |
 | Stage, camera, particles, cloud, cannon, tray, equation UI, spotlight | `src/30_stage.js` |
 | Start screen (`TL` layout table) | `src/35_title.js` |
 | Game flow, shot timeline (`roundTimeline` / `addShot` / `addFreed` / `addStuck`), input, loop, boot | `src/40_game.js` |

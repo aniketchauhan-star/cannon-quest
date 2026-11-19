@@ -19,24 +19,42 @@ lay['mount'] = dict(x=X0, y=322, w=W, h=m.height / R); m.save(f'{OUT}/bg_mount.p
 lay['trees'] = dict(x=X0, y=404, w=W, h=t.height / R); t.save(f'{OUT}/bg_trees.png')
 lay['lake'] = dict(x=X0, y=546, w=W, h=lk.height / R); lk.save(f'{OUT}/bg_lake.png')
 # --- ground (k = 1): grass bank, plaza in perspective, lake-edge rocks + plants ---
+# Saved in pieces so the plants can sway in the wind (src/32_scenery.js): the bank is a CSS gradient, the plaza and
+# the rocks are still pictures, and every grass tuft and bush is its own picture. Back to front: bank, grass strip,
+# plaza, bushes, rocks, small tufts (the same order the single ground picture was painted in). Positions go to
+# bg_ground.json in ground units (the ground box: x GX, y GT, GW x GH bg units).
 GT, GW = 560, FW + 120; GX = -60
 GH = FH + 30 - GT
-g = Image.new('RGBA', (GW * R, GH * R), (0, 0, 0, 0))
 yy = np.linspace(0, 1, GH * R)[:, None]
 top = np.array([128, 210, 62]); bot = np.array([98, 188, 46])
 grad = (top * (1 - yy) + bot * yy)[:, None, :].repeat(GW * R, 1).reshape(GH * R, GW * R, 3)
 base = np.dstack([grad, np.full((GH * R, GW * R, 1), 255)]).astype(np.uint8)
 bank0 = 662 - GT  # grass bank starts here (just under the lake's bottom edge, which overlaps it)
 base[: bank0 * R, :, 3] = 0
-g = Image.fromarray(base)
-def put(im, x, y_bottom, flip=False):
+g = Image.fromarray(base)  # the whole ground, for the preview only
+k0 = bank0 / GH
+ground = {'box': dict(x=GX, y=GT, w=GW, h=GH),
+          'bank': dict(y=bank0, top=[round(float(c), 1) for c in top * (1 - k0) + bot * k0], bot=[int(c) for c in bot]),
+          'grass': [], 'plants': []}
+def place(im, x, y_bottom, flip=False):
     if flip: im = im.transpose(Image.FLIP_LEFT_RIGHT)
-    g.alpha_composite(im, (round((x - GX) * R), round((y_bottom - GT) * R - im.height)))
-# grass tufts along the lake's edge
-gs = scaled(L('prop_685'), f=0.62)
+    l, t = (x - GX), (y_bottom - GT) - im.height / R
+    g.alpha_composite(im, (round(l * R), round(t * R)))
+    return dict(x=round(l, 2), y=round(t, 2), w=round(im.width / R, 2), h=round(im.height / R, 2))
+def group(name, items):  # several props flattened into one still picture, cropped to what they cover
+    c = Image.new('RGBA', (GW * R, GH * R))
+    for im, x, yb, fl in items:
+        if fl: im = im.transpose(Image.FLIP_LEFT_RIGHT)
+        c.alpha_composite(im, (round((x - GX) * R), round((yb - GT) * R - im.height)))
+    g.alpha_composite(c)
+    b = c.getbbox(); c.crop(b).save(f'{OUT}/{name}.png')
+    return dict(src=name, x=round(b[0] / R, 2), y=round(b[1] / R, 2), w=round((b[2] - b[0]) / R, 2), h=round((b[3] - b[1]) / R, 2))
+# grass tufts along the lake's edge (one picture, repeated; every other one mirrored)
+gs = scaled(L('prop_685'), f=0.62); gs.save(f'{OUT}/bg_grass.png')
 x = GX - 20
 while x < GX + GW:
-    put(gs, x, 676, flip=(int(x) // 151) % 2 == 1); x += gs.width / R - 18
+    fl = (int(x) // 151) % 2 == 1
+    ground['grass'].append({**place(gs, x, 676, flip=fl), 'flip': fl}); x += gs.width / R - 18
 # plaza with a perspective stretch (far rows compressed, near rows tall)
 pz = L('plaza'); pw, ph = pz.size
 PT, PB, PW = 678, FH + 40, 1830
@@ -46,17 +64,18 @@ arr = np.array(pz).astype(np.float32)
 i0 = np.floor(u).astype(int); fr = (u - i0)[:, None, None]; i1 = np.minimum(i0 + 1, ph - 1)
 st = arr[i0] * (1 - fr) + arr[i1] * fr
 pzs = Image.fromarray(st.clip(0, 255).astype(np.uint8)).resize((round(PW * R), dh), Image.LANCZOS)
-g.alpha_composite(pzs, (round(((FW - PW) / 2 - GX) * R), round((PT - GT) * R)))
+ground['plaza'] = group('bg_plaza', [(pzs, (FW - PW) / 2, PT + dh / R, False)])
 # rocks + plants on the bank (like the painted scene: left and right of the lake, clear of the cannon)
-put(scaled(L('prop_262'), f=1.0), -10, 686)
-put(scaled(L('prop_940'), f=1.18), 70, 690)
-put(scaled(L('prop_1452'), f=0.9), 430, 684)
-put(scaled(L('prop_597'), f=0.9), 520, 682)
-put(scaled(L('prop_262'), f=1.0), 1500, 688, flip=True)
-put(scaled(L('prop_940'), f=1.12), 1260, 690, flip=True)
-put(scaled(L('prop_1243'), f=0.95), 1110, 686)
-put(scaled(L('prop_464'), f=0.8), 1050, 684, flip=True)
-g.save(f'{OUT}/bg_ground.png')
+bush = scaled(L('prop_262'), f=1.0); bush.save(f'{OUT}/bg_bush.png')
+ground['plants'].append({**place(bush, -10, 686), 'src': 'bg_bush', 'flip': False})
+ground['plants'].append({**place(bush, 1500, 688, flip=True), 'src': 'bg_bush', 'flip': True})
+ground['rocks'] = [group('bg_rocksL', [(scaled(L('prop_940'), f=1.18), 70, 690, False), (scaled(L('prop_1452'), f=0.9), 430, 684, False)]),
+                   group('bg_rocksR', [(scaled(L('prop_940'), f=1.12), 1260, 690, True), (scaled(L('prop_1243'), f=0.95), 1110, 686, False)])]
+t1 = scaled(L('prop_597'), f=0.9); t1.save(f'{OUT}/bg_tuft1.png')
+t2 = scaled(L('prop_464'), f=0.8); t2.save(f'{OUT}/bg_tuft2.png')
+ground['tufts'] = [{**place(t1, 520, 682), 'src': 'bg_tuft1', 'flip': False}, {**place(t2, 1050, 684, flip=True), 'src': 'bg_tuft2', 'flip': True}]
+g.save(f'{OUT}/bg_ground.png')  # (preview only: the game builds the ground from the pieces)
+json.dump(ground, open(f'{OUT}/bg_ground.json', 'w'), indent=1)
 lay['ground'] = dict(x=GX, y=GT, w=GW, h=GH)
 # --- foreground corner plants (own layer, parallax > 1, they sway) ---
 fl = scaled(L('prop_16'), f=1.3); fr_ = scaled(L('prop_1567'), f=1.3).transpose(Image.FLIP_LEFT_RIGHT)

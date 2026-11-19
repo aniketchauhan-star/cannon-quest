@@ -30,7 +30,11 @@ const Title = {
       const im = document.createElement('img'); im.className = 'tp'; im.src = IMG + src; im.alt = ''; im.draggable = false;
       im.style.width = w + 'px'; box.insertBefore(im, this.play); return im;
     };
-    const sized = (el, x, y, w) => { const h = w * ((el.naturalHeight || 1) / (el.naturalWidth || 1)); Object.assign(el.style, { left: x - w / 2 + 'px', top: y - h / 2 + 'px' }); return h; };
+    const sized = (el, x, y, w) => {
+      const place = () => { const h = w * ((el.naturalHeight || 1) / (el.naturalWidth || 1)); Object.assign(el.style, { left: x - w / 2 + 'px', top: y - h / 2 + 'px' }); return h; };
+      if (!el.naturalWidth) el.addEventListener('load', place, { once: true }); // (on a slow line boot may stop waiting first: placed when it lands)
+      return place();
+    };
     // the one cloud, with x caged on it (behind everything else)
     this.cloud = add('cloud.webp', TL.cloud.w); sized(this.cloud, TL.cloud.x, TL.cloud.y, TL.cloud.w); this.cloud.style.transformOrigin = '50% 70%';
     this.cage = add('t_cage.webp', TL.cage.w); sized(this.cage, TL.cage.x, TL.cage.y, TL.cage.w); this.cage.style.transformOrigin = '50% 92%';
@@ -56,7 +60,7 @@ const Title = {
     for (const [ev, fn] of this.handlers) this.play.addEventListener(ev, fn);
     this.hideAll();
   },
-  hideAll() { for (const el of this.box.querySelectorAll('.tp, .gsh, #playBtn')) el.style.opacity = 0; }, // (the ground under the cannon too: nothing shows behind the loading bar)
+  hideAll() { for (const el of this.box.querySelectorAll('.tp, .gsh, #playBtn')) el.style.opacity = 0; }, // (the ground under the cannon too: each piece enters in update)
   start() { this.active = true; this.t0 = Clock.t; this.nextFire = 3.4; this.box.classList.add('live'); },
   teardown() { // the start screen unmounts: no more updates, no will-change, no listeners
     this.active = false;
@@ -143,7 +147,7 @@ const Title = {
     this.set(this.logoLit, 0, ly, lr, ls, lo * flash);
     // play button: pops in last, breathes, reacts to hover/press; its glow is a halo whose opacity pulses
     this.press = Math.max(0, this.press - dt * 4);
-    const pIn = pr(0.2, 0.8), pk = Ease.outElastic(pIn); // (right as the loading bar collapses into this spot)
+    const pIn = pr(0.2, 0.8), pk = Ease.outElastic(pIn); // (it can be tapped from pIn 0.25: about 0.4 s after the screen shows)
     const pX = ex(0, 0.12), pBoom = ex(0.12, 0.25);
     const psc = pk * (1 + 0.03 * Math.sin(tt * 3.4) + (this.hover ? 0.07 : 0) - this.press * 0.12) * (1 - 0.15 * pX + 0.5 * pBoom);
     this.set(this.play, 0, 0, -120 * (1 - Math.min(1, pIn * 1.4)), Math.max(0.001, psc), Math.min(1, pIn * 3) * (1 - pBoom));
@@ -158,6 +162,6 @@ const Title = {
     FX.burst(TL.play.x, TL.play.y, '#ffd34d', 50, 600, { g: 0 }); FX.burst(TL.play.x, TL.play.y, '#ffffff', 24, 440, { g: 0 }); FX.ring(TL.play.x, TL.play.y, '#fff3c4', 200);
     FX.uiMode = false;
     Sound.boom(); Sound.whoosh(0.7); Stage.hit({ trauma: 0.35, ky: 10, zoom: 0.03 }); Haptic.buzz(25);
-    return wait(0.62);
+    return Promise.all([wait(0.62), Pics.game]); // (the play scene's pictures: almost always in already, see boot)
   },
 };

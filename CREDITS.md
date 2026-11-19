@@ -4,9 +4,11 @@
 All game art comes from the files you supplied, kept in `art/`: the sprite sheets (`art/sprite_sheets/`), the start-screen sheet and Play button (`art/start_screen/`), and the background layer sheet and mockup (`art/background/`).
 
 ## Music
-**"Chill Wave"** by Kevin MacLeod ([incompetech.com](https://incompetech.com)).
-Licensed under [Creative Commons: By Attribution 4.0](https://creativecommons.org/licenses/by/4.0/).
-The licence requires this credit. It is also shown on the title screen.
+**"Blue Skies"** by HoliznaCC0, from the *Happy Lo-Fi (Lofi Collection)* on OpenGameArt:
+[opengameart.org/content/happy-lo-fi-lofi-collection](https://opengameart.org/content/happy-lo-fi-lofi-collection).
+Released as **CC0 (public domain)**: "This music is public domain CC0, so use it how you want!" No credit is required; it is given here anyway.
+Stored as `assets/music/blueskies.webm` (Opus, 64 kbps). It is trimmed at 172.3 s, before the track's silent tail, with a 0.4 s fade-in and a 2.5 s fade-out so the loop has no gap. Its loudness is matched to the previous track (−12.5 LUFS).
+It replaced "Chill Wave" by Kevin MacLeod (CC BY 4.0) on 19 Nov 2026, at the user's request for a copyright-free track.
 
 ## Voice-over
 Every line is made in Aamir's TTS studio **Ai Wala Human By Aamir**, in one man's voice (since 18 Nov 2026, at the user's request; by default **Male Child (Energetic)**, which is Gemini voice Puck, an adult man's upbeat voice), with `tools/vo_studio.mjs`. Until the studio's clips are in `assets/VO/en/`, the lines are read by the device's own voice (a man's where the device has one). The earlier Kokoro clips were removed on 18 Nov 2026: the project's rules allow only the studio's voice.
@@ -40,4 +42,4 @@ They are stored as Opus (`assets/sfx/*.webm`) to keep the game small.
 
 ## Libraries and fonts
 - GSAP 3.15.0 by GreenSock, bundled locally in `libs/gsap.min.js` (free under the GSAP Standard License)
-- Fredoka and Lilita One from Google Fonts (SIL Open Font License)
+- Poppins SemiBold (600) by the Indian Type Foundry, SIL Open Font License 1.1 (`assets/fonts/OFL-Poppins.txt`). The game's only typeface; `build.sh` embeds `assets/fonts/poppins-600-*.woff2` into `index.html`

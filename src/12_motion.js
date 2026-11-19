@@ -12,9 +12,38 @@
 // =====================================================================
 const Clock = { t: 0, paused: false };
 const Motion = {
-  DUR: { INSTANT: 0.08, FAST: 0.15, NORMAL: 0.25, SLOW: 0.4, REVEAL: 0.6 },
-  EASE: { OUT: 'power3.out', IN: 'power2.in', INOUT: 'power2.inOut', POP: 'back.out(1.4)' },
-  STAGGER: 0.08,
+  DUR: { INSTANT: 0.08, FAST: 0.18, NORMAL: 0.3, SLOW: 0.45, REVEAL: 0.7 },
+  EASE: { OUT: 'power2.out', IN: 'power2.in', INOUT: 'power2.inOut', POP: 'back.out(1.25)' },
+  STAGGER: 0.1,
+  // THE LESSON'S PACE (seconds). On 19 Nov 2026 the user asked for slower, smoother motion "so that I can
+  // understand easily": each idea in a shot is its own beat, played at the slow end of the concept-reveal
+  // range (0.6–0.8 s), with a pause to read between beats. No freeze-frames (they read as lag), gentle eases,
+  // no fast spins. Scene moves (a cloud sailing in or away) may take up to 1 s. Tune the whole game here.
+  BEAT: {
+    AIM: 0.5,        // a shot: the socket glows and the camera leans in on the cannon
+    LOAD: 0.5,       //   the ball drops into the barrel while the cannon squats (anticipation)
+    FLIGHT: 0.8,     //   cannon → cloud
+    SPLIT: 0.8,      //   the hit term splits into two copies that fly to BOTH sides of the equation
+    READ: 1.5,       //   time to read "x + 5 − 5 = 7 − 5"
+    PAIR: 0.75,      //   the terms that cancel light up together…
+    CANCEL: 0.7,     //   …and fade away
+    SETTLE: 0.8,     //   the simplified equation glides together
+    READ2: 1.4,      //   time to read the simplified equation
+    UNLOCK: 1.2,     // freed: the cage glows, then the lock clicks
+    HOLD: 4.5,       //   "x = 2" rests on the card
+    HOP: 0.7,        //   x hops up…
+    POOF: 0.55,      //   …and vanishes in sparkles
+    CLEAR: 0.9,      //   the cloud clears away
+    BREATH: 0.6,     //   a breath before the next question
+    RATTLE: 1.3,     // stuck: the cage rattles, the cloud wobbles
+    LEAVE: 1.0,      //   the cloud sails away
+    CLOUD_IN: 1.0,   // a new question's cloud sails in
+    BALLS_OUT: 0.45, // the tray's balls shrink away…
+    BALL_DROP: 0.8,  //   …and the new ones drop in, one after another
+    BALL_GAP: 0.1,
+    TAP_FLY: 0.75,   // a tapped ball flies into its socket (or back to the tray)
+    MORPH: 0.75,     // the cannon changes to 1 or 2 sockets
+  },
   reduced: false, skipping: false, live: new Set(),
   init() {
     let mq = null;
