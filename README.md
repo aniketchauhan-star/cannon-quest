@@ -58,7 +58,10 @@ It is based on the *Cannon Quest* deck, the POD A stand-up brief (16 Nov 2026), 
   - Particles don't create new memory each frame.
   - Slower devices automatically get fewer particles and a simpler tutorial dim, changed only between shots.
 - **Words by key:** every line of text and every voice clip is looked up by a key (`T('key')`), with the English in `locales/locales.json`. `index.html?lan=xx` picks a language once one is added.
-- **Type and UI:** one typeface at one weight, **Poppins SemiBold (600)**, with no outlines on text. The caption, Skip and the socket markers (1, 2) share one look: a dark-glass chip with a thin gold edge. The caption hugs its line. When a new line comes in, the old words fade out, the card glides to its new size, and the new words fade in (`Caption` in `src/20_audio.js`). Play again sits under the score cloud.
+- **Type and UI:** one typeface at one weight, **Poppins SemiBold (600)**, with no outlines on text. Skip and the socket markers (1, 2) share one look: a dark-glass chip with a thin gold edge. Play again sits under the score cloud.
+  - **Caption (what the voice says):** a wooden board on the left, halfway down: the jungle board from your UI sheet (wood in a gold frame, a bamboo rail with green rings, rope bindings, leaves at both ends), with cream words. It hugs its words: as wide as its longest line (no empty wood at the right), one line high, or taller for a 2nd line, and it stays centred on its spot. A one-letter word (x) never ends a line.
+  - The board is a 9-slice (`#cap` in `src/00_head.html`): its ends and corners never stretch, the middle repeats one bamboo ring at a time to any width, and the ends grow for more lines. Each end's leaf column is drawn twice, pinned top and bottom, so one line looks exactly like the art and a taller board gets a fuller column. `tools/cut_caption_board.py` cuts it (`cap_board`, `cap_leaf_l/r`).
+  - When a new line comes in, the old words fade out, the board glides to its new size and place, and the new words fade in (`Caption` in `src/20_audio.js`).
 
 ## Files
 ```
