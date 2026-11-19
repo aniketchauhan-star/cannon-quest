@@ -34,7 +34,7 @@ It is based on the *Cannon Quest* deck, the POD A stand-up brief (16 Nov 2026), 
 - **Six rounds from the deck.** Every operation is applied to both whole sides, with exact fractions and negatives. Any route that isolates x is accepted.
 - **Freeing x:** the cage bursts open and the cloud shows the value of x (for example **x = 2**) for a moment. Then x hops, disappears in a puff of sparkles, the cloud clears, and the next cloud arrives.
 - **Not freeing x:** the cage rattles and the cloud floats away. There is no "wrong" label and no retry, and the game moves to the next round.
-- **Grounded scene:** the cannon and the ball tray cast soft shadows on the deck, balls sit down into their cups, and a loaded ball fills its cannon socket with the gold ring over its edge.
+- **Grounded scene:** the cannon and the ball tray cast soft shadows on the deck, balls sit down into their cups, and a loaded ball sits wholly inside its cannon socket, centred, with a thin dark rim and a soft shade all round (the gold ring never covers it: `CANNON.seat`). The FIRE button fills the recess in the cannon's gold bezel exactly, centred on it (`CANNON.fire`, measured in the cannon art).
 - **First-time spotlight tutorial:** everything is blurred and dimmed except the one thing being explained, with a gold ring and a tapping hand.
   - Round 1: the caged x ("Let's free x!"), then the glowing −5 ball (only that ball can be tapped), then FIRE.
   - Round 2: the two sockets with their 1 and 2 markers while the firing order is explained, then FIRE once both are loaded.
@@ -81,7 +81,7 @@ cannon quest/
 | `assets/fonts/` | Poppins SemiBold (`poppins-600-latin*.woff2`, SIL OFL). `build.sh` embeds it into `index.html` (as `src/02_fonts.html`), because Chrome blocks font files on pages opened from disk |
 | `assets/img/` | The sprites, cut from the sheets in `art/` and upscaled (EDSR super-resolution) so they stay sharp on retina screens. Start-screen sprites are named `t_*`; `bg_*.webp` are the background layers. All images are WebP |
 | `assets/sfx/` | Recorded sound effects (CC0 / public domain), Opus `.webm` |
-| `assets/music/` | Background music: "Blue Skies" by HoliznaCC0, a happy lo-fi beat, CC0 public domain (Opus `.webm`) |
+| `assets/music/` | Background music: "Bravery Run" by MintoDog, upbeat electric guitar + synth game music (170 bpm) that loops without a seam, CC0 public domain (Opus `.webm`) |
 | `assets/VO/en/` | Voice clips, one per key (`<key>.webm`), from Aamir's studio |
 
 **Working files (the game doesn't need these to run)**

@@ -185,6 +185,8 @@ img{-webkit-user-drag:none;user-select:none}
 .ball.gone{display:none}
 .ball .ao{position:absolute;inset:3%;border-radius:50%;background:radial-gradient(ellipse 72% 46% at 50% 97%,rgba(66,26,4,.6),rgba(66,26,4,.26) 55%,rgba(66,26,4,0) 100%);opacity:0;transition:opacity .25s;pointer-events:none}
 .ball.seated .ao{opacity:1}
+/* in the cannon's socket the orb sits inside the barrel: a soft shade round its edge, deepest under the ring's top lip */
+.ball.insock .ao{opacity:1;inset:2%;background:radial-gradient(circle at 50% 58%,rgba(40,14,0,0) 60%,rgba(40,14,0,.2) 82%,rgba(40,14,0,.46) 100%)}
 .bshadow{position:absolute;width:106px;height:38px;margin:-19px 0 0 -53px;border-radius:50%;background:radial-gradient(ellipse at center,rgba(70,28,4,.5) 0,rgba(70,28,4,.25) 45%,rgba(70,28,4,0) 72%);opacity:0;transition:opacity .25s;pointer-events:none}
 .bshadow.on{opacity:1}
 .xfly{position:absolute;left:0;top:0;width:121px;height:115px;margin:-57.5px 0 0 -60.5px;pointer-events:none}
