@@ -4,7 +4,7 @@
 // =====================================================================
 const G = {
   state: 'boot', session: 0, idx: 0, freed: 0, eq: null, sockets: [], inputOn: false, fireResolve: null, hooks: {},
-  taught1: false, taughtSeq: false, tutSkip: false, idle: 0, rackFor: null, firstEntry: false, paused: false, helping: false, tl: null,
+  taught1: false, tutSkip: false, idle: 0, rackFor: null, firstEntry: false, paused: false, helping: false, tl: null,
   welcome: null, said: { freed: 0, stuck: 0, next: 0 },
 };
 // ---- the voice's lines through a session, in order: welcome → tutorial → a short intro on every other
@@ -268,20 +268,21 @@ function playShots() {
   });
 }
 
-// ---- tutorials (first game on this device only), every line by key; Skip ends the tutorial ----
-// What has been taught is saved in this browser once the player fires (or taps Skip), so a reload or a new visit
-// goes straight into play, like Play again does. A reload mid-tutorial, before that, shows it again.
-// (A test hook: ?tutorial in the address forgets it, so the tutorials play again.)
+// ---- the tutorial: ONE, on the first shot of the first game on this device (x, then the glowing −5, then FIRE).
+// Every line by key; Skip ends it. There is no other tutorial: the user (19 Nov) wants only this first −5 shot taught,
+// so the two-socket rounds just start (their 1 and 2 markers stay on the cannon).
+// It is saved in this browser once the player fires (or taps Skip), so a reload or a new visit goes straight into
+// play, like Play again does. A reload mid-tutorial, before that, shows it again.
+// (A test hook: ?tutorial in the address forgets it, so the tutorial plays again.)
 const Taught = {
   KEY: 'cannonQuest.taught',
   load() {
     try {
       if (new URLSearchParams(location.search).has('tutorial')) { localStorage.removeItem(this.KEY); return; }
-      const t = JSON.parse(localStorage.getItem(this.KEY) || '{}');
-      G.taught1 = !!t.load; G.taughtSeq = !!t.seq;
-    } catch (e) { /* storage blocked (private window, file:// in some browsers): the tutorials simply play */ }
+      G.taught1 = !!JSON.parse(localStorage.getItem(this.KEY) || '{}').load;
+    } catch (e) { /* storage blocked (private window, file:// in some browsers): the tutorial simply plays */ }
   },
-  save() { try { localStorage.setItem(this.KEY, JSON.stringify({ load: G.taught1, seq: G.taughtSeq })); } catch (e) {} },
+  save() { try { localStorage.setItem(this.KEY, JSON.stringify({ load: G.taught1 })); } catch (e) {} },
 };
 function skipTutorial() {
   G.tutSkip = true; Taught.save();
@@ -316,32 +317,6 @@ async function tutorialLoad() {
     };
   };
 }
-async function tutorialSeq() {
-  G.taughtSeq = true; G.tutSkip = false;
-  Skip.show(skipTutorial);
-  // the two sockets (with their 1 and 2 markers) are the focus while the order is explained
-  Spot.show(() => Spot.boxOf([...Cannon.sock, ...Cannon.tags]), { sx: 1.1, sy: 1.2, pad: 30 });
-  await VO.say('tutOrder', 0.15);
-  if (G.tutSkip) return null;
-  Cannon.pulseSockets();
-  await VO.say('tutLeftRight', 0.3);
-  if (G.tutSkip) return null;
-  Spot.hide();
-  return () => {
-    if (G.tutSkip) return;
-    G.hooks.onFill = (filled, n) => {
-      if (G.tutSkip) return;
-      if (filled === 1 && !G.hooks.saidNext) { G.hooks.saidNext = true; VO.say('tutNextOp', 0.5); }
-      if (filled === n && !G.hooks.saidFire) { // a soft spotlight on FIRE (balls stay tappable, it lifts if you unload one)
-        G.hooks.saidFire = true; G.hooks.softSpot = true;
-        Spot.show(fireSpot, { hand: true, sx: 1.12, sy: 1.45, pad: 24 });
-        VO.say('tutTapFireMany', 0.5);
-      }
-      if (filled < n && G.hooks.softSpot) { G.hooks.softSpot = false; Spot.hide(); }
-    };
-  };
-}
-
 // ---- a full round ----
 async function firstEntry() { // the play scene has just built itself after the start screen
   EqUI.el.style.transition = 'opacity .35s'; EqUI.el.style.opacity = 1;
@@ -365,8 +340,7 @@ async function playRound(sid, i) {
   await Promise.all(tasks);
   if (sid !== G.session) return;
   let after = null;
-  if (i === 0 && !G.taught1) after = await tutorialLoad();
-  else if (R.slots > 1 && !G.taughtSeq) after = await tutorialSeq();
+  if (i === 0 && !G.taught1) after = await tutorialLoad(); // (the only tutorial: the first −5 shot, first game only)
   else VO.sayAfter(introLine(i), 0.4); // a short intro, once the reaction before it has finished (play starts at once)
   if (sid !== G.session) return;
   const fired = new Promise((res) => (G.fireResolve = res));
