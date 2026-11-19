@@ -1,69 +1,151 @@
 
 // =====================================================================
-//  START SCREEN — the thumbnail from your art, brought to life:
-//  logo drops in, the cannon fires the 8 balls into their arcs, the
-//  caged x rattles, sparkles twinkle, and your Play button pops in.
-//  Time-based (gsap.ticker), transform + opacity only: every glow is a
-//  separate layer whose opacity moves. Reduced motion: it is simply there.
+//  START SCREEN: the user's mockup (art/start_screen/start_mockup.png), built from their sheet
+//  (art/start_screen/start_sheet.png, cut by tools/cut_start_screen.py). The CANNON QUEST plaque on top, the
+//  wooden cannon on the left, a small Play button in the middle, and the golden cage on the right with x INSIDE
+//  it (drawn between the cage's back and its front bars).
+//  x wants out. In a loop it peeks through the bars, shoves the left bars, shoves the right bars, jumps at the
+//  roof and rattles the bars, and the cage rocks on its edge, hops and wiggles each time (one GSAP timeline;
+//  the cage's rock, jolt and squash are springs, so every wiggle settles by itself).
+//  Time-based (Clock / GSAP), transform + opacity only. Reduced motion: it is simply there, x sits still.
 // =====================================================================
-const TL = (() => { // clean layout in art-space (1672×941): logo on top, Play in the middle, cannon bottom-left, the one cloud (x caged on it) right
-  const cannon = { x: 290, y: 668, w: 410 };
+const TL = (() => { // art space (1672×941). Boxes = where the mockup draws each piece (tools/cut_start_screen.py prints them)
+  const cannon = { x: 122.3, y: 401.3, w: 525.7, h: 485.2 }, cage = { x: 1092.1, y: 348.9, w: 382.1, h: 505.3 };
   return {
-    logo: { x: 836, y: 170, w: 560 },
-    cloud: { x: 1300, y: 372, w: 420 },   // the only cloud in the sky
-    cage: { x: 1300, y: 238, w: 150 },    // x, caged, sitting on it
+    logo: { x: 338.9, y: 34.5, w: 980.7 },
     cannon,
-    fire: { x: cannon.x + 0.048 * cannon.w, y: cannon.y + 0.2495 * cannon.w, w: 0.4606 * cannon.w },   // the FIRE plate on the cannon art (its word is in the art)
-    muzzle: { x: cannon.x + 0.3209 * cannon.w, y: cannon.y - 0.322 * cannon.w },
-    // the cannon art on the ground, as fractions of its width: base centre offset + width, ground line below the centre, cyan strips (centre, width)
-    foot: { dx: 0, w: 0.95, y: (479 / 527) * (0.9958 - 0.5), strips: [[0.2312, 0.186], [0.8083, 0.1822]] },
-    play: { x: 836, y: 548, w: 168 },
-    shot: { ctrl: { x: 850, y: 330 }, w: 84, dur: 0.85, every: 4.4 }, // one ball at a time, cannon → cage, in a low arc under the logo
+    foot: { x: 0.5, y: 0.93, w: 0.9 },          // its wooden base on the deck (fractions of its box): centre, width
+    muzzle: { x: cannon.x + 0.84 * cannon.w, y: cannon.y + 0.27 * cannon.w, dir: -0.6 }, // its mouth, and where it points
+    play: { x: 836, y: 640, w: 176 },           // centre + width: smaller than the mockup's 257 (the user: "start button should small")
+    cage,
+    cageFoot: { pivot: 0.987, y: 0.955 },       // its base: the lowest point (it rocks on it), the middle of its footprint
+    // in the cage's own box (px). x stands on the cage floor, between the front bars, as in the mockup
+    x: { x: 92.3, y: 202.7, w: 194.6, h: 202.7 },
+    room: { side: 38, up: 15 },                 // how far x can move before it meets the side bars / the top ring
+    bars: { l: 50.6, r: 324.6, top: 186.2 },    // the side bars' inner edges and the top ring's underside (sparks fly where x hits)
   };
 })();
 const Title = {
-  active: false, exiting: false, t0: 0, hover: false, press: 0, kick: 0, nextFire: 0, handlers: [],
-  shotT: -1, hitT: -99, shotN: 0, sq: 0,
+  active: false, exiting: false, t0: 0, hover: false, press: 0, kick: 0, handlers: [], tl: null, landed: false, cLanded: false,
+  // the cage: rock (degrees; it tips onto the edge it leans to), jolt (px sideways), squash (+ = squashed), hop (px up),
+  // shake (0..1: x rattling the bars). x: its pose from the timeline, plus a squash spring for landings
+  rock: new Spring(2.3, 0.2), jolt: new Spring(6, 0.3), squash: new Spring(4.2, 0.32), xsq: new Spring(5, 0.3),
+  cg: { hop: 0, shake: 0 }, xs: { x: 0, y: 0, r: 0, sx: 1, sy: 1 },
   init() {
-    const box = $('#thumb'); this.box = box; this.play = $('#playBtn'); this.pg = this.play.querySelector('.pg'); this.rays = $('#rays'); this.glow = $('#sunGlow');
-    const add = (src, w) => {
-      const im = document.createElement('img'); im.className = 'tp'; im.src = IMG + src; im.alt = ''; im.draggable = false;
-      im.style.width = w + 'px'; box.insertBefore(im, this.play); return im;
+    const box = $('#thumb'); this.box = box; this.play = $('#playBtn'); this.pg = this.play.querySelector('.pg');
+    const img = (src, cls, parent, before = null) => {
+      const im = document.createElement('img'); im.className = cls; im.src = IMG + src; im.alt = ''; im.draggable = false;
+      parent.insertBefore(im, before); return im;
     };
-    const sized = (el, x, y, w) => {
-      const place = () => { const h = w * ((el.naturalHeight || 1) / (el.naturalWidth || 1)); Object.assign(el.style, { left: x - w / 2 + 'px', top: y - h / 2 + 'px' }); return h; };
-      if (!el.naturalWidth) el.addEventListener('load', place, { once: true }); // (on a slow line boot may stop waiting first: placed when it lands)
-      return place();
-    };
-    // the one cloud, with x caged on it (behind everything else)
-    this.cloud = add('cloud.webp', TL.cloud.w); sized(this.cloud, TL.cloud.x, TL.cloud.y, TL.cloud.w); this.cloud.style.transformOrigin = '50% 70%';
-    this.cage = add('t_cage.webp', TL.cage.w); sized(this.cage, TL.cage.x, TL.cage.y, TL.cage.w); this.cage.style.transformOrigin = '50% 92%';
-    this.cannon = add('t_cannon.webp', TL.cannon.w); sized(this.cannon, TL.cannon.x, TL.cannon.y, TL.cannon.w);
-    // ground under the start-screen cannon: shadow, the golden glow ring from the mockup, cyan strip light
-    const cw = TL.cannon.w, fx = TL.cannon.x + TL.foot.dx * cw, fy = (this.footY = TL.cannon.y + cw * TL.foot.y);
-    const fw = cw * TL.foot.w;
-    this.cSh = groundGroup(box, 'shadow', fx, fy, this.cannon);
-    groundBlob(this.cSh, 'cast', fw * 0.34, -20, fw * 1.1, fw * 0.15); groundBlob(this.cSh, 'soft', 8, 2, fw * 1.36, fw * 0.13); groundBlob(this.cSh, 'contact', -2, -2, fw * 1.12, 26);
-    for (const sx of [-1, 1]) groundBlob(this.cSh, 'contact', sx * fw * 0.44 - 2, -2, fw * 0.26, 26);
-    this.cGold = groundGroup(box, 'ring', fx, fy, this.cannon); groundBlob(this.cGold, 'gold', -4, -2, cw * 1.08, 46);
-    this.cGlow = groundGroup(box, 'light', fx, fy, this.cannon);
-    TL.foot.strips.forEach(([c, w]) => groundBlob(this.cGlow, 'glow', (c - 0.5 - TL.foot.dx) * cw, 8, w * cw * 1.7, 32));
-    this.fire = add('t_fire.webp', TL.fire.w); sized(this.fire, TL.fire.x, TL.fire.y, TL.fire.w); this.fire.classList.add('fireBase');
-    this.fireLit = add('t_fire.webp', TL.fire.w); sized(this.fireLit, TL.fire.x, TL.fire.y, TL.fire.w); this.fireLit.classList.add('fireLit'); // its glow
-    // the ball the cannon fires at the cage (one at a time; it flies under the logo)
-    this.ball = add('ball_0.webp', TL.shot.w); sized(this.ball, 0, 0, TL.shot.w);
-    this.logo = add('t_logo.webp', TL.logo.w); this.logoH = sized(this.logo, TL.logo.x, TL.logo.y, TL.logo.w);
-    this.logoLit = add('t_logo.webp', TL.logo.w); sized(this.logoLit, TL.logo.x, TL.logo.y, TL.logo.w); this.logoLit.classList.add('lit'); // its flash
-    Object.assign(this.play.style, { left: TL.play.x - TL.play.w / 2 + 'px', top: TL.play.y - TL.play.w * 0.508 + 'px', width: TL.play.w + 'px', height: TL.play.w * 1.016 + 'px' });
-    for (const el of [this.rays, this.glow]) Object.assign(el.style, { left: TL.play.x + 'px', top: TL.play.y + 'px' });
+    const place = (el, x, y, w, h) => Object.assign(el.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
+    // the ground under the cannon, the cage and the Play button (they stand on the wooden deck)
+    const cn = TL.cannon, fx = cn.x + cn.w * TL.foot.x, fw = cn.w * TL.foot.w;
+    this.footY = cn.y + cn.h * TL.foot.y;
+    this.cSh = groundGroup(box, 'shadow', fx, this.footY, this.play);
+    groundBlob(this.cSh, 'pool', -14, 6, fw * 1.38, 124); groundBlob(this.cSh, 'contact', 0, 20, fw * 1.0, 28);
+    const cg = TL.cage;
+    this.cageFootY = cg.y + cg.h * TL.cageFoot.y;
+    this.gSh = groundGroup(box, 'shadow', cg.x + cg.w / 2, this.cageFootY, this.play);
+    groundBlob(this.gSh, 'pool', -14, 8, cg.w * 1.32, 100); groundBlob(this.gSh, 'contact', 0, 12, cg.w * 1.03, 36);
+    const p = TL.play;
+    this.pSh = groundGroup(box, 'shadow', p.x, p.y + p.w * 0.68, this.play);
+    groundBlob(this.pSh, 'soft', 0, 0, p.w * 0.98, 32); groundBlob(this.pSh, 'contact', 0, 0, p.w * 0.66, 14);
+    // the cannon
+    this.cannon = img('t_cannon.webp', 'tp', box, this.play); place(this.cannon, cn.x, cn.y, cn.w, cn.h);
+    this.cannon.style.transformOrigin = `${TL.foot.x * 100}% ${TL.foot.y * 100}%`;
+    // the cage, one group: its whole picture (behind x), x's shadow on the floor, x, then its front bars
+    const g = (this.cage = document.createElement('div')); g.className = 'tp tcage'; box.insertBefore(g, this.play);
+    place(g, cg.x, cg.y, cg.w, cg.h); g.style.transformOrigin = `50% ${TL.cageFoot.pivot * 100}%`;
+    place(img('t_cage.webp', '', g), 0, 0, cg.w, cg.h);
+    const X = TL.x;
+    this.xShadow = document.createElement('i'); this.xShadow.className = 'xsh'; g.appendChild(this.xShadow);
+    place(this.xShadow, X.x + X.w * 0.14, X.y + X.h - 18, X.w * 0.72, 22);
+    this.x = img('t_x.webp', 'tx', g); place(this.x, X.x, X.y, X.w, X.h);
+    place(img('t_cage_front.webp', '', g), 0, 0, cg.w, cg.h);
+    // the logo, and a brighter copy of it that flashes now and then
+    const lh = TL.logo.w * (719 / 1833);
+    this.logo = img('t_logo.webp', 'tp', box, this.play); place(this.logo, TL.logo.x, TL.logo.y, TL.logo.w, lh);
+    this.logoLit = img('t_logo.webp', 'tp lit', box, this.play); place(this.logoLit, TL.logo.x, TL.logo.y, TL.logo.w, lh);
+    // Play: small, in the middle of the deck
+    Object.assign(this.play.style, { left: p.x - p.w / 2 + 'px', top: p.y - p.w / 2 + 'px', width: p.w + 'px', height: p.w + 'px' });
     this.handlers = [['pointerenter', () => (this.hover = true)], ['pointerleave', () => (this.hover = false)], ['pointerdown', () => (this.press = 1)]];
     for (const [ev, fn] of this.handlers) this.play.addEventListener(ev, fn);
     this.hideAll();
   },
-  hideAll() { for (const el of this.box.querySelectorAll('.tp, .gsh, #playBtn')) el.style.opacity = 0; }, // (the ground under the cannon too: each piece enters in update)
-  start() { this.active = true; this.t0 = Clock.t; this.nextFire = 3.4; this.box.classList.add('live'); },
-  teardown() { // the start screen unmounts: no more updates, no will-change, no listeners
+  hideAll() { for (const el of this.box.querySelectorAll('.tp, .gsh, #playBtn')) el.style.opacity = 0; }, // (each piece enters in update)
+  start() {
+    this.active = true; this.t0 = Clock.t; this.box.classList.add('live');
+    if (!Motion.reduced) this.tl = this.escape();
+  },
+  // x tries to get out: one looping timeline (~10 s). The cage answers (rocks, hops, rattles) from the callbacks
+  escape() {
+    const X = this.xs, C = this.cg, S = TL.room.side, U = TL.room.up;
+    const tl = gsap.timeline({ repeat: -1, delay: 1.9 });
+    // 1. it peeks out through the bars: left, then right
+    tl.to(X, { x: -12, r: -7, duration: 0.5, ease: 'sine.inOut' })
+      .to(X, { x: 12, r: 7, duration: 0.7, ease: 'sine.inOut' }, '+=0.25')
+      .to(X, { x: 0, r: 0, duration: 0.45, ease: 'sine.inOut' }, '+=0.25')
+    // 2. a shove at the left bars: wind up, rush, hit (squashed against the bars), back to the middle
+      .to(X, { x: S * 0.4, r: 8, sx: 0.95, sy: 1.04, duration: 0.4, ease: 'power2.out' }, '+=0.35')
+      .to(X, { x: -S, r: -9, sx: 1.04, sy: 0.98, duration: 0.2, ease: 'power2.in' })
+      .call(() => this.bump(-1))
+      .to(X, { sx: 0.86, sy: 1.07, duration: 0.08, ease: 'power1.out' })
+      .to(X, { x: 0, r: 0, sx: 1, sy: 1, duration: 0.6, ease: 'power3.out' })
+    // 3. …and at the right bars
+      .to(X, { x: -S * 0.4, r: -8, sx: 0.95, sy: 1.04, duration: 0.4, ease: 'power2.out' }, '+=0.45')
+      .to(X, { x: S, r: 9, sx: 1.04, sy: 0.98, duration: 0.2, ease: 'power2.in' })
+      .call(() => this.bump(1))
+      .to(X, { sx: 0.86, sy: 1.07, duration: 0.08, ease: 'power1.out' })
+      .to(X, { x: 0, r: 0, sx: 1, sy: 1, duration: 0.6, ease: 'power3.out' })
+    // 4. a jump at the roof: crouch, spring up, bonk (the whole cage hops), fall, land (the cage thuds down)
+      .to(X, { sx: 1.12, sy: 0.82, duration: 0.32, ease: 'power2.out' }, '+=0.45')
+      .to(X, { y: -U * 1.6, sx: 0.92, sy: 1.1, duration: 0.18, ease: 'power2.out' })
+      .addLabel('bonk')
+      .call(() => this.bonk(), null, 'bonk')
+      .to(C, { hop: -18, duration: 0.15, ease: 'power2.out' }, 'bonk')
+      .to(C, { hop: 0, duration: 0.2, ease: 'power2.in' }, 'bonk+=0.15')
+      .to(X, { y: 0, sx: 1, sy: 1, duration: 0.26, ease: 'power2.in' }, 'bonk+=0.04')
+      .call(() => this.thud(), null, 'bonk+=0.35')
+    // 5. it grabs the bars and rattles them
+      .to(C, { shake: 1, duration: 0.15, ease: 'power1.out' }, '+=0.45')
+      .to(C, { shake: 0, duration: 0.3, ease: 'power1.in' }, '+=0.75')
+    // 6. a sigh, a rest, and it tries again
+      .to(X, { sy: 0.94, sx: 1.03, duration: 0.55, ease: 'sine.inOut' }, '+=0.15')
+      .to(X, { sy: 1, sx: 1, duration: 0.7, ease: 'sine.inOut' })
+      .to({}, { duration: 1.1 });
+    return tl;
+  },
+  at(fx, fy) { const cg = TL.cage; return { x: cg.x + fx, y: cg.y + fy + this.cg.hop }; }, // a point of the cage, in art space
+  bump(side) { // x hits the side bars: the cage tips onto that edge and rocks back, with a jolt; sparks at the bars
+    this.rock.kick(side * 4.2); this.jolt.kick(side * 5);
+    const p = this.at(side < 0 ? TL.bars.l : TL.bars.r, TL.x.y + TL.x.h * 0.45);
+    FX.uiMode = true; FX.burst(p.x, p.y, '#ffd34d', 9, 260, { g: 300, dir: side < 0 ? Math.PI : 0, spread: 1.1, size: 0.6 }); FX.uiMode = false;
+    if (Sound.ctx) Sound.rattle();
+  },
+  bonk() { // x's head hits the top ring
+    const p = this.at(TL.cage.w / 2, TL.bars.top);
+    FX.uiMode = true; FX.burst(p.x, p.y, '#ffd34d', 8, 220, { g: 300, dir: -Math.PI / 2, spread: 1.2, size: 0.6 }); FX.uiMode = false;
+    if (Sound.ctx) Sound.clunk();
+  },
+  thud() { // the cage lands back on the deck: it squashes, x squashes, a puff of dust each side
+    this.squash.kick(0.05); this.xsq.kick(0.08); this.rock.kick((Math.random() < 0.5 ? -1 : 1) * 1.2);
+    this.cageDust(false);
+    if (Sound.ctx) Sound.land();
+  },
+  cageDust(big) {
+    const cg = TL.cage, r = cg.w * 0.46, x = cg.x + cg.w / 2;
+    FX.uiMode = true; FX.dust(x - r, this.cageFootY, -1, big ? 6 : 4); FX.dust(x + r, this.cageFootY, 1, big ? 6 : 4); FX.uiMode = false;
+  },
+  titleDust(big) {
+    const cn = TL.cannon, r = cn.w * 0.42, x = cn.x + cn.w * TL.foot.x;
+    FX.uiMode = true; FX.dust(x - r, this.footY, -1, big ? 7 : 4); FX.dust(x + r, this.footY, 1, big ? 7 : 4); FX.uiMode = false;
+  },
+  muzzleFx() { // the same real-looking blast as in the game, out of the barrel (up and to the right)
+    FX.uiMode = true; FX.blast(TL.muzzle.x, TL.muzzle.y, TL.muzzle.dir, 0.9); FX.uiMode = false;
+  },
+  teardown() { // the start screen unmounts: no more updates, no timeline, no will-change, no listeners
     this.active = false;
+    if (this.tl) { this.tl.kill(); this.tl = null; }
     this.box.classList.remove('live'); this.box.classList.add('gone');
     for (const [ev, fn] of this.handlers) this.play.removeEventListener(ev, fn);
     this.handlers = [];
@@ -72,94 +154,59 @@ const Title = {
     el.style.transform = `translate(${dx.toFixed(1)}px,${dy.toFixed(1)}px) rotate(${rot.toFixed(2)}deg) scale(${(sc * sx).toFixed(4)},${sc.toFixed(4)})`;
     el.style.opacity = op.toFixed(3);
   },
-  titleDust(big) {
-    FX.uiMode = true;
-    const r = TL.cannon.w * 0.46;
-    FX.dust(TL.cannon.x - r, this.footY, -1, big ? 7 : 4); FX.dust(TL.cannon.x + r, this.footY, 1, big ? 7 : 4);
-    FX.uiMode = false;
-  },
-  muzzleFx(big) { // the same real-looking blast as in the game, aimed along the barrel (up and to the right)
-    FX.uiMode = true;
-    FX.blast(TL.muzzle.x, TL.muzzle.y, -0.93, big ? 1 : 0.7);
-    FX.uiMode = false;
-  },
   update(t, dt) {
     if (!this.active) return;
     const R = Motion.reduced, tt = R ? 0 : t;               // reduced motion: everything in place at once, nothing idles
     const T = R ? 99 : t - this.t0, X = this.exiting ? (R ? 99 : t - this.exitT) : -1;
     const pr = (s, d) => clamp((T - s) / d, 0, 1);
     const ex = (s, d) => (X < 0 ? 0 : clamp((X - s) / d, 0, 1));
-    // sun burst + rays behind Play (soft, so the screen stays calm)
-    const rIn = Ease.outCubic(pr(0, 0.8)), rOut = 1 - ex(0.15, 0.45);
-    this.rays.style.opacity = (rIn * rOut * 0.32).toFixed(3);
-    this.rays.style.transform = `translate(-50%,-50%) rotate(${((tt * 5) % 360).toFixed(2)}deg)`;
-    this.glow.style.opacity = (rIn * rOut * (0.5 + 0.1 * Math.sin(tt * 1.7))).toFixed(3);
-    this.glow.style.transform = `translate(-50%,-50%) scale(${(1 + 0.06 * Math.sin(tt * 1.3)).toFixed(3)})`;
-    // cannon: slides in, recoils on every shot, idles with a breath
+    // cannon: slides in from the left, breathes, recoils when Play fires it, slides out
     this.kick = Math.max(0, this.kick - dt * 3.2);
     const ck = Math.sin(this.kick * Math.PI), cIn = Ease.outBack(pr(0.3, 0.75)), cOut = Ease.inBack(ex(0.08, 0.5));
-    const cdx = -560 * (1 - cIn) - 760 * cOut - 16 * ck * 0.6, cdy = 16 * ck * 0.8, breathe = 1 + Math.sin(tt * 2.4) * 0.008;
-    this.set(this.cannon, cdx, cdy, -2.5 * ck, breathe, pr(0.3, 0.2));
-    const gtr = `translate(${cdx.toFixed(1)}px,${cdy.toFixed(1)}px)`, cOp = pr(0.3, 0.2);
-    this.cSh.style.transform = this.cGold.style.transform = this.cGlow.style.transform = gtr;
-    this.cSh.style.opacity = cOp.toFixed(3);
-    this.cGold.style.opacity = (cOp * Ease.outCubic(pr(1.0, 0.5)) * (0.82 + 0.18 * Math.sin(tt * 2.2))).toFixed(3);
-    this.cGlow.style.opacity = Math.min(1, cOp * (0.75 + 0.2 * Math.sin(tt * 2.6)) + 0.3 * ck).toFixed(3);
+    const cdx = -640 * (1 - cIn) - 760 * cOut - 18 * ck, cdy = 8 * ck, breathe = 1 + Math.sin(tt * 2.4) * 0.006, cOp = pr(0.3, 0.2);
+    this.set(this.cannon, cdx, cdy, -2 * ck, breathe, cOp);
+    this.set(this.cSh, cdx, 0, 0, 1, cOp);
     if (!this.cLanded && pr(0.3, 0.75) >= 1) { this.cLanded = true; if (!R) this.titleDust(true); }
-    // the FIRE plate breathes; its glow is a brighter copy on top whose opacity pulses
-    const fs = breathe * (1 + 0.03 * Math.sin(tt * 3.2)), fg = R ? 0 : Math.max(0, Math.sin(tt * 3.2));
-    this.set(this.fire, cdx, cdy, -2.5 * ck, fs, pr(0.3, 0.2));
-    this.set(this.fireLit, cdx, cdy, -2.5 * ck, fs, pr(0.3, 0.2) * fg);
-    // the cloud floats in from the right and bobs; it squashes when a ball hits the cage
-    this.sq = Math.max(0, this.sq - dt * 2.2);
-    const qIn = Ease.outBack(pr(0.45, 0.9)), qOut = Ease.inBack(ex(0.05, 0.55)), sq = Math.sin(this.sq * Math.PI * 3) * this.sq;
-    const qdx = 620 * (1 - qIn) + 700 * qOut, qdy = Math.sin(tt * 1.1) * 7 - 520 * qOut;
-    this.set(this.cloud, qdx, qdy, 0, 1 - 0.035 * sq, Math.min(1, pr(0.45, 0.3)), 1 + 0.08 * sq);
-    // x in its cage drops onto the cloud, then rattles each time a ball hits it
-    const gIn = pr(0.9, 0.7), drop = 1 - Ease.outBounce(gIn), rat = R ? 0 : clamp(1 - (T - this.hitT) / 0.7, 0, 1);
-    this.set(this.cage, qdx + Math.sin(T * 40) * 7 * rat, qdy - 420 * drop + 6 * sq, Math.sin(T * 46) * 7 * rat, 1 + 0.06 * rat, Math.min(1, gIn * 4) * (1 - ex(0.4, 0.2)));
-    // the shot: one ball at a time, from the muzzle to the cage in a low arc (it never stays on screen)
-    if (!R && !this.exiting && T > this.nextFire) {
-      this.nextFire = T + TL.shot.every; this.shotT = T; this.kick = 1; this.muzzleFx(this.shotN === 0); this.titleDust(false);
-      this.ball.src = IMG + `ball_${this.shotN++ % 8}.webp`;
-      if (Sound.ctx) Sound.boom(0.55);
-    }
-    const k = this.shotT < 0 ? 1 : (T - this.shotT) / TL.shot.dur;
-    if (k >= 0 && k < 1) {
-      const e = Ease.inOutQuad(k), m = TL.muzzle, c = TL.shot.ctrl, to = { x: TL.cage.x + qdx, y: TL.cage.y + qdy };
-      const x = bez(m.x, c.x, to.x, e), y = bez(m.y, c.y, to.y, e);
-      this.set(this.ball, x, y, 600 * k, 0.55 + 0.45 * Math.min(1, k * 4), 1);
-      if (Math.random() < 0.85) { FX.uiMode = true; FX.trail(x, y, pick(['#ffd34d', '#fff1a8', '#ffffff'])); FX.uiMode = false; }
-    } else if (this.shotT >= 0) {
-      this.ball.style.opacity = 0; this.shotT = -1;
-      if (!this.exiting) { // it hits the cage: a pop of sparkles, the cage rattles, the cloud squashes
-        const p = { x: TL.cage.x + qdx, y: TL.cage.y + qdy };
-        FX.uiMode = true; FX.burst(p.x, p.y, '#ffd34d', 26, 380, { g: 200 }); FX.burst(p.x, p.y, '#ffffff', 12, 260, { g: 0 }); FX.ring(p.x, p.y, '#fff3c4', 110); FX.uiMode = false;
-        this.hitT = T; this.sq = 1;
-        if (Sound.ctx) { Sound.pop(1.3); Sound.rattle(0.5); }
-      }
-    }
+    // the cage: drops onto the deck (with bounces), then x's struggle rocks, hops, rattles and squashes it
+    const gIn = pr(0.45, 0.9), drop = 1 - Ease.outBounce(gIn), gOut = Ease.inBack(ex(0.05, 0.55));
+    if (!this.landed && gIn >= 0.364) { this.landed = true; if (!R) { this.cageDust(true); this.squash.kick(0.06); this.xsq.kick(0.1); } } // (the bounce's first touch-down)
+    const rock = this.rock.update(dt), jolt = this.jolt.update(dt), sq = this.squash.update(dt), xsq = this.xsq.update(dt);
+    const sh = this.cg.shake, w7 = R ? 0 : Math.sin(tt * Math.PI * 2 * 7), w7b = R ? 0 : Math.sin(tt * Math.PI * 2 * 7 + 1.3);
+    const rot = rock + sh * 0.9 * w7b + 6 * gOut;
+    const tip = -TL.cage.w * 0.5 * Math.abs(Math.sin((rot * Math.PI) / 180)); // it tips on its edge: the low side stays on the deck
+    const gdx = jolt + sh * 3.5 * w7 + 760 * gOut, up = -640 * drop + this.cg.hop - 120 * gOut;
+    this.cage.style.transform = `translate(${gdx.toFixed(1)}px,${(up + tip).toFixed(1)}px) rotate(${rot.toFixed(2)}deg) scale(${(1 + 0.6 * sq).toFixed(4)},${(1 - sq).toFixed(4)})`;
+    this.cage.style.opacity = Math.min(1, gIn * 5).toFixed(3);
+    const air = clamp(-up / 160, 0, 1); // its shadow shrinks and fades while it is up in the air
+    this.set(this.gSh, gdx, 0, 0, 1 - 0.5 * air, Math.min(1, gIn * 3) * (1 - 0.7 * air) * (1 - gOut));
+    // x inside: its pose from the timeline, a slow breath, the rattle, and a squash on each landing
+    const xb = 1 + (R ? 0 : Math.sin(tt * 2.6) * 0.018), xs = this.xs;
+    this.set(this.x, xs.x + sh * 2 * w7b, xs.y, xs.r + sh * 7 * w7, xb * xs.sy * (1 - xsq), 1, (xs.sx * (1 + 0.7 * xsq)) / (xs.sy * (1 - xsq)));
+    const xUp = clamp(-xs.y / 30, 0, 1); // its shadow on the cage floor
+    this.set(this.xShadow, xs.x, 0, 0, 1 - 0.35 * xUp, 0.9 - 0.5 * xUp);
     // logo: bounces down from the sky, floats, flashes now and then (a brighter copy fades in and out)
     const lIn = Ease.outBounce(pr(0.12, 0.8)), lOut = Ease.inBack(ex(0.04, 0.55));
-    const flash = R ? 0 : Math.max(0, Math.sin(clamp(((T - 3) % 4.5) / 0.5, 0, 1) * Math.PI));
-    const ly = -560 * (1 - lIn) - 760 * lOut + Math.sin(tt * 1.6) * 7, lr = Math.sin(tt * 1.1) * 1.3 - 8 * lOut, ls = 1 + Math.sin(tt * 2.2) * 0.012, lo = pr(0.12, 0.15);
+    const flash = R ? 0 : Math.max(0, Math.sin(clamp(((T - 3) % 5) / 0.55, 0, 1) * Math.PI));
+    const ly = -560 * (1 - lIn) - 760 * lOut + Math.sin(tt * 1.6) * 6, lr = Math.sin(tt * 1.1) * 1 - 8 * lOut, ls = 1 + Math.sin(tt * 2.2) * 0.01, lo = pr(0.12, 0.15);
     this.set(this.logo, 0, ly, lr, ls, lo);
-    this.set(this.logoLit, 0, ly, lr, ls, lo * flash);
-    // play button: pops in last, breathes, reacts to hover/press; its glow is a halo whose opacity pulses
+    this.set(this.logoLit, 0, ly, lr, ls, lo * flash * 0.85);
+    // Play: pops in, floats a little over the deck (its shadow answers), reacts to hover / press, bursts on exit
     this.press = Math.max(0, this.press - dt * 4);
-    const pIn = pr(0.2, 0.8), pk = Ease.outElastic(pIn); // (it can be tapped from pIn 0.25: about 0.4 s after the screen shows)
-    const pX = ex(0, 0.12), pBoom = ex(0.12, 0.25);
-    const psc = pk * (1 + 0.03 * Math.sin(tt * 3.4) + (this.hover ? 0.07 : 0) - this.press * 0.12) * (1 - 0.15 * pX + 0.5 * pBoom);
-    this.set(this.play, 0, 0, -120 * (1 - Math.min(1, pIn * 1.4)), Math.max(0.001, psc), Math.min(1, pIn * 3) * (1 - pBoom));
-    this.pg.style.opacity = Math.min(1, 0.45 + 0.4 * (0.5 + 0.5 * Math.sin(tt * 3.4)) + (this.hover ? 0.15 : 0)).toFixed(3);
-    if (pIn > 0.25) this.play.classList.add('live');
+    const pIn = pr(0.2, 0.7), pk = Ease.outBack(pIn);
+    const pX = ex(0, 0.12), pBoom = ex(0.12, 0.25), bob = R ? 0 : Math.sin(tt * 2.1) * 5;
+    const psc = pk * (1 + 0.02 * Math.sin(tt * 3.4) + (this.hover ? 0.08 : 0) - this.press * 0.12) * (1 - 0.15 * pX + 0.5 * pBoom);
+    this.set(this.play, 0, bob, 0, Math.max(0.001, psc), Math.min(1, pIn * 3) * (1 - pBoom));
+    this.set(this.pSh, 0, 0, 0, Math.max(0.001, pk * (1 - bob / 60)), Math.min(1, pIn * 3) * (0.8 - bob / 40) * (1 - pBoom));
+    this.pg.style.opacity = Math.min(1, 0.35 + 0.35 * (0.5 + 0.5 * Math.sin(tt * 3.4)) + (this.hover ? 0.2 : 0)).toFixed(3);
+    if (pIn > 0.3) this.play.classList.add('live');
     if (this.exiting && X > 0.9) this.teardown();
   },
   exit() {
     this.exiting = true; this.exitT = Clock.t; this.play.classList.remove('live');
-    this.kick = 1; this.muzzleFx(true);
+    if (this.tl) this.tl.pause(); // x stops struggling; the cage leaves as it is
+    this.kick = 1; this.muzzleFx();
     FX.uiMode = true;
-    FX.burst(TL.play.x, TL.play.y, '#ffd34d', 50, 600, { g: 0 }); FX.burst(TL.play.x, TL.play.y, '#ffffff', 24, 440, { g: 0 }); FX.ring(TL.play.x, TL.play.y, '#fff3c4', 200);
+    FX.burst(TL.play.x, TL.play.y, '#ffd34d', 44, 560, { g: 0 }); FX.burst(TL.play.x, TL.play.y, '#ffffff', 20, 420, { g: 0 }); FX.ring(TL.play.x, TL.play.y, '#fff3c4', 170);
     FX.uiMode = false;
     Sound.boom(); Sound.whoosh(0.7); Stage.hit({ trauma: 0.35, ky: 10, zoom: 0.03 }); Haptic.buzz(25);
     return Promise.all([wait(0.62), Pics.game]); // (the play scene's pictures: almost always in already, see boot)

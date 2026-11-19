@@ -25,13 +25,12 @@
 <link rel="preload" as="image" href="assets/img/bg_plantL.webp" fetchpriority="high">
 <link rel="preload" as="image" href="assets/img/bg_plantR.webp" fetchpriority="high">
 <link rel="preload" as="image" href="assets/img/bg_deck.webp" fetchpriority="high">
-<link rel="preload" as="image" href="assets/img/cloud.webp" fetchpriority="high">
-<link rel="preload" as="image" href="assets/img/playbtn.webp" fetchpriority="high">
 <link rel="preload" as="image" href="assets/img/t_logo.webp" fetchpriority="high">
 <link rel="preload" as="image" href="assets/img/t_cannon.webp" fetchpriority="high">
-<link rel="preload" as="image" href="assets/img/t_fire.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/playbtn.webp" fetchpriority="high">
 <link rel="preload" as="image" href="assets/img/t_cage.webp" fetchpriority="high">
-<link rel="preload" as="image" href="assets/img/ball_0.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/t_x.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/t_cage_front.webp" fetchpriority="high">
 <!--FONTS-->
 <style>
 :root{--ink:#1a1740;--gold:#ffcb3d;--orange:#ff9418;--plum:#2a1c5c;--glass:rgba(28,19,78,.88);--glass-hi:rgba(48,34,120,.94)}
@@ -198,6 +197,7 @@ img{-webkit-user-drag:none;user-select:none}
 /* (warm brown: the cannon and tray stand on a wooden deck) */
 .gsh .soft{background:radial-gradient(closest-side,rgba(70,36,10,.7),rgba(70,36,10,.42) 45%,rgba(70,36,10,0));filter:blur(6px)}
 .gsh .cast{background:radial-gradient(closest-side,rgba(70,36,10,.45),rgba(70,36,10,.24) 50%,rgba(70,36,10,0));filter:blur(9px)}
+.gsh .pool{background:radial-gradient(closest-side,rgba(66,32,8,.72),rgba(66,32,8,.6) 55%,rgba(66,32,8,.3) 82%,rgba(66,32,8,0));filter:blur(7px)} /* (a wide, even shadow that spreads past a base: start screen) */
 .gsh .contact{background:radial-gradient(closest-side,rgba(40,18,4,.95),rgba(40,18,4,.62) 50%,rgba(40,18,4,0));filter:blur(2px)}
 .gsh .glow{background:radial-gradient(closest-side,rgba(90,236,255,.62),rgba(90,236,255,.28) 50%,rgba(90,236,255,0));filter:blur(2px)}
 .gsh .gold{border:3px solid rgba(255,248,205,.95);box-shadow:0 0 6px 2px rgba(255,214,70,.95),0 0 18px 7px rgba(255,176,20,.65),inset 0 0 8px 2px rgba(255,214,70,.8)}
@@ -246,20 +246,17 @@ body.lowfx #spot .sl{-webkit-backdrop-filter:none;backdrop-filter:none;backgroun
 .gsh.light{will-change:opacity}
 #thumb.live .gsh{will-change:transform,opacity}
 
-/* ---------- start screen (thumbnail from the art) ---------- */
+/* ---------- start screen: the user's mockup (art/start_screen/start_mockup.png), see src/35_title.js ---------- */
 #world.title #cloud,#world.title #cannon,#world.title #rack,#world.title #rackFront,#world.title #balls,#world.title #bshadows,#world.title #hglows,#world.title #ground,#world.title #cannonFront{visibility:hidden}
 #thumb{position:absolute;inset:0;pointer-events:none}
 #thumb.gone{display:none}
 .tp{position:absolute;display:block;transform-origin:50% 50%;pointer-events:none}
-#thumb.live .tp,#thumb.live #rays,#thumb.live #sunGlow,#thumb.live #playBtn{will-change:transform,opacity}
-.tp.lit{filter:brightness(1.22) drop-shadow(0 0 16px rgba(255,236,150,.9))}
-.tp.fireLit{filter:brightness(1.18) drop-shadow(0 0 16px rgba(255,90,40,.7))}
-.tp.fireBase{filter:drop-shadow(0 0 6px rgba(255,90,40,.7))}
-#rays{position:absolute;left:836px;top:560px;width:2700px;height:2700px;border-radius:50%;opacity:0;pointer-events:none;
-  background:repeating-conic-gradient(from 0deg,rgba(255,255,255,.36) 0deg 5deg,rgba(255,255,255,0) 5deg 15deg);
-  -webkit-mask:radial-gradient(circle,#000 0,rgba(0,0,0,.7) 16%,transparent 58%);mask:radial-gradient(circle,#000 0,rgba(0,0,0,.7) 16%,transparent 58%)}
-#sunGlow{position:absolute;left:836px;top:560px;width:720px;height:720px;border-radius:50%;opacity:0;pointer-events:none;
-  background:radial-gradient(circle,rgba(255,255,240,1) 0,rgba(255,250,215,.75) 16%,rgba(255,246,200,.25) 36%,rgba(255,255,255,0) 62%)}
+#thumb.live .tp,#thumb.live #playBtn,#thumb.live .tx{will-change:transform,opacity}
+.tp.lit{filter:brightness(1.2) drop-shadow(0 0 16px rgba(255,236,150,.9))}
+/* the cage group: its whole picture, x's shadow on the floor, x, its front bars (x is inside, between them) */
+.tcage img{position:absolute;display:block;max-width:none;pointer-events:none}
+.tcage .tx{transform-origin:50% 92%}
+.tcage .xsh{position:absolute;display:block;border-radius:50%;transform-origin:50% 50%;background:radial-gradient(closest-side,rgba(120,56,0,.6),rgba(120,56,0,.28) 55%,rgba(120,56,0,0))}
 #playBtn{position:absolute;pointer-events:auto;cursor:pointer;transform-origin:50% 50%}
 #playBtn img{position:relative;width:100%;height:100%;display:block;pointer-events:none;filter:drop-shadow(0 6px 10px rgba(80,20,0,.35))}
 #playBtn .pg{position:absolute;inset:-16%;border-radius:50%;pointer-events:none;opacity:0;background:radial-gradient(closest-side,rgba(255,226,120,.95),rgba(255,214,90,.55) 55%,rgba(255,214,90,0))}
@@ -313,7 +310,7 @@ html:not(.fit) #stage,html:not(.fit) #stageTop{visibility:hidden} /* (until fitS
       <img id="rackFront" class="spr" data-src="assets/img/rack_front.webp" alt="">
       <div id="hglows"></div>
     </div>
-    <div id="thumb"><div id="sunGlow"></div><div id="rays"></div>
+    <div id="thumb">
       <button id="playBtn" data-i18n-attr="aria-label:btnPlay"><span class="pg"></span><span class="rp"></span><img src="assets/img/playbtn.webp" alt="" data-i18n-attr="alt:btnPlay"></button></div>
     <div id="spot"><div class="sl"></div><div class="sl"></div></div>
     <div id="overlay">

@@ -16,10 +16,14 @@ It is based on the *Cannon Quest* deck, the POD A stand-up brief (16 Nov 2026), 
 - Keyboard: `1`–`8` load a ball, `Backspace` removes the last one, `Enter` fires, `P` pauses, `M` mutes.
 
 ## What's in the game
-- **Start screen:** built from your thumbnail art and the Play button you supplied, in a clean, uncluttered layout.
-  - The logo sits at the top, the Play button in the centre, the cannon at the bottom left, and the only cloud in the sky on the right, with x caged on it.
-  - Soft sun rays turn behind the Play button. The logo bounces in, the cloud floats in and the cage drops onto it.
-  - Every few seconds the cannon fires one ball (smoke, fireball, recoil) in a low arc under the logo. It hits the cage, which rattles while the cloud squashes. Nothing stays on screen, so it never gets cluttered.
+- **Start screen:** your mockup `art/start_screen/start_mockup.png`, built from your sheet `art/start_screen/start_sheet.png`. Every piece sits where the mockup puts it, on the game's own deck background.
+  - The CANNON QUEST plaque is at the top, the wooden cannon at the bottom left, and the golden cage at the bottom right with x inside it. The Play button sits in the middle; it is smaller than in the mockup (176 art px instead of 257), as you asked.
+  - x is really inside the cage: the cage is two layers (its whole picture behind x, and only its front bars, top ring and base lip in front of x).
+  - x wants out. In a loop of about 10 s it peeks through the bars, shoves the left bars, then the right bars, jumps and bonks the roof, then grabs the bars and rattles them, then rests and tries again. The cage answers every time: it tips onto its edge and wiggles back, hops and thuds down (with dust), or shakes.
+  - The logo bounces in, the cannon slides in, and the cage drops onto the deck. Play pops in, floats a little over its shadow and pulses a soft ripple.
+  - Pressing Play fires the cannon, bursts the button, and sends the logo up, the cannon left and the cage right.
+  - Under reduced motion everything is simply in place and x sits still.
+  - To recut the pieces: `tools/cut_start_screen.py` (EDSR 2×; the cage and x 4×) prints each piece's box for `TL` in `src/35_title.js`.
 - **Background:** your deck picture `art/background/new_background.png`, exactly as you made it: blue sky with five clouds, mountains, the forest with its big trees, the rope railing on wooden posts, and the wooden deck the cannon and the tray stand on. (`art/background/new_background_sheet.png` is the parts sheet you sent with it.)
   - It is cut into layers that move at different speeds as the camera moves and shakes (parallax): the sky drifts least, then the mountains, then the trees, and the deck moves with the cannon. With the camera at rest they stack back into your picture pixel for pixel. Each layer carries a little hidden picture under the edge of the layer in front, so no gap ever shows.
   - The scene is alive (`src/32_scenery.js`): the two leafy plants behind the railing sway in the wind, and the five clouds drift slowly to and fro. It runs as CSS keyframes, so it stays smooth even when the game is busy. It freezes on pause and stands still, exactly as painted, under reduced motion.
@@ -85,9 +89,9 @@ cannon quest/
 |---|---|
 | `src/` | The game's source code and page, in the order `build.sh` joins them |
 | `build.sh` | Rebuilds `index.html` (with the font embedded at the `<!--FONTS-->` line of `src/00_head.html`), `js/script.js`, `js/sfx.js` and `locales/locales.js` from `src/` and `locales/locales.json` |
-| `tools/` | `vo_studio.mjs` (makes the clips in the studio), `vo_build.sh` (turns them into `.webm`), `gen_locales.mjs` (run by `build.sh`), `cut_ui_elements.py` (cuts the cannon, FIRE, tray and balls), `upscale2x.py` + `cut_deck_bg.py` (the background layers) |
+| `tools/` | `vo_studio.mjs` (makes the clips in the studio), `vo_build.sh` (turns them into `.webm`), `gen_locales.mjs` (run by `build.sh`), `cut_ui_elements.py` (cuts the cannon, FIRE, tray and balls), `cut_start_screen.py` (cuts the start screen), `upscale2x.py` + `cut_deck_bg.py` (the background layers) |
 | `art/sprite_sheets/` | `ui_elements.png`: the UI sheet the cannon, FIRE button, tray and balls are cut from (`tools/cut_ui_elements.py`). `new.png`: the cloud, cage, x and buttons (`tools/cut_new_art.py`). `1.png`–`4.png`: older glossy sheets. `flat_sprites.png`: a flat-art sheet that was tried and dropped |
-| `art/start_screen/` | `thumbnail.png` (start-screen sheet; the logo `t_logo.png` still comes from it) and `play_button.png` |
+| `art/start_screen/` | `start_sheet.png` (the start-screen sheet: logo, cannon, Play button, cage, x; cut by `tools/cut_start_screen.py`) and `start_mockup.png` (the layout it follows). Older, no longer used: `thumbnail.png` and `play_button.png` |
 | `art/background/` | `new_background.png` (the background, cut into layers by `tools/cut_deck_bg.py`), `new_background_2x.png` (it at 2×, EDSR) and `new_background_sheet.png` (its parts sheet). Older, no longer used: `background_layers.png` (the lake-and-plaza layer sheet) and `5.png` (the first one-piece background) |
 | `docs/ASSET_PROMPTS.md` | The image prompts for the flat-art sprite sheet |
 | `claude/skills/` | Your skills for game projects: localization, animation, translation, compression |
