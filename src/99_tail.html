@@ -1,3 +1,27 @@
+<script>
+/* Fit the art-space stage to the screen before the first paint, so the loading bar shows at once, in its place
+   (the same maths as Stage.resize; once the game's Stage is up, it does the job). Loader.finish() removes it. */
+function fitStage() {
+  if (typeof Stage !== 'undefined' && Stage.el) { Stage.resize(); return; }
+  var DW = 1672, DH = 941, W = innerWidth, H = innerHeight, S = Math.min(W / DW, H / DH);
+  document.getElementById('stage').style.transform = document.getElementById('stageTop').style.transform =
+    'translate(' + (W - DW * S) / 2 + 'px,' + (H - DH * S) / 2 + 'px) scale(' + S + ')';
+  document.documentElement.classList.add('fit');
+}
+fitStage(); addEventListener('resize', fitStage);
+</script>
+<!-- Load order: GSAP (bundled in libs/, never a CDN), the loading screen (js/loader.js: it starts the bar and
+     tracks everything loading), the words (js/i18n.js reads locales/locales.json, or locales/locales.js when
+     opened from disk), then the game (js/script.js, built from src/ by ./build.sh). -->
+<script src="libs/gsap.min.js"></script>
+<script src="js/loader.js"></script>
+<script src="js/i18n.js"></script>
+<script>
+I18n.load(function () {
+  I18n.applyStatic();
+  Loader.words();
+  Loader.loadScript('js/script.js');
+});
 </script>
 </body>
 </html>

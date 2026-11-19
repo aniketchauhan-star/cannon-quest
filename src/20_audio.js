@@ -38,6 +38,7 @@ const Sound = {
     if (m) VO.stop();
   },
   play(key, { vol = 1, rate = 1, t = 0, verb = 0.08, pan = null, vary = 0.04 } = {}) {
+    if (Motion.skipping) return true; // a skipped shot is silent (and no synth fallback either)
     const b = this.buf[key];
     if (!this.ctx || !b) return false;
     const c = this.ctx, t0 = c.currentTime + t;
@@ -52,7 +53,7 @@ const Sound = {
     return true;
   },
   tone({ type = 'sine', f = 440, f2 = null, t = 0, dur = 0.2, vol = 0.25, attack = 0.005 }) {
-    if (!this.ctx) return;
+    if (!this.ctx || Motion.skipping) return;
     const c = this.ctx, t0 = c.currentTime + t, o = c.createOscillator(), g = c.createGain();
     o.type = type; o.frequency.setValueAtTime(f, t0);
     if (f2) o.frequency.exponentialRampToValueAtTime(Math.max(20, f2), t0 + dur);
@@ -60,7 +61,7 @@ const Sound = {
     o.connect(g); g.connect(this.sfx); o.start(t0); o.stop(t0 + dur + 0.05);
   },
   noise({ t = 0, dur = 0.3, vol = 0.2, type = 'lowpass', f = 1200, f2 = null, q = 1, attack = 0.004 }) {
-    if (!this.ctx) return;
+    if (!this.ctx || Motion.skipping) return;
     const c = this.ctx, t0 = c.currentTime + t, s = c.createBufferSource(); s.buffer = this.noiseBuf; s.loop = true;
     const fl = c.createBiquadFilter(); fl.type = type; fl.Q.value = q; fl.frequency.setValueAtTime(f, t0);
     if (f2) fl.frequency.exponentialRampToValueAtTime(Math.max(30, f2), t0 + dur);
@@ -78,14 +79,17 @@ const Sound = {
   press() { this.play('toggle', { vol: 0.75, vary: 0.02 }); },
   tick() { if (!this.play('tick', { vol: 0.45 })) this.tone({ f: 1500, dur: 0.05, vol: 0.05 }); },
   click() { this.play('click', { vol: 0.6 }); },
-  boom() {
-    const ok = this.play('boom', { vol: 1, rate: 0.82, verb: 0.35, vary: 0.03, pan: 0 });
-    this.play('shot', { vol: 0.5, rate: 0.62, verb: 0.2, pan: 0 });
-    this.play('thunder', { vol: 0.42, rate: 1.1, t: 0.03, verb: 0.25, pan: 0 });
-    this.tone({ f: 78, f2: 34, dur: 0.6, vol: ok ? 0.5 : 0.7, attack: 0.003 });
-    if (!ok) this.noise({ dur: 0.75, vol: 0.7, type: 'lowpass', f: 2400, f2: 90, attack: 0.002 });
+  // a real cannon: a close farm-gun crack for the attack, a recorded boom for the body and rumble, and a
+  // distant shot's echo rolling back off the lake (all recordings; no synth layer). v = how big
+  boom(v = 1) {
+    const alt = Math.random() < 0.35;
+    this.play('blast', { vol: 0.75 * v, rate: 0.9, verb: 0.15, vary: 0.04, pan: 0 });
+    this.play(alt ? 'cannonb' : 'cannon', { vol: 1 * v, rate: alt ? 0.92 : 0.86, verb: 0.3, vary: 0.03, pan: 0, t: 0.004 });
+    this.play('echo', { vol: 0.9 * v, rate: 0.95, t: 0.09, verb: 0.35, vary: 0.04, pan: 0.25 });
   },
-  whistle() { if (!this.play('airmid', { vol: 0.5, rate: 1.3 })) this.tone({ f: 520, f2: 1500, dur: 0.6, vol: 0.05, attack: 0.08 }); },
+  whistle() { this.play('whoosh', { vol: 0.55, rate: 1.15, vary: 0.05 }); }, // the ball rushing out of the barrel (a real swung metal tube)
+  // the cannon winds up: a short rising whoosh into the blast
+  charge() { this.play('air', { vol: 0.3, rate: 1.55, vary: 0.02 }); this.play('whoosh', { vol: 0.22, rate: 1.7, vary: 0.02 }); },
   ding(i = 0) { const r = [1, 1.26, 1.5, 2][i % 4]; if (!this.play(i % 2 ? 'glass2' : 'glass1', { vol: 0.55, rate: r, verb: 0.3, vary: 0.01 })) this.tone({ f: 1318 * r, dur: 0.6, vol: 0.12 }); },
   sparkle() { [1.5, 1.68, 2, 2.24, 2.52].forEach((r, i) => { if (!this.play('glass2', { vol: 0.28, rate: r, t: i * 0.05, verb: 0.4, vary: 0.005 })) this.tone({ type: 'triangle', f: 1568 * r / 1.5, t: i * 0.045, dur: 0.22, vol: 0.05 }); }); },
   unlock() { if (!this.play('key', { vol: 0.85, verb: 0.15, pan: 0 })) this.noise({ dur: 0.05, vol: 0.2, type: 'highpass', f: 2500 }); },
@@ -119,9 +123,12 @@ const Sound = {
 };
 
 // ---------- background music: teen-style chill electronic track ----------
-const TRACKS = { chill: 'assets/music/chillwave.mp3' };
+const TRACKS = { chill: 'assets/music/chillwave.webm' };
+// a short buzz on phones that support it (never when muted or with reduced motion)
+const Haptic = { buzz(p) { if (Sound.muted || Motion.still() || !navigator.vibrate) return; try { navigator.vibrate(p); } catch (e) { /* ignore */ } } };
+
 const Music = {
-  el: null, choice: 'chill', level: 0.36, target: 0, on: false, paused: false,
+  el: null, choice: 'chill', level: 0.36, target: 0, on: false, paused: false, vol: 0, hitT: 0,
   start() { this.on = true; this.setTrack(this.choice); },
   setTrack(name) {
     this.choice = name;
@@ -136,57 +143,116 @@ const Music = {
   setMuted(m) { if (this.el) this.el.muted = m; },
   pause() { this.paused = true; if (this.el) this.el.pause(); },
   resume() { this.paused = false; if (this.el) this.el.play().catch(() => {}); },
-  update(dt) { if (this.el) { const v = this.el.volume; this.el.volume = clamp(v + clamp(this.target - v, -dt * 0.4, dt * 0.4), 0, 1); } },
+  // the music dips for a moment under each cannon blast, so the boom hits harder (a volume dip, not a filter:
+  // routing the <audio> through Web Audio would silence it when the game is opened from disk)
+  punch() { this.hitT = 1; },
+  update(dt) {
+    if (!this.el) return;
+    this.vol = clamp(this.vol + clamp(this.target - this.vol, -dt * 0.4, dt * 0.4), 0, 1);
+    this.hitT = Math.max(0, this.hitT - dt * 2.5);
+    const v = clamp(this.vol * (1 - 0.55 * Math.sin(Math.min(1, this.hitT * 1.25) * Math.PI / 2)), 0, 1);
+    if (Math.abs(v - this.el.volume) > 0.002) this.el.volume = v;
+  },
 };
 
-// ---------- voice-over + captions (drop recordings in assets/vo/<id>.mp3) ----------
+// ---------- voice-over + captions, by key (localization skill) ----------
+// Each line's text is T(key); its clip is I18n.voice(key) = assets/VO/en/<key>.webm, made in Aamir's TTS
+// studio in ONE man's voice (the user's choice of 2026-11-18: see tools/vo_studio.mjs and the "voice" in
+// tools/vo_lines.json). VO_FILES (build.sh) lists the keys that have a clip. A line with no clip, or a
+// browser that can't play it, is read by the device's own voice: a man's, the most natural one the device
+// has (Edge's "Natural" voices, then Google's, then the system's; Indian English first among equals),
+// coloured by the line's mood (VO_MOOD, from tools/vo_lines.json "mood", via build.sh).
+const MAN = /\b(male|man|prabhat|madhur|kunal|aarav|ravi|aman|rishi|daniel|alex|aaron|arthur|gordon|oliver|thomas|guy|ryan|andrew|brian|christopher|eric|roger|steffan|davis|jason|tony|william|liam|connor|george|david|mark|james|nathan|evan|tom)\b/i;
+const NOVELTY = /albert|bad news|bahh|bells|boing|bubbles|cellos|good news|jester|organ|superstar|trinoids|whisper|wobble|zarvox|deranged|hysterical|\b(fred|ralph|junior|grandpa|grandma|eddy|reed|rocko|sandy|shelley|flo)\b/i;
+// how each mood colours the device's voice (the studio's clips carry their own emotion)
+const MOODS = {
+  hype: { rate: 1.04, pitch: 1.06 },  // welcome, round intros: upbeat
+  cheer: { rate: 1.06, pitch: 1.1 },  // x is free, a high score: excited
+  teach: { rate: 0.96, pitch: 1 },    // tutorial steps: calm and clear
+  soft: { rate: 0.92, pitch: 0.95 },  // x stays caged: gentle, never "wrong"
+  warm: { rate: 0.98, pitch: 1.03 },  // a low score: kind, encouraging
+};
 const VO = {
-  voice: null, token: 0, missing: new Set(), cur: null,
+  voice: null, local: null, token: 0, missing: new Set(), cur: null, finish: null, utter: null, cancelAt: -1e9, busy: null,
   pickVoice() {
     if (!window.speechSynthesis) return;
     const vs = speechSynthesis.getVoices(); if (!vs.length) return;
-    const prefs = ['Microsoft Aria Online', 'Microsoft Jenny Online', 'Microsoft Ana Online', 'Google US English', 'Samantha', 'Google UK English Female', 'Karen', 'Moira', 'Tessa'];
-    for (const p of prefs) { const v = vs.find((x) => x.name.includes(p)); if (v) { this.voice = v; return; } }
-    this.voice = vs.find((v) => /^en[-_]/i.test(v.lang)) || null;
+    const lang = (v) => String(v.lang || '').replace(/_/g, '-').toLowerCase();
+    const quality = (v) => (/natural|neural|enhanced|premium/i.test(v.name) ? 3 : /google/i.test(v.name) ? 2 : /\baman\b/i.test(v.name) ? 1.5 : 0);
+    const accent = (v) => ({ 'en-in': 1.2, 'en-gb': 0.6, 'en-us': 0.5 }[lang(v)] ?? (lang(v).startsWith('en') ? 0.2 : -99));
+    const score = (v) => quality(v) * 2 + accent(v) - (NOVELTY.test(v.name) ? 20 : 0);
+    const best = (list) => list.filter((v) => accent(v) > -99).sort((a, b) => score(b) - score(a))[0] || null;
+    const men = vs.filter((v) => MAN.test(v.name));
+    this.voice = best(men) || best(vs);
+    this.local = best(men.filter((v) => v.localService)) || best(vs.filter((v) => v.localService)); // when offline
   },
-  speakTTS(text, finish) {
+  // (as in Crown Quest: cancel only what is speaking, never speak() within 120 ms of a cancel, which Chrome can
+  // swallow, and keep a reference to the utterance, whose 'end' Chrome drops once it is garbage-collected)
+  speakTTS(text, finish, key) {
     if (!window.speechSynthesis) return;
     try {
-      speechSynthesis.cancel();
+      const sy = speechSynthesis;
+      if (sy.speaking || sy.pending) { sy.cancel(); this.cancelAt = performance.now(); }
       const u = new SpeechSynthesisUtterance(text);
       if (!this.voice) this.pickVoice();
-      if (this.voice) u.voice = this.voice;
-      u.rate = 0.98; u.pitch = 1.05; u.onend = finish; u.onerror = finish;
-      speechSynthesis.speak(u);
+      if (this.voice) { u.voice = this.voice; u.lang = this.voice.lang; } else u.lang = 'en-IN';
+      const m = MOODS[(typeof VO_MOOD !== 'undefined' && VO_MOOD[key]) || 'teach'];
+      u.rate = m.rate; u.pitch = m.pitch; u.onend = finish;
+      // a network voice (Google's, Edge's) that fails, e.g. offline, gives way to the device's own for good
+      u.onerror = (e) => {
+        const net = this.voice && !this.voice.localService && this.local && this.local !== this.voice;
+        if (net && this.utter === u && !/interrupted|canceled/.test(e && e.error)) { this.voice = this.local; this.speakTTS(text, finish, key); } else finish();
+      };
+      this.utter = u;
+      const go = () => { if (this.utter !== u) return; try { if (sy.paused) sy.resume(); sy.speak(u); } catch (e) { finish(); } };
+      const since = performance.now() - this.cancelAt;
+      if (since < 120) gsap.delayedCall((120 - since) / 1000, go); else go();
     } catch (e) { /* captions still show */ }
   },
-  async say(text, hold = 0.5, id = null) {
-    const my = ++this.token, cap = $('#cap');
+  // say a line by key: caption + clip (or the device voice); resolves when it has been said, or at once when stopped
+  async say(key, hold = 0.5) {
+    const text = T(key), my = ++this.token, cap = $('#cap');
     if (this.cur) { try { this.cur.pause(); } catch (e) { /* ignore */ } this.cur = null; } // never let two lines overlap
+    if (this.finish) this.finish();
     cap.querySelector('.txt').textContent = text;
     cap.classList.add('on');
     Music.duck(true);
     const est = 0.9 + text.length * 0.058;
-    await new Promise((resolve) => {
+    const spoken = new Promise((resolve) => {
       let done = false;
-      const finish = () => { if (!done) { done = true; resolve(); } };
+      const finish = () => { if (!done) { done = true; if (this.finish === finish) this.finish = null; resolve(); } };
+      this.finish = finish;
       if (Sound.muted) { wait(est).then(finish); return; }
       wait(est + 2.5).then(finish);
-      if (id && typeof VO_FILES !== 'undefined' && VO_FILES.includes(id) && !this.missing.has(id)) {
-        const a = new Audio(`assets/vo/${id}.mp3`); this.cur = a;
-        const fail = () => { this.missing.add(id); if (this.cur === a && !done) this.speakTTS(text, finish); };
-        a.addEventListener('ended', finish, { once: true }); a.addEventListener('error', fail, { once: true });
-        const p = a.play(); if (p && p.catch) p.catch((err) => { if (!err || err.name !== 'AbortError') fail(); }); // AbortError = we stopped it on purpose
-      } else this.speakTTS(text, finish);
+      if (typeof VO_FILES !== 'undefined' && VO_FILES.includes(key) && !this.missing.has(key)) {
+        let a = null;
+        const fail = () => { this.missing.add(key); if (a && this.cur === a && !done) this.speakTTS(text, finish, key); };
+        a = I18n.say(key, { onended: finish, onerror: fail });
+        this.cur = a;
+      } else this.speakTTS(text, finish, key);
     });
+    this.busy = spoken;
+    await spoken;
+    if (this.busy === spoken) this.busy = null;
+    if (my !== this.token) return;
     await wait(hold);
     if (my === this.token) { cap.classList.remove('on'); Music.duck(false); }
+  },
+  // say a line once the one being said has ended, so lines follow each other instead of cutting each other
+  // off (a newer line, or stop(), drops it: the newest moment wins)
+  async sayAfter(key, hold = 0.5) {
+    const my = this.token;
+    if (this.busy) await Promise.race([this.busy, wait(5)]);
+    if (my !== this.token) return;
+    await this.say(key, hold);
   },
   stop() {
     this.token++;
     $('#cap').classList.remove('on');
     if (this.cur) { try { this.cur.pause(); } catch (e) { /* ignore */ } this.cur = null; }
-    if (window.speechSynthesis) speechSynthesis.cancel();
+    this.utter = null;
+    if (window.speechSynthesis && (speechSynthesis.speaking || speechSynthesis.pending)) { speechSynthesis.cancel(); this.cancelAt = performance.now(); }
+    const f = this.finish; this.finish = null; if (f) f();
     Music.duck(false);
   },
   pause() { if (window.speechSynthesis) speechSynthesis.pause(); if (this.cur) this.cur.pause(); },

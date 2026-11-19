@@ -1,7 +1,7 @@
 # Credits
 
 ## Art
-All game art comes from the files you supplied: the asset sheets and background (`1.png`–`5.png`), the start-screen sheet (`thumbnail .png`) and the Play button (`play button.png`).
+All game art comes from the files you supplied, kept in `art/`: the sprite sheets (`art/sprite_sheets/`), the start-screen sheet and Play button (`art/start_screen/`), and the background layer sheet and mockup (`art/background/`).
 
 ## Music
 **"Chill Wave"** by Kevin MacLeod ([incompetech.com](https://incompetech.com)).
@@ -9,16 +9,23 @@ Licensed under [Creative Commons: By Attribution 4.0](https://creativecommons.or
 The licence requires this credit. It is also shown on the title screen.
 
 ## Voice-over
-Generated with **Kokoro-82M** by hexgrad (Apache License 2.0), voice `af_heart`, run locally with `kokoro-onnx` (MIT).
+Every line is made in Aamir's TTS studio **Ai Wala Human By Aamir**, in one man's voice (since 18 Nov 2026, at the user's request; by default **Male Child (Energetic)**, which is Gemini voice Puck, an adult man's upbeat voice), with `tools/vo_studio.mjs`. Until the studio's clips are in `assets/VO/en/`, the lines are read by the device's own voice (a man's where the device has one). The earlier Kokoro clips were removed on 18 Nov 2026: the project's rules allow only the studio's voice.
 
 ## Sound effects
-All sound effects are recorded audio released as **CC0 (public domain)**. No credit is required, but here are the sources:
+All sound effects are real recordings (no synthesized or AI-made sound), released as **CC0 or public domain**. No credit is required, but here are the sources:
 - Kenney: *RPG Audio* and *Interface Sounds* ([kenney.nl](https://www.kenney.nl), via OpenGameArt)
 - rubberduck: *100 CC0 SFX* and *100 CC0 SFX #2* (OpenGameArt)
+- Joseph SARDIN, [BigSoundBank.com](https://bigsoundbank.com) (CC0)
+- Fg2, Wikimedia Commons (public domain)
+
+They are stored as Opus (`assets/sfx/*.webm`) to keep the game small.
 
 | File | Used for | Source file |
 |---|---|---|
-| boom, shot, thunder | Cannon blast | explosion, shot_01, sfx100v2_thunder_01 |
+| cannon, cannonb | Cannon blast: the boom and its rumble | [Explosions-LS100150.ogg](https://commons.wikimedia.org/wiki/File:Explosions-LS100150.ogg) and [Explosion-LS100155.ogg](https://commons.wikimedia.org/wiki/File:Explosion-LS100155.ogg), recorded by Fg2 at Nikko's Toshogu Spring Festival (public domain) |
+| blast | Cannon blast: the close crack | BigSoundBank #1808, a farm bird-scare gun (CC0) |
+| echo | Cannon blast: the echo off the lake | [BigSoundBank #1023](https://bigsoundbank.com/explosion-far-away-s1023.html), "Explosion far away" (CC0) |
+| whoosh | The ball rushing out of the barrel | [BigSoundBank #1800](https://bigsoundbank.com/whoosh-7-s1800.html), a swung metal tube (CC0) |
 | plop, pluck | Picking a ball | plop_02, pluck_002 |
 | latch, woodhit | Ball seating in a socket | metalLatch, sfx100v2_wood_hit_01 |
 | woodhit2, wooden | Balls settling, "socket full" knock | sfx100v2_wood_hit_02, wooden_02 |
@@ -32,4 +39,5 @@ All sound effects are recorded audio released as **CC0 (public domain)**. No cre
 | water | Lake-side ambience | sfx100v2_loop_water_01 |
 
 ## Libraries and fonts
+- GSAP 3.15.0 by GreenSock, bundled locally in `libs/gsap.min.js` (free under the GSAP Standard License)
 - Fredoka and Lilita One from Google Fonts (SIL Open Font License)
