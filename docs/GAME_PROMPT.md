@@ -188,7 +188,7 @@ The whole sequence is computed **before anything moves**: the equation after eve
 - The camera is at zoom 1.05 on the cloud.
 - A round orange **Play again** button restarts the whole session cleanly: kill the timelines, clear flying elements, and reset the camera, cloud and sockets.
 
-### 6.8 First-time spotlight tutorials (first session only)
+### 6.8 First-time spotlight tutorial (first game on the device only, the first −5 shot only)
 **Spotlight:** everything except the target is dimmed and blurred, with a gold ring and a tapping hand. On guided steps only the highlighted target accepts taps; anything else gives a nope and a nudge. Skip ends the tutorial.
 
 | Round | Spotlight on | Voice line key (caption + VO) |
@@ -196,10 +196,8 @@ The whole sequence is computed **before anything moves**: the equation after eve
 | 1 | the caged x | `tutFreeX`: "Let's free x!" |
 | 1 | the glowing −5 ball (only it is tappable) | `tutTapOp`: "Tap an operation to load the cannon." |
 | 1 | FIRE | `tutTapFireOne`: "Tap Fire to launch your operation." |
-| 2 | the two sockets with their 1 / 2 markers | `tutOrder`: "Load the operations into the cannon in the order you want to apply them." |
-| 2 | the sockets (pulse) | `tutLeftRight`: "The cannon fires from left to right." |
-| 2 | after the first ball is loaded | `tutNextOp`: "Now load your next operation." |
-| 2 | FIRE (a soft spotlight that lifts if a ball is unloaded) | `tutTapFireMany`: "Tap Fire to launch your operations." |
+
+There is no other tutorial (the user, 19 Nov 2026): the two-socket rounds start straight away, with their 1 / 2 markers on the cannon. It is remembered on the device once the player fires or taps Skip; `?tutorial` in the address shows it again.
 
 ### 6.9 HUD and controls
 - **Pause** freezes everything: the GSAP global timeline, music, SFX and VO. Its icon swaps to ▶; tap again to continue. There is **no pause popup**. The game auto-pauses when the tab is hidden.
