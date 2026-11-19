@@ -400,7 +400,7 @@ async function restartGame() {
   $('#fly').innerHTML = '';
   Object.assign(Stage.cam, { fx: CX, fy: CY, z: 1 }); Stage.snap(); TimeFx.reset(); Cannon.settle(); FX.parts = [];
   Cloud.a = 1; Cloud.s = 1; Cloud.blur = 0; Cloud.rot = 0; Cloud.sq.reset();
-  QCard.label('qTask');
+  QCard.label(null); // back to no label during play
   G.rackFor = null;
   runSession();
 }
@@ -485,14 +485,13 @@ function frame(time, deltaMs) {
   if (G.state === 'title' && !Motion.reduced) { const c = Stage.cam, tt = t - Title.t0; c.fx = CX + Math.sin(tt * 0.22) * 28; c.fy = CY + Math.sin(tt * 0.31) * 10; c.z = 1.05 + Math.sin(tt * 0.17) * 0.02; } // (drifts from where boot framed it)
   Cloud.apply(t, dt); Cannon.update(dt, t); updateBalls(dt, t); Rack.applyEnter(); Title.update(t, dt);
   if (G.inputOn && !G.helping) { G.idle += dt; if (G.idle > 7) { G.idle = 0; idleHint(); } }
-  Stage.update(rdt); Scenery.update(rdt); Spot.update(dt, t); FX.update(dt); FX.draw();
+  Stage.update(rdt); Spot.update(dt, t); FX.update(dt); FX.draw();
 }
 // ---- pictures: there is no loading screen. The start screen shows as soon as its own pictures are in (the page
 // preloads them); the play scene's arrive while the player is on the start screen (Title.exit waits for them,
 // in case Play is tapped first) ----
 const Pics = {
-  TITLE: ['bg_mount', 'bg_trees', 'bg_lake', 'bg_plaza', 'bg_rocksL', 'bg_rocksR', 'bg_grass', 'bg_bush', 'bg_tuft1', 'bg_tuft2', 'bg_foreL', 'bg_foreR',
-    'sun_glow', 'sun_rays', 'cloud', 't_logo', 't_cage', 't_cannon', 't_fire', 'playbtn', 'ball_0'],
+  TITLE: ['bg_sky', 'bg_clouds', 'bg_mount', 'bg_trees', 'bg_plantL', 'bg_plantR', 'bg_deck', 'cloud', 't_logo', 't_cage', 't_cannon', 't_fire', 'playbtn', 'ball_0'],
   GAME: ['cannon1', 'cannon2', 'cannon1_front', 'cannon2_front', 'rack', 'rack_front', 'fire', 'cage_x', 'xchar', 'hand', 'pause', 'play', 'sound',
     ...[1, 2, 3, 4, 5, 6, 7].map((i) => `ball_${i}`)],
   game: null, // (a promise: the play scene's pictures and the font)
@@ -513,7 +512,7 @@ async function boot() {
   removeEventListener('resize', fitStage); // (index.html's first fit; the game's Stage keeps the screen fitted from here)
   Object.assign(Stage.cam, { fx: CX, fy: CY, z: 1.05 }); Stage.snap(); Stage.update(0);
   await Pics.load(Pics.TITLE, 8); // usually in already: they have been downloading since the page's <head>
-  Cloud.init(); Cannon.init(); Rack.init(); EqUI.init(); Title.init(); Spot.init(); Skip.init(); Scenery.init();
+  Cloud.init(); Cannon.init(); Rack.init(); EqUI.init(); Title.init(); Spot.init(); Skip.init();
   wireInput();
   gsap.ticker.add(frame);
   window.__cqBooted = true; window.__cq = { G, Clock, Rack, Sound, Music, Stage, EqUI, VO, Motion, Skip, Spot, Title, Cloud, Cannon, TimeFx, Perf, FX, Pics };

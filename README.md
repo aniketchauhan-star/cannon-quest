@@ -20,21 +20,17 @@ It is based on the *Cannon Quest* deck, the POD A stand-up brief (16 Nov 2026), 
   - The logo sits at the top, the Play button in the centre, the cannon at the bottom left, and the only cloud in the sky on the right, with x caged on it.
   - Soft sun rays turn behind the Play button. The logo bounces in, the cloud floats in and the cage drops onto it.
   - Every few seconds the cannon fires one ball (smoke, fireball, recoil) in a low arc under the logo. It hits the cage, which rattles while the cloud squashes. Nothing stays on screen, so it never gets cluttered.
-- **Background:** built from your layer sheet `art/background/background_layers.png` (sky, mountains, trees, lake, plaza, rocks, plants), with no painted clouds, so the equation cloud is the only cloud in the sky.
-  - The layers move at different speeds as the camera moves and shakes (parallax): the mountains drift least, and the corner plants move a little more than the plaza. This gives the scene depth.
-  - The scene is alive (`src/32_scenery.js`):
-    - **Wind:** every grass tuft, bush and corner plant sways on one gust curve. Each gust travels across the bank from left to right. It runs as CSS keyframes, so it stays smooth even when the game is busy.
-    - **Water:** a canvas animates the lake. The water ripples, the far trees are mirrored in it, and glints twinkle, thickest under the sun.
-    - **Sun:** a real-looking sun in the top right: a blown-out white disc, a soft bloom, slowly turning glare rays, a warm haze over the far hills, and a faint lens flare that follows the camera.
-    - All of it freezes on pause and stands still under reduced motion. On slow devices the water is drawn lighter.
-  - `tools/cut_bg_layers.py` → `tools/upscale2x.py` (EDSR) → `tools/compose_bg.py` rebuild the layers. The ground comes out in pieces (plaza, rocks, each grass tuft and bush), with their positions in `bg_ground.json` (copied into `GROUND` in `src/32_scenery.js`). `tools/make_sun.py` draws `sun_glow` and `sun_rays`. Each layer's parallax amount is in `PARALLAX` in `src/30_stage.js`.
+- **Background:** your deck picture `art/background/new_background.png`, exactly as you made it: blue sky with five clouds, mountains, the forest with its big trees, the rope railing on wooden posts, and the wooden deck the cannon and the tray stand on. (`art/background/new_background_sheet.png` is the parts sheet you sent with it.)
+  - It is cut into layers that move at different speeds as the camera moves and shakes (parallax): the sky drifts least, then the mountains, then the trees, and the deck moves with the cannon. With the camera at rest they stack back into your picture pixel for pixel. Each layer carries a little hidden picture under the edge of the layer in front, so no gap ever shows.
+  - The scene is alive (`src/32_scenery.js`): the two leafy plants behind the railing sway in the wind, and the five clouds drift slowly to and fro. It runs as CSS keyframes, so it stays smooth even when the game is busy. It freezes on pause and stands still, exactly as painted, under reduced motion.
+  - To rebuild the layers: `tools/upscale2x.py` (EDSR) makes `art/background/new_background_2x.png`, then `tools/cut_deck_bg.py` cuts it into `assets/img/bg_*.webp` and prints each layer's box for the CSS. Each layer's parallax amount is in `PARALLAX` in `src/30_stage.js`.
 - **Equation cloud:** smaller (about 80%) and high in the sky, well clear of the cannon.
-- **Cannon blast:** a white-hot flash, then an orange fireball that cools to red, a shock ring, falling embers, and thick grey smoke. The smoke billows out, rolls sideways, then rises and drifts off on the breeze. The sound is real recordings only: a close gun crack, a recorded boom with its rumble, and a distant echo off the lake (see `CREDITS.md`). The ball's whoosh is a real swung metal tube.
+- **Cannon blast:** a white-hot flash, then an orange fireball that cools to red, a shock ring, falling embers, and thick grey smoke. The smoke billows out, rolls sideways, then rises and drifts off on the breeze. The sound is real recordings only: a close gun crack, a recorded boom with its rumble, and a distant echo (see `CREDITS.md`). The ball's whoosh is a real swung metal tube.
   - Pressing Play bursts the start screen away. The cloud then floats down, the cannon pops up and the tray slides in.
 - **Six rounds from the deck.** Every operation is applied to both whole sides, with exact fractions and negatives. Any route that isolates x is accepted.
 - **Freeing x:** the cage bursts open and the cloud shows the value of x (for example **x = 2**) for a moment. Then x hops, disappears in a puff of sparkles, the cloud clears, and the next cloud arrives.
 - **Not freeing x:** the cage rattles and the cloud floats away. There is no "wrong" label and no retry, and the game moves to the next round.
-- **Grounded scene:** the cannon and the ball tray cast soft shadows on the plaza, balls sit down into their cups, and a loaded ball fills its cannon socket with the gold ring over its edge.
+- **Grounded scene:** the cannon and the ball tray cast soft shadows on the deck, balls sit down into their cups, and a loaded ball fills its cannon socket with the gold ring over its edge.
 - **First-time spotlight tutorial:** everything is blurred and dimmed except the one thing being explained, with a gold ring and a tapping hand.
   - Round 1: the caged x ("Let's free x!"), then the glowing −5 ball (only that ball can be tapped), then FIRE.
   - Round 2: the two sockets with their 1 and 2 markers while the firing order is explained, then FIRE once both are loaded.
@@ -89,10 +85,10 @@ cannon quest/
 |---|---|
 | `src/` | The game's source code and page, in the order `build.sh` joins them |
 | `build.sh` | Rebuilds `index.html` (with the font embedded at the `<!--FONTS-->` line of `src/00_head.html`), `js/script.js`, `js/sfx.js` and `locales/locales.js` from `src/` and `locales/locales.json` |
-| `tools/` | `vo_studio.mjs` (makes the clips in the studio), `vo_build.sh` (turns them into `.webm`), `gen_locales.mjs` (run by `build.sh`) |
-| `art/sprite_sheets/` | `1.png`–`4.png`: the glossy sheets every current sprite is cut from. `flat_sprites.png`: a flat-art sheet that was tried and dropped |
+| `tools/` | `vo_studio.mjs` (makes the clips in the studio), `vo_build.sh` (turns them into `.webm`), `gen_locales.mjs` (run by `build.sh`), `cut_ui_elements.py` (cuts the cannon, FIRE, tray and balls), `upscale2x.py` + `cut_deck_bg.py` (the background layers) |
+| `art/sprite_sheets/` | `ui_elements.png`: the UI sheet the cannon, FIRE button, tray and balls are cut from (`tools/cut_ui_elements.py`). `new.png`: the cloud, cage, x and buttons (`tools/cut_new_art.py`). `1.png`–`4.png`: older glossy sheets. `flat_sprites.png`: a flat-art sheet that was tried and dropped |
 | `art/start_screen/` | `thumbnail.png` (start-screen sheet; the logo `t_logo.png` still comes from it) and `play_button.png` |
-| `art/background/` | `background_layers.png` (the layer sheet the background is built from) and `5.png` (the earlier one-piece background, no longer used) |
+| `art/background/` | `new_background.png` (the background, cut into layers by `tools/cut_deck_bg.py`), `new_background_2x.png` (it at 2×, EDSR) and `new_background_sheet.png` (its parts sheet). Older, no longer used: `background_layers.png` (the lake-and-plaza layer sheet) and `5.png` (the first one-piece background) |
 | `docs/ASSET_PROMPTS.md` | The image prompts for the flat-art sprite sheet |
 | `claude/skills/` | Your skills for game projects: localization, animation, translation, compression |
 
@@ -109,7 +105,8 @@ After changing anything in `src/`, run `./build.sh`.
 | Positions and sizes of the cloud, cannon, tray and holes | top of `src/30_stage.js` (art-space is 1672 × 941, the same as the mockup) |
 | Start-screen layout and timing | `TL` at the top of `src/35_title.js` |
 | A sprite | Replace the file in `assets/img/` and keep the name |
+| Cannon, FIRE button, tray, balls | `python tools/cut_ui_elements.py art/sprite_sheets/ui_elements.png EDSR_x2.pb OUT` (a Python with OpenCV's `dnn_superres`, SciPy and Pillow), then `cwebp -m 6 -q 90 -alpha_q 100` each PNG into `assets/img/`. It prints the numbers for `CANNON` and `RACK` at the top of `src/30_stage.js` |
 
-The cannon art comes in 1- and 2-socket versions, so rounds can use up to 2 sockets. If you supply 3- and 4-socket cannon art, the deck's bonus banks can be added back.
+The cannon comes in 1- and 2-socket versions (the sheet has only 1-socket cannons, so `tools/cut_ui_elements.py` builds the 2-socket one from the same wooden cannon), so rounds can use up to 2 sockets. If you supply 3- and 4-socket cannon art, the deck's bonus banks can be added back.
 
 See `CREDITS.md` for the audio licences.

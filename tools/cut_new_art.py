@@ -1,4 +1,4 @@
-# cut every game sprite from new.png (native resolution); prints the measured geometry
+# cut the cloud, caged x, x on its own and the pause / sound / play buttons from new.png (native resolution)
 import sys, json, numpy as np, cv2
 from PIL import Image, ImageDraw
 from scipy import ndimage as nd
@@ -21,53 +21,9 @@ def polyfit_fill(img, fitm, fill, deg=4):
         s = sum(cf * t for cf, t in zip(np.linalg.lstsq(M, img[..., ch][fitm], rcond=None)[0], terms))
         out[..., ch] = img[..., ch] * (1 - wgt) + s * wgt
     return out
-def holes_of(c, n):
-    L = lum(c); dark = (L < 70) & (c[..., 3] > 200); dark[int(c.shape[0] * 0.66):] = False
-    dark = nd.binary_opening(dark, iterations=3)
-    lab, k = nd.label(dark); sizes = nd.sum(dark, lab, range(1, k + 1)); ids = np.argsort(sizes)[::-1][:n] + 1
-    hs = []
-    for i in ids:
-        m = nd.binary_fill_holes(lab == i); ys, xs = np.nonzero(m)
-        hs.append((xs.mean(), ys.mean(), np.sqrt(m.sum() / np.pi)))
-    return sorted(hs)
-def ring_front(c, hs):
-    h, w = c.shape[:2]; yy, xx = np.mgrid[0:h, 0:w]; f = np.zeros((h, w), np.float32); out = []
-    gold = (c[..., 0] > 170) & (c[..., 1] > 110) & (c[..., 2] < 110)
-    for (cx, cy, r) in hs:
-        d = np.hypot(xx - cx, yy - cy); ro = r
-        for rad in np.arange(r, r * 1.7, 0.5):  # walk out while the band is still mostly gold
-            band = (d >= rad) & (d < rad + 0.5)
-            if gold[band].mean() > 0.5: ro = rad
-        ro += 2.5  # its dark outline
-        f = np.maximum(f, np.clip(np.minimum(d - (r - 1.0), ro + 1 - d), 0, 1)); out.append((cx, cy, r, ro))
-    fr = c.copy(); fr[..., 3] *= f; return fr, out
-
-# ---------- cannons ----------
-c1, o1 = piece((138, 10, 606, 395)); c2, o2 = piece((697, 9, 1268, 395))
-# remove the FIRE plate baked into cannon 1: transplant the plain belly + base from cannon 2 (bottom-aligned)
-red = (c1[..., 0] > 200) & (c1[..., 1] < 95) & (c1[..., 2] < 95); red[:int(c1.shape[0] * 0.55)] = False
-lab, n = nd.label(red); red = lab == (np.argmax(nd.sum(red, lab, range(1, n + 1))) + 1); ys, xs = np.nonzero(red)
-rx0, ry0, rx1, ry1 = xs.min(), ys.min(), xs.max() + 1, ys.max() + 1; rcy = (ry0 + ry1) // 2
-row = c1[rcy]; x = rx0
-while x > 0 and not (row[x, 1] > row[x, 0] + 40 and row[x, 2] > row[x, 0] + 30): x -= 1  # walk left to the teal body
-t = rx0 - x + 1
-plate = (rx0 - t, ry0 - t, rx1 + t, ry1 + t)
-mk = Image.new('L', (c1.shape[1], c1.shape[0]), 0)
-ImageDraw.Draw(mk).rounded_rectangle(plate, radius=(plate[3] - plate[1]) / 2, fill=255)
-pm = np.array(mk) > 0; pmd = nd.binary_dilation(pm, iterations=2)
-w1 = nd.gaussian_filter(pmd.astype(np.float32), 1.3); w1 = np.maximum(w1, pmd)[..., None]
-cx1 = c1.shape[1] / 2 + o1[0]; cx2 = c2.shape[1] / 2 + o2[0]; dx = int(round(cx2 - cx1))
-donor = A[o1[1]:o1[1] + c1.shape[0], o1[0] + dx:o1[0] + dx + c1.shape[1]]
-c1[..., :3] = c1[..., :3] * (1 - w1) + donor[..., :3] * w1
-geo['plate'] = dict(box=[int(v) for v in plate], w=c1.shape[1], h=c1.shape[0])
-for name, c, n in (('cannon1', c1, 1), ('cannon2', c2, 2)):
-    hs = holes_of(c, n); fr, rings = ring_front(c, hs)
-    save(c, name + '.png'); save(fr, name + '_front.png')
-    H, W = c.shape[:2]; ys, xs = np.nonzero(c[..., 3] > 128)
-    geo[name] = dict(size=[W, H], holes=[[round(cx / W, 4), round(cy / H, 4), round(r / W, 4)] for cx, cy, r in hs],
-                     rings=[[round(v, 1) for v in rr] for rr in rings], opaque=[int(xs.min()), int(ys.min()), int(xs.max() + 1), int(ys.max() + 1)])
-# ---------- FIRE, cloud, cage, buttons ----------
-for name, box in (('fire', (7, 688, 305, 822)), ('cloud', (22, 407, 576, 657)), ('cage_x', (605, 405, 798, 661)),
+# ---------- cloud, cage, buttons ----------
+# (the cannon, FIRE, tray and balls now come from the user's UI sheet: tools/cut_ui_elements.py)
+for name, box in (('cloud', (22, 407, 576, 657)), ('cage_x', (605, 405, 798, 661)),
                   ('pause', (819, 490, 945, 617)), ('sound', (962, 490, 1089, 617))):
     c, o = piece(box); save(c, name + '.png'); geo[name] = [c.shape[1], c.shape[0]]
     if name == 'pause': pz = c
@@ -111,17 +67,4 @@ alpha = nd.gaussian_filter(ch.astype(np.float32), 0.7)
 xc[..., 3] = np.clip(alpha * 255, 0, 255)
 ys, xs = np.nonzero(ch); xc = xc[max(0, ys.min() - 2):ys.max() + 3, max(0, xs.min() - 2):xs.max() + 3]
 save(xc, 'xchar.png'); geo['xchar'] = [xc.shape[1], xc.shape[0]]
-# ---------- tray + its front lip ----------
-t, ot = piece((13, 845, 1435, 1003)); save(t, 'rack.png')
-L = lum(t); H, W = L.shape
-inner = (L < 212) & (t[..., 3] > 200); lab, n = nd.label(inner); inner = lab == lab[H // 2 - 10, W // 2]
-cols = np.nonzero(inner.any(0))[0]; ybot = np.full(W, -1)
-for x in cols: ybot[x] = np.nonzero(inner[:, x])[0].max()
-yrow = np.nonzero(inner.any(1))[0]
-cut = np.where(ybot >= 0, ybot, ybot[cols].min())
-yy = np.mgrid[0:H, 0:W][0]; f = t.copy(); f[..., 3] *= (yy > cut[None, :] + 0.5)
-save(f, 'rack_front.png')
-ys, xs = np.nonzero(t[..., 3] > 128)
-geo['rack'] = dict(size=[W, H], inner_x=[int(cols.min()), int(cols.max())], inner_y=[int(yrow.min()), int(yrow.max())],
-                   front_mid=int(ybot[W // 2]), bottom=int(ys.max() + 1), opaque_x=[int(xs.min()), int(xs.max() + 1)])
 print(json.dumps(geo))

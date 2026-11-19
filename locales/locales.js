@@ -23,7 +23,6 @@ window.GAME_LOCALES = {
     "btnPlayAgain": "Play again",
     "btnSkip": "Skip",
     "altX": "x",
-    "qTask": "Find the value of <span class=\"v\">x</span>",
     "qScore": "Your score",
     "endFreed": "You freed",
     "endScore": "{freed} out of {total}!",

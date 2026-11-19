@@ -27,7 +27,7 @@ This prompt describes the **whole game**, so you understand every part of it. It
 
 ## 2. The game in one paragraph
 
-A purple **x** is locked in a golden cage on a cloud, inside an equation such as **x + 5 = 7**. Below sits a teal **cannon** with 1 or 2 gold **sockets**. In front of it is a **tray of 8 coloured operation balls** (+5, −5, ×5, ÷5 …).
+A purple **x** is locked in a golden cage on a cloud, inside an equation such as **x + 5 = 7**. Below sits a wooden **cannon** with leaves and 1 or 2 gold **sockets**. In front of it is a **tray of 8 coloured operation balls** (+5, −5, ×5, ÷5 …).
 - The player taps balls to load them into the sockets, then taps **FIRE**.
 - Each ball flies up into the cloud and splits into **two identical terms that land on both sides** of the equation (x + 5 **− 5** = 7 **− 5**). The terms that cancel vanish, and the equation simplifies (x = 2).
 - If x ends up alone, the cage bursts open and x is free. If not, the cage rattles and the cloud floats away.
@@ -47,10 +47,10 @@ A purple **x** is locked in a golden cage on a cloud, inside an equation such as
 | `assets/img/bg.jpg` | Lake-side plaza background with painted clouds (2× upscale of `art/background/5.png`). One flat layer. |
 | `assets/img/cloud.png` | The equation cloud |
 | `assets/img/cage_x.png`, `cage.png`, `xchar.png` | x in its cage, the empty cage, and the free x character |
-| `assets/img/cannon1.png`, `cannon2.png` (+ `_front`) | 1-socket and 2-socket cannons. Only these two exist, so rounds use at most 2 sockets. |
-| `assets/img/fire.png` | FIRE plate (the word is painted in) |
+| `assets/img/cannon1.webp`, `cannon2.webp` (+ `_front`) | 1-socket and 2-socket wooden cannons, cut from `art/sprite_sheets/ui_elements.png` by `tools/cut_ui_elements.py` (the 2-socket one is built from the 1-socket art). Only these two exist, so rounds use at most 2 sockets. |
+| `assets/img/fire.webp` | The red FIRE pill, blank: the game writes the word (`btnFire`) on it |
 | `assets/img/ball_0..7.png` | Ball bodies: magenta, pink, green, cyan, coral, blue, yellow, purple. The game draws the labels. |
-| `assets/img/rack.png`, `rack_front.png` | The 8-cup ball tray |
+| `assets/img/rack.webp`, `rack_front.webp` | The wooden ball tray (metal corners, rope ends, cyan light), its plain middle stretched to hold 8 balls; the front lip is drawn over the balls |
 | `assets/img/pause.png`, `play.png`, `sound.png` | HUD buttons (orange rounded squares) |
 | `assets/img/t_*.png`, `playbtn.png` | Start screen: logo "Cannon Quest / Solve & Fire!", caged x, cannon, balls with painted labels, sparkles, round red Play button |
 | `assets/sfx/*.mp3` | Recorded CC0 effects (boom, shot, thunder, plop, latch, glass, bell, key, creak, spring, metal, air…; see `CREDITS.md`) |
@@ -70,13 +70,13 @@ The stage is a fixed 1672 × 941 "art-space" scaled to fit the screen. The backg
 |---|---|
 | Equation cloud | box left 398, top 12, 860 × 352 (centre ≈ 828, 190), gentle bob ±5 px |
 | Equation text | inside the cloud, dark navy, Fredoka/Lilita One, tokens: the cage, numbers, operators, fractions, parentheses |
-| Cannon | centre x 836, base bottom y 762, height 342. Muzzle ≈ (836, 434). FIRE plate on the front of the base. |
-| Tray | left 271, top 778, width 1130, 8 cups; ball diameter 112 |
+| Cannon | centre x 836, base bottom y 762, height 360. Muzzle ≈ (836, 416). FIRE pill on the front, below the socket. |
+| Tray | left 166, top 780, width 1340, 8 spots 141 apart; ball diameter 122 |
 | HUD | Pause + Sound top-left (orange); Skip pill top-right (navy with gold ring), shown only during a tutorial or a shot |
 | Captions | navy rounded card, left side (left 58, top 420), for voice lines |
 | Start screen | logo (836, 176) w 580; caged x (1238, 170) w 168; cannon bottom-left (290, 668) w 410; Play (836, 548) w **168** (keep it modest) |
 
-Grounded look: the cannon and tray cast soft contact shadows on the plaza, the cannon's cyan light strips spill onto the ground, and balls sit down into their cups.
+Grounded look: the cannon and tray cast soft contact shadows on the plaza, and balls sit down into their cups.
 
 ---
 

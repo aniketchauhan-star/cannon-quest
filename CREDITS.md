@@ -1,7 +1,7 @@
 # Credits
 
 ## Art
-All game art comes from the files you supplied, kept in `art/`: the sprite sheets (`art/sprite_sheets/`), the start-screen sheet and Play button (`art/start_screen/`), and the background layer sheet and mockup (`art/background/`).
+All game art comes from the files you supplied, kept in `art/`: the sprite sheets (`art/sprite_sheets/`), the start-screen sheet and Play button (`art/start_screen/`), and the deck background picture with its parts sheet (`art/background/`).
 
 ## Music
 **"Blue Skies"** by HoliznaCC0, from the *Happy Lo-Fi (Lofi Collection)* on OpenGameArt:

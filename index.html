@@ -18,22 +18,15 @@
   if (disk) { l.as = 'script'; l.href = 'locales/locales.js'; } else { l.as = 'fetch'; l.crossOrigin = 'anonymous'; l.href = 'locales/locales.json'; }
   document.head.appendChild(l); })();
 </script>
+<link rel="preload" as="image" href="assets/img/bg_sky.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/bg_clouds.webp" fetchpriority="high">
 <link rel="preload" as="image" href="assets/img/bg_mount.webp" fetchpriority="high">
 <link rel="preload" as="image" href="assets/img/bg_trees.webp" fetchpriority="high">
-<link rel="preload" as="image" href="assets/img/bg_lake.webp" fetchpriority="high">
-<link rel="preload" as="image" href="assets/img/bg_foreL.webp" fetchpriority="high">
-<link rel="preload" as="image" href="assets/img/bg_foreR.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/bg_plantL.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/bg_plantR.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/bg_deck.webp" fetchpriority="high">
 <link rel="preload" as="image" href="assets/img/cloud.webp" fetchpriority="high">
 <link rel="preload" as="image" href="assets/img/playbtn.webp" fetchpriority="high">
-<link rel="preload" as="image" href="assets/img/bg_plaza.webp" fetchpriority="high">
-<link rel="preload" as="image" href="assets/img/bg_rocksL.webp" fetchpriority="high">
-<link rel="preload" as="image" href="assets/img/bg_rocksR.webp" fetchpriority="high">
-<link rel="preload" as="image" href="assets/img/bg_grass.webp" fetchpriority="high">
-<link rel="preload" as="image" href="assets/img/bg_bush.webp" fetchpriority="high">
-<link rel="preload" as="image" href="assets/img/bg_tuft1.webp" fetchpriority="high">
-<link rel="preload" as="image" href="assets/img/bg_tuft2.webp" fetchpriority="high">
-<link rel="preload" as="image" href="assets/img/sun_glow.webp" fetchpriority="high">
-<link rel="preload" as="image" href="assets/img/sun_rays.webp" fetchpriority="high">
 <link rel="preload" as="image" href="assets/img/t_logo.webp" fetchpriority="high">
 <link rel="preload" as="image" href="assets/img/t_cannon.webp" fetchpriority="high">
 <link rel="preload" as="image" href="assets/img/t_fire.webp" fetchpriority="high">
@@ -47,62 +40,36 @@
 :root{--ink:#1a1740;--gold:#ffcb3d;--orange:#ff9418;--plum:#2a1c5c;--glass:rgba(28,19,78,.88);--glass-hi:rgba(48,34,120,.94)}
 *{box-sizing:border-box;margin:0;padding:0}
 /* one typeface, one weight: Poppins SemiBold (600), embedded by build.sh. No outlines on text, no fake bold */
-html,body{width:100%;height:100%;overflow:hidden;background:#3cb8f6;font-family:'Poppins',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-weight:600;font-synthesis:none;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:none;color:var(--ink)}
+html,body{width:100%;height:100%;overflow:hidden;background:#0198fc;font-family:'Poppins',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-weight:600;font-synthesis:none;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:none;color:var(--ink)}
 button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
 img{-webkit-user-drag:none;user-select:none}
-#viewport{position:fixed;inset:0;overflow:hidden;background:linear-gradient(#36b3f5,#9ad9ff)}
+#viewport{position:fixed;inset:0;overflow:hidden;background:linear-gradient(#0198fc,#0aa3fc 22%,#53c9fd 32%,#96eefd 38%,#00b1a6 50%,#ec9e4c 70%,#d8853b)} /* (the picture's colours, until it has loaded) */
 #stage{position:absolute;left:0;top:0;width:1672px;height:941px;transform-origin:0 0}
 #world{position:absolute;left:0;top:0;width:1672px;height:941px;transform-origin:0 0;will-change:transform}
 .spr{position:absolute;display:block;pointer-events:none}
-/* ---------- background: your layer sheet, as parallax layers (bg units = the 1672×941 frame; Stage scales it to cover) ---------- */
+/* ---------- background: the user's deck picture (art/background/new_background.png), cut into parallax layers by
+   tools/cut_deck_bg.py (bg units = the 1672×941 frame; Stage scales it to cover). At rest the layers stack back into
+   the picture exactly. Each one also goes on a little under the layer in front of it, for the camera's parallax
+   (PARALLAX in src/30_stage.js). The boxes are the ones that tool prints. ---------- */
 #bg{position:absolute;left:0;top:0;width:1672px;height:941px;transform-origin:0 0;pointer-events:none}
 #bg .bl{position:absolute;display:block;max-width:none;pointer-events:none}
-/* the sky brightens toward the sun (top right, SUN in src/32_scenery.js; sky units = bg units + 500, 700) */
-#bgSky{left:-500px;top:-700px;width:2672px;height:1700px;background:radial-gradient(circle at 1990px 792px,rgba(255,253,234,.6) 0,rgba(255,250,222,.3) 190px,rgba(255,250,222,.1) 480px,rgba(255,250,222,0) 820px),linear-gradient(#1c9cf0 0,#2aa8f5 700px,#6cc6f8 1000px,#ace3fb 1240px,#bdeafc 1700px)}
-/* the sun (src/32_scenery.js places it): bloom, two counter-turning glare layers, a lens streak, the white disc */
-#bgSun{left:0;top:0;width:0;height:0}
-#bgSun>*{position:absolute;display:block;max-width:none;pointer-events:none}
-#bgSun .sg{left:-380px;top:-380px;width:760px;height:760px;animation:sglow 5.5s ease-in-out infinite alternate}
-#bgSun .sr{left:-500px;top:-500px;width:1000px;height:1000px;opacity:.6}
-#bgSun .r1{animation:sspin 210s linear infinite,sbreath 4.7s ease-in-out infinite alternate}
-#bgSun .r2{transform:scaleX(-1) rotate(17deg);animation:sspin2 270s linear infinite,sbreath 6.3s -3s ease-in-out infinite alternate-reverse}
-#bgSun .ss{left:-320px;top:-2.5px;width:640px;height:5px;border-radius:50%;opacity:.5;background:linear-gradient(90deg,rgba(255,250,235,0),rgba(255,250,235,.25) 32%,rgba(255,255,255,.85) 50%,rgba(255,250,235,.25) 68%,rgba(255,250,235,0))}
-#bgSun .sd{left:-28px;top:-28px;width:56px;height:56px;border-radius:50%;background:radial-gradient(closest-side,#fff 0,#fff 70%,rgba(255,255,250,.92) 80%,rgba(255,253,240,.4) 91%,rgba(255,250,232,0) 100%);animation:spulse 3.3s ease-in-out infinite alternate}
-@keyframes sglow{from{opacity:.86}to{opacity:1}}
-@keyframes sspin{to{transform:rotate(360deg)}}
-@keyframes sspin2{from{transform:scaleX(-1) rotate(17deg)}to{transform:scaleX(-1) rotate(377deg)}}
-@keyframes sbreath{from{opacity:.42}to{opacity:.82}}
-@keyframes spulse{to{transform:scale(1.07)}}
-/* a warm haze over the far hills near the sun */
-#bgHaze{left:0;top:0;width:1600px;height:1600px;background:radial-gradient(closest-side,rgba(255,250,232,.34),rgba(255,248,226,.13) 42%,rgba(255,248,226,0))}
-#bgMount{left:-134px;top:322px;width:1940px;height:200.5px}
-#bgTrees{left:-134px;top:404px;width:1940px;height:168px}
-/* the lake: the picture, and the canvas that animates it (ripples, the trees' reflection, glints) once it runs */
-#bgLake{left:-134px;top:546px;width:1940px;height:121.5px}
-#bgLake img,#bgLake canvas{position:absolute;left:0;top:0;width:100%;height:100%;display:block}
-/* the ground, in pieces (src/32_scenery.js builds it): the plants lean on the wind (keyframes made there) */
-#bgGround{left:-60px;top:560px;width:1792px;height:411px}
-#bgGround>*{position:absolute;display:block}
-#bgGround img{position:absolute;left:0;top:0;width:100%;height:100%;display:block;max-width:none}
-#bgGround img.fl{transform:scaleX(-1)}
-.wnd{transform-origin:50% 100%}
-.wg{animation:wgrass 12s linear infinite}
-.wt{animation:wtuft 12s linear infinite}
-.wb{animation:wbush 12s linear infinite}
-.flt{position:absolute;left:0;top:0;width:100%;height:100%;transform-origin:50% 100%;animation:flut 1.7s ease-in-out infinite alternate}
-@keyframes flut{from{transform:skewX(.9deg)}to{transform:skewX(-.9deg)}}
-.fore{transform-origin:50% 100%}
-.fore img{display:block;width:100%;height:100%;transform-origin:50% 100%;animation:wfore 12s linear infinite}
-#bgForeL{left:-36px;top:797.5px;width:316px;height:157.5px}
-#bgForeR{left:1439.5px;top:803px;width:262.5px;height:152px}
-/* the lens flare (in the world, under the cloud and cannon; src/32_scenery.js moves it with the camera) */
-#flare{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none}
-#flare i{position:absolute;left:0;top:0;border-radius:50%}
-#flare .fgd{background:radial-gradient(closest-side,rgba(255,244,214,.55),rgba(255,226,170,.2) 58%,rgba(255,226,170,0))}
-#flare .fgh{border-radius:0;clip-path:polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0 50%);background:radial-gradient(closest-side,rgba(206,255,236,.22),rgba(150,220,255,.4) 80%,rgba(150,220,255,.18))}
-#flare .fgr{background:radial-gradient(closest-side,rgba(255,255,255,0) 70%,rgba(120,196,255,.28) 78%,rgba(255,236,170,.3) 86%,rgba(255,170,120,.16) 92%,rgba(255,170,120,0))}
+/* the sky without its clouds: a smooth gradient, saved at 1/4 size and stretched */
+#bgSky{left:0;top:0;width:1672px;height:941px}
+/* the five clouds: windows onto one picture (bg_clouds, box CLOUD_PIC), each drifting on its own (src/32_scenery.js) */
+#bgClouds{left:0;top:0;width:0;height:0}
+#bgClouds i{position:absolute;display:block;background:url(assets/img/bg_clouds.webp) no-repeat;background-size:1568px 263px;animation:cdrift 60s ease-in-out infinite}
+@keyframes cdrift{50%{transform:translateX(var(--dx))}}
+#bgMount{left:0;top:261.5px;width:1672px;height:229.5px}
+#bgTrees{left:0;top:263.5px;width:1672px;height:455.5px}
+/* the two leafy plants behind the railing sway in the wind about their roots, under the deck (keyframes made there) */
+.plant{transform-origin:50% 100%}
+.plant img{display:block;width:100%;height:100%;transform-origin:50% 100%;animation:wplant 12s linear infinite}
+#bgPlantL{left:82px;top:557px;width:114.5px;height:107px}
+#bgPlantR{left:1496.5px;top:554.5px;width:93px;height:108.5px}
+/* the railing (posts + ropes) and the wooden deck the cannon and the tray stand on */
+#bgDeck{left:0;top:464px;width:1672px;height:477px}
 /* the scenery freezes with the game */
-.scnPause #bg *,.scnPause #flare *{animation-play-state:paused !important}
+.scnPause #bg *{animation-play-state:paused !important}
 
 
 /* ---------- the equation cloud: the question sits right on the cloud ---------- */
@@ -110,14 +77,15 @@ img{-webkit-user-drag:none;user-select:none}
 #cloud{position:absolute;left:500px;top:-23px;width:656px;height:300px;transform-origin:50% 62%;will-change:transform}
 /* the cloud art: no outline, soft and hazy (tools/soft_cloud.py), where the painted cloud was less its old blue stroke */
 #cloud .cl{position:absolute;left:10px;top:10px;width:636px;height:281px}
-/* No box: the question sits right on the cloud (the user asked to remove the card on 19 Nov). A small dark label
-   (the same dark glass + gold ring as Skip and the caption) names the task, under the cloud's top bump; the equation
-   sits in the cloud's widest part below it, always fitted inside the cloud (EqUI.maxW / maxH). Measured on cloud.webp,
+/* No box: the question sits right on the cloud (the user asked to remove the card on 19 Nov). During play there is no
+   label, only the equation (the user removed "Find the value of x" on 19 Nov); at the end a small dark label
+   (the same dark glass + gold ring as Skip and the caption) reads "Your score", under the cloud's top bump. The equation
+   sits in the cloud's widest part, always fitted inside the cloud (EqUI.maxW / maxH). Measured on cloud.webp,
    in #cloud box px: the art is ≥ 520 px wide from y 115 to 250, and its middle is x 328 */
 #qCard{position:absolute;left:0;top:0;width:656px;height:0;pointer-events:none}
 #qTab{position:absolute;left:328px;top:80px;translate:-50% -50%;padding:7px 24px;border-radius:99px;background:var(--glass);box-shadow:0 0 0 3px #ffd23d,0 5px 12px rgba(20,10,60,.24);color:#fff;font-size:25px;line-height:1.2;letter-spacing:.01em;white-space:nowrap}
-#qTab .v{color:#ffd23d}
-#eqBox{position:absolute;left:328px;top:184px;width:0;height:0} /* (the middle of the cloud's body, below the label) */
+#qTab:empty{display:none}
+#eqBox{position:absolute;left:328px;top:184px;width:0;height:0} /* (the middle of the cloud's body) */
 #eq{position:absolute;left:0;top:0;transform:translate(-50%,-50%);display:flex;align-items:center;white-space:nowrap;font-size:70px;line-height:1;letter-spacing:-.01em;font-variant-numeric:lining-nums;color:var(--ink);transform-origin:0 0}
 #eq.wob{animation:eqwob .45s ease-in-out 3}
 @keyframes eqwob{25%{rotate:-3deg}75%{rotate:3deg}}
@@ -189,6 +157,10 @@ img{-webkit-user-drag:none;user-select:none}
 #fireBtn img{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none}
 #fireBtn .gr{filter:grayscale(1) brightness(1.06) contrast(.85);opacity:0;transition:opacity .25s ease-in}#fireBtn.off .gr{opacity:1;transition-timing-function:ease-out}
 #fireBtn.off{cursor:default}
+/* the word on the button (the pill art is blank): T('btnFire'), white like the painted word; Cannon sets its size
+   from the button's height and shrinks it to fit a longer word */
+#fireBtn .ft{position:absolute;left:50%;top:50%;transform:translate(-50%,-44%);color:#fff;line-height:1;letter-spacing:.03em;text-transform:uppercase;white-space:nowrap;pointer-events:none;text-shadow:0 .05em 0 rgba(140,24,0,.55),0 0 .14em rgba(120,20,0,.35)}
+#fireBtn.off .ft{text-shadow:0 .05em 0 rgba(60,60,60,.45)}
 #fireBtn .fgl{position:absolute;inset:-45% -22%;border-radius:50%;pointer-events:none;opacity:0;background:radial-gradient(closest-side,rgba(255,236,120,.95),rgba(255,160,40,.7) 45%,rgba(255,106,31,0))}
 #fireBtn.glow{animation:fglow .9s ease-out 1}
 #fireBtn.glow .fgl{animation:fglowL .9s ease-out 1}
@@ -201,13 +173,13 @@ img{-webkit-user-drag:none;user-select:none}
 #fireBtn.press{transform:scale(.9)}
 
 /* ---------- rack + balls ---------- */
-.hglow{position:absolute;width:116px;height:54px;margin:-27px 0 0 -58px;border-radius:50%;pointer-events:none;opacity:0;box-shadow:0 0 0 5px #ffe46b,0 0 28px 12px rgba(255,205,50,.85)}
+.hglow{position:absolute;width:126px;height:58px;margin:-29px 0 0 -63px;border-radius:50%;pointer-events:none;opacity:0;box-shadow:0 0 0 5px #ffe46b,0 0 28px 12px rgba(255,205,50,.85)}
 .hglow.on{animation:hg 1s ease-out 1}
 @keyframes hg{25%{opacity:1}100%{opacity:0}}
-.ball{position:absolute;left:0;top:0;width:112px;height:112px;margin:-56px 0 0 -56px;cursor:pointer;touch-action:none}
+.ball{position:absolute;left:0;top:0;width:122px;height:122px;margin:-61px 0 0 -61px;cursor:pointer;touch-action:none} /* = BALL_D */
 .ball.mv{will-change:transform}
 .ball img{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-.ball b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:48px;line-height:1;letter-spacing:-.02em;color:var(--ink);padding-top:2px;pointer-events:none;text-shadow:0 2px 0 rgba(255,255,255,.28)}
+.ball b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:52px;line-height:1;letter-spacing:-.02em;color:var(--ink);padding-top:2px;pointer-events:none;text-shadow:0 2px 0 rgba(255,255,255,.28)}
 .ball b .dv{margin-right:.03em}
 .ball .gl{position:absolute;inset:-34%;border-radius:50%;pointer-events:none;opacity:0;background:radial-gradient(closest-side,rgba(255,251,208,.95),rgba(255,214,40,.75) 48%,rgba(255,196,0,0))}
 .ball.guide img{filter:drop-shadow(0 0 9px #fff6a0) drop-shadow(0 0 20px #ffc800)}
@@ -215,9 +187,9 @@ img{-webkit-user-drag:none;user-select:none}
 @keyframes guide{from{opacity:.55;transform:scale(.9)}to{opacity:1;transform:scale(1.06)}}
 .ball.hov img{filter:brightness(1.12)}
 .ball.gone{display:none}
-.ball .ao{position:absolute;inset:3%;border-radius:50%;background:radial-gradient(ellipse 72% 46% at 50% 97%,rgba(24,14,58,.62),rgba(24,14,58,.28) 55%,rgba(24,14,58,0) 100%);opacity:0;transition:opacity .25s;pointer-events:none}
+.ball .ao{position:absolute;inset:3%;border-radius:50%;background:radial-gradient(ellipse 72% 46% at 50% 97%,rgba(66,26,4,.6),rgba(66,26,4,.26) 55%,rgba(66,26,4,0) 100%);opacity:0;transition:opacity .25s;pointer-events:none}
 .ball.seated .ao{opacity:1}
-.bshadow{position:absolute;width:98px;height:36px;margin:-18px 0 0 -49px;border-radius:50%;background:radial-gradient(ellipse at center,rgba(18,22,70,.5) 0,rgba(18,22,70,.25) 45%,rgba(18,22,70,0) 72%);opacity:0;transition:opacity .25s;pointer-events:none}
+.bshadow{position:absolute;width:106px;height:38px;margin:-19px 0 0 -53px;border-radius:50%;background:radial-gradient(ellipse at center,rgba(70,28,4,.5) 0,rgba(70,28,4,.25) 45%,rgba(70,28,4,0) 72%);opacity:0;transition:opacity .25s;pointer-events:none}
 .bshadow.on{opacity:1}
 .xfly{position:absolute;left:0;top:0;width:121px;height:115px;margin:-57.5px 0 0 -60.5px;pointer-events:none}
 .xfly img{width:100%;height:100%;display:block;filter:drop-shadow(0 0 10px rgba(255,255,255,.9)) drop-shadow(0 0 22px rgba(197,139,255,.8))}
@@ -226,9 +198,10 @@ img{-webkit-user-drag:none;user-select:none}
 .gsh{position:absolute;left:0;top:0;width:0;height:0;transform-origin:0 0;pointer-events:none}
 .gsh.shadow{mix-blend-mode:multiply}
 .gsh i{position:absolute;display:block;border-radius:50%}
-.gsh .soft{background:radial-gradient(closest-side,rgba(52,30,78,.7),rgba(52,30,78,.42) 45%,rgba(52,30,78,0));filter:blur(6px)}
-.gsh .cast{background:radial-gradient(closest-side,rgba(52,30,78,.45),rgba(52,30,78,.24) 50%,rgba(52,30,78,0));filter:blur(9px)}
-.gsh .contact{background:radial-gradient(closest-side,rgba(26,14,40,.95),rgba(26,14,40,.62) 50%,rgba(26,14,40,0));filter:blur(2px)}
+/* (warm brown: the cannon and tray stand on a wooden deck) */
+.gsh .soft{background:radial-gradient(closest-side,rgba(70,36,10,.7),rgba(70,36,10,.42) 45%,rgba(70,36,10,0));filter:blur(6px)}
+.gsh .cast{background:radial-gradient(closest-side,rgba(70,36,10,.45),rgba(70,36,10,.24) 50%,rgba(70,36,10,0));filter:blur(9px)}
+.gsh .contact{background:radial-gradient(closest-side,rgba(40,18,4,.95),rgba(40,18,4,.62) 50%,rgba(40,18,4,0));filter:blur(2px)}
 .gsh .glow{background:radial-gradient(closest-side,rgba(90,236,255,.62),rgba(90,236,255,.28) 50%,rgba(90,236,255,0));filter:blur(2px)}
 .gsh .gold{border:3px solid rgba(255,248,205,.95);box-shadow:0 0 6px 2px rgba(255,214,70,.95),0 0 18px 7px rgba(255,176,20,.65),inset 0 0 8px 2px rgba(255,214,70,.8)}
 
@@ -328,14 +301,13 @@ html:not(.fit) #stage,html:not(.fit) #stageTop{visibility:hidden} /* (until fitS
 <div id="viewport">
   <div id="stage">
     <div id="world" class="title">
-      <div id="bg"><i class="bl" id="bgSky"></i><div class="bl" id="bgSun"></div><img class="bl" id="bgMount" src="assets/img/bg_mount.webp" alt=""><img class="bl" id="bgTrees" src="assets/img/bg_trees.webp" alt=""><i class="bl" id="bgHaze"></i><div class="bl" id="bgLake"><img src="assets/img/bg_lake.webp" alt=""></div><div class="bl" id="bgGround"></div><div class="bl fore" id="bgForeL"><img src="assets/img/bg_foreL.webp" alt=""></div><div class="bl fore" id="bgForeR"><img src="assets/img/bg_foreR.webp" alt=""></div></div>
-      <div id="flare"></div>
-      <div id="cloud"><img class="cl" src="assets/img/cloud.webp" alt=""><div id="qCard"><span id="qTab" data-i18n-html="qTask"></span></div><div id="eqBox"><div id="eq"></div></div></div>
+      <div id="bg"><img class="bl" id="bgSky" src="assets/img/bg_sky.webp" alt=""><div class="bl" id="bgClouds"></div><img class="bl" id="bgMount" src="assets/img/bg_mount.webp" alt=""><img class="bl" id="bgTrees" src="assets/img/bg_trees.webp" alt=""><div class="bl plant" id="bgPlantL"><img src="assets/img/bg_plantL.webp" alt=""></div><div class="bl plant" id="bgPlantR"><img src="assets/img/bg_plantR.webp" alt=""></div><img class="bl" id="bgDeck" src="assets/img/bg_deck.webp" alt=""></div>
+      <div id="cloud"><img class="cl" src="assets/img/cloud.webp" alt=""><div id="qCard"><span id="qTab"></span></div><div id="eqBox"><div id="eq"></div></div></div>
       <div id="ground"></div>
       <div id="cannon">
         <div id="cannonBody"><img id="c1" data-src="assets/img/cannon1.webp" alt=""><img id="c2" data-src="assets/img/cannon2.webp" alt="" style="display:none"></div>
         <div id="sockFx"></div>
-        <button id="fireBtn" class="off" data-i18n-attr="aria-label:btnFire"><i class="fgl"></i><img data-src="assets/img/fire.webp" alt="" data-i18n-attr="alt:btnFire"><img class="gr" data-src="assets/img/fire.webp" alt=""></button>
+        <button id="fireBtn" class="off" data-i18n-attr="aria-label:btnFire"><i class="fgl"></i><img data-src="assets/img/fire.webp" alt="" data-i18n-attr="alt:btnFire"><img class="gr" data-src="assets/img/fire.webp" alt=""><span class="ft" data-i18n="btnFire"></span></button>
       </div>
       <img id="rack" class="spr" data-src="assets/img/rack.webp" alt="">
       <div id="bshadows"></div>
