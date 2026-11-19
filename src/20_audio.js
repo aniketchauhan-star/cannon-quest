@@ -165,35 +165,47 @@ const Music = {
   },
 };
 
-// ---------- the caption card (what the voice is saying) ----------
+// ---------- the caption board (what the voice is saying): the wooden board on the left (CSS #cap) ----------
 // GSAP, transform + opacity only (animation skill): it rises in (ease-out), sinks away (ease-in), and a new
-// line while it is up cross-fades its words while the card's backing (.bg) glides to the new size (FLIP), so
-// it never snaps. Under reduced motion or a Skip every step lands at once (Motion.d).
+// line while it is up cross-fades its words while the board (.bg) glides from its old box to the new one (FLIP:
+// position + size, as the board stays centred on its line), so it never snaps. The board hugs its words: fit()
+// makes the text box exactly as wide as its longest line. Under reduced motion or a Skip every step lands at once.
 const Caption = {
   el: null, bg: null, txt: null,
   init() { if (!this.el) { this.el = $('#cap'); this.bg = this.el.querySelector('.bg'); this.txt = this.el.querySelector('.txt'); } },
+  // wrapped text would keep the board at its full max-width (empty wood at the right): measure the lines it really
+  // has and make the text box that wide (in layout px: the stage and the board's own entrance are scaled)
+  fit() {
+    const t = this.txt; t.style.width = '';
+    const r = document.createRange(); r.selectNodeContents(t);
+    const rs = [...r.getClientRects()]; if (!rs.length) return;
+    const k = t.getBoundingClientRect().width / (t.offsetWidth || 1) || 1;
+    const w = Math.max(...rs.map((q) => q.right)) - Math.min(...rs.map((q) => q.left));
+    t.style.width = Math.ceil(w / k + 0.5) + 'px';
+  },
   show(text) {
     this.init();
+    text = String(text).replace(/(^|\s)(\S)\s+/g, '$1$2 '); // a one-letter word (x) never ends a line: it stays with the next word
     const { el, bg, txt } = this, up = +gsap.getProperty(el, 'opacity') > 0.05;
     el.classList.add('on');
     gsap.killTweensOf(el);
     if (!up) { // enter: the words are set before it shows
-      gsap.killTweensOf([txt, bg]); txt.textContent = text;
-      gsap.set(txt, { opacity: 1, y: 0 }); gsap.set(bg, { scaleX: 1, scaleY: 1 }); gsap.set(el, { y: 14, scale: 0.97 });
+      gsap.killTweensOf([txt, bg]); txt.textContent = text; this.fit();
+      gsap.set(txt, { opacity: 1, y: 0 }); gsap.set(bg, { x: 0, y: 0, scaleX: 1, scaleY: 1 }); gsap.set(el, { y: 14, scale: 0.97 });
     }
     Motion.to(el, { opacity: 1, y: 0, scale: 1, duration: Motion.DUR.SLOW * 0.75, ease: Motion.EASE.OUT });
     if (up && txt.textContent !== text) this.swap(text);
   },
-  swap(text) { // the old words fade out, the card's backing resizes from the old box to the new one, the new words fade in
+  swap(text) { // the old words fade out, the board glides from the old box to the new one, the new words fade in
     const { el, bg, txt } = this;
     gsap.killTweensOf(txt);
     Motion.to(txt, { opacity: 0, y: -5, duration: Motion.DUR.FAST * 0.8, ease: Motion.EASE.IN, onComplete: () => {
       const a = el.getBoundingClientRect();
-      txt.textContent = text;
-      const b = el.getBoundingClientRect();
+      txt.textContent = text; this.fit();
+      const b = el.getBoundingClientRect(), k = b.width / (el.offsetWidth || 1) || 1;
       gsap.killTweensOf(bg);
-      if (b.width && b.height) gsap.set(bg, { scaleX: a.width / b.width, scaleY: a.height / b.height });
-      Motion.to(bg, { scaleX: 1, scaleY: 1, duration: Motion.DUR.NORMAL + 0.05, ease: Motion.EASE.OUT });
+      if (b.width && b.height) gsap.set(bg, { x: (a.left - b.left) / k, y: (a.top - b.top) / k, scaleX: a.width / b.width, scaleY: a.height / b.height });
+      Motion.to(bg, { x: 0, y: 0, scaleX: 1, scaleY: 1, duration: Motion.DUR.NORMAL + 0.05, ease: Motion.EASE.OUT });
       gsap.set(txt, { y: 6 });
       Motion.to(txt, { opacity: 1, y: 0, duration: Motion.DUR.NORMAL, ease: Motion.EASE.OUT, delay: Motion.d(0.04) });
     } });

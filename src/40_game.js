@@ -482,7 +482,7 @@ function frame(time, deltaMs) {
 const Pics = {
   TITLE: ['bg_sky', 'sun_glow', 'sun_rays', 'bg_mount', 'bg_trees', 'bg_plantL', 'bg_plantR', 'bg_deck', 't_logo', 't_cannon', 'playbtn', 't_cage', 't_x', 't_cage_front'],
   GAME: ['cloud', 'cannon1', 'cannon2', 'cannon1_front', 'cannon2_front', 'rack', 'rack_front', 'fire', 'cage_x', 'xchar', 'hand', 'pause', 'play', 'sound',
-    ...[0, 1, 2, 3, 4, 5, 6, 7].map((i) => `ball_${i}`)],
+    'cap_board', 'cap_leaf_l', 'cap_leaf_r', ...[0, 1, 2, 3, 4, 5, 6, 7].map((i) => `ball_${i}`)],
   game: null, // (a promise: the play scene's pictures and the font)
   // resolves when every picture has arrived and is decoded (so it shows without a hitch), or after cap seconds,
   // so a picture that never comes never holds the game up
@@ -513,6 +513,7 @@ async function boot() {
   // …and the rest comes while the player looks at it (nothing of it was asked for before, so it never slowed the
   // start screen): the play scene's pictures (the markup's data-src ones, the tray's balls) + the font, then the sound effects
   for (const im of document.querySelectorAll('img[data-src]')) { im.src = im.dataset.src; im.removeAttribute('data-src'); }
+  $('#cap').classList.add('art'); // (the caption board's wood and leaves: CSS pictures, asked for from here on)
   Rack.balls = ROUNDS[0].balls.map((s, i) => createBall(s, i)); G.rackFor = ROUNDS[0];
   const font = document.fonts && document.fonts.load ? document.fonts.load('600 64px Poppins', '0123456789+−×=').catch(() => {}) : null;
   Pics.game = Pics.load(Pics.GAME, 15, font ? [font] : []);

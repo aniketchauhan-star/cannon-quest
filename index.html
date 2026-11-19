@@ -254,13 +254,30 @@ img{-webkit-user-drag:none;user-select:none}
 .gsh .glow{background:radial-gradient(closest-side,rgba(90,236,255,.62),rgba(90,236,255,.28) 50%,rgba(90,236,255,0));filter:blur(2px)}
 .gsh .gold{border:3px solid rgba(255,248,205,.95);box-shadow:0 0 6px 2px rgba(255,214,70,.95),0 0 18px 7px rgba(255,176,20,.65),inset 0 0 8px 2px rgba(255,214,70,.8)}
 
-/* ---------- caption (what the voice says): a compact dark-glass card that hugs its line ----------
-   Caption (src/20_audio.js) fades it in/out and cross-fades a new line with GSAP (transform + opacity only) */
+/* ---------- caption (what the voice says): a WOODEN BOARD that hugs its words, on the left, halfway down ----------
+   The board is the jungle board from the user's UI sheet (wood in a gold frame, bamboo rail, rope, leaves), rebuilt
+   by tools/cut_caption_board.py and drawn at 0.82 of its art size as a 9-slice (border-image): the ends and corners
+   never stretch, the middle repeats (one bamboo ring a piece) to any width, and the edges grow for a 2nd/3rd line.
+   Each end's leaf column is drawn twice, pinned to the top and to the bottom: one line = exactly the art, a taller
+   board = a fuller column. Caption (src/20_audio.js) fits the board to its longest line (no empty wood), fades it
+   in / out and cross-fades a new line with GSAP (transform + opacity only). #capPos keeps it centred on y 470 */
 #overlay{position:absolute;inset:0;pointer-events:none}
-#cap{position:absolute;left:56px;top:424px;max-width:450px;padding:16px 24px 17px 62px;color:#fff;font-size:26px;line-height:1.36;letter-spacing:.003em;opacity:0;transform-origin:0 50%}
-#cap .bg{position:absolute;inset:0;border-radius:22px;background:var(--glass);box-shadow:0 0 0 2px rgba(255,210,61,.85),0 12px 28px rgba(20,10,60,.28);transform-origin:0 0}
-#cap .txt{display:block;position:relative}
-#cap svg{position:absolute;left:20px;top:19px;width:28px;height:28px}
+#capPos{position:absolute;left:30px;top:470px;height:0;display:flex;align-items:center;pointer-events:none}
+#cap{position:relative;flex:none;max-width:540px;min-width:240px;padding:32.8px 67px 31.9px 94px;color:#fff5dd;font-size:24px;line-height:1.3;letter-spacing:.005em;opacity:0;transform-origin:0 50%;
+  text-shadow:0 2px 0 rgba(84,34,4,.6),0 0 8px rgba(70,24,0,.35)}
+#cap .bg{position:absolute;inset:0;transform-origin:0 0}
+#cap .bd{position:absolute;inset:0;border:solid transparent;border-width:34.44px 65.6px 31.98px}
+#cap .lf{position:absolute;height:95.94px;background:no-repeat 0 0/100% 100%}
+#cap .lf.l{left:3.28px;width:25.83px}
+#cap .lf.r{right:3.69px;width:27.47px}
+#cap .lf.t{top:0}
+#cap .lf.b{bottom:0}
+/* (the board's pictures are asked for only once the start screen is up: boot adds .art) */
+#cap.art .bd{border-image:url(assets/img/cap_board.webp) 84 160 78 fill / 34.44px 65.6px 31.98px / 0 round stretch}
+#cap.art .lf.l{background-image:url(assets/img/cap_leaf_l.webp)}
+#cap.art .lf.r{background-image:url(assets/img/cap_leaf_r.webp)}
+#cap .txt{display:block;position:relative;text-wrap:balance}
+#cap svg{position:absolute;left:62px;top:36px;width:24px;height:24px;filter:drop-shadow(0 1.5px 0 rgba(84,34,4,.6))}
 
 /* ---------- HUD (from the art: pause, sound) ---------- */
 #hud{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .3s ease-out}
@@ -368,7 +385,7 @@ html:not(.fit) #stage,html:not(.fit) #stageTop{visibility:hidden} /* (until fitS
     <div id="overlay">
       <div id="spotRing"></div>
       <img id="spotHand" data-src="assets/img/hand.webp" alt="" aria-hidden="true" draggable="false">
-      <div id="cap"><i class="bg"></i><svg viewBox="0 0 24 24" fill="none" stroke="#ffd23d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h3l5-4v14l-5-4H4z" fill="#ffd23d"/><path d="M16 8.5a5 5 0 0 1 0 7"/></svg><span class="txt"></span></div>
+      <div id="capPos"><div id="cap"><i class="bg"><i class="bd"></i><i class="lf l t"></i><i class="lf l b"></i><i class="lf r t"></i><i class="lf r b"></i></i><svg viewBox="0 0 24 24" fill="none" stroke="#ffd23d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h3l5-4v14l-5-4H4z" fill="#ffd23d"/><path d="M16 8.5a5 5 0 0 1 0 7"/></svg><span class="txt"></span></div></div>
       <div id="endUI"><button id="againBtn" class="rbtn" data-i18n-attr="aria-label:btnPlayAgain"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg></button></div>
     </div>
   </div>

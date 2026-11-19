@@ -500,35 +500,47 @@ const Music = {
   },
 };
 
-// ---------- the caption card (what the voice is saying) ----------
+// ---------- the caption board (what the voice is saying): the wooden board on the left (CSS #cap) ----------
 // GSAP, transform + opacity only (animation skill): it rises in (ease-out), sinks away (ease-in), and a new
-// line while it is up cross-fades its words while the card's backing (.bg) glides to the new size (FLIP), so
-// it never snaps. Under reduced motion or a Skip every step lands at once (Motion.d).
+// line while it is up cross-fades its words while the board (.bg) glides from its old box to the new one (FLIP:
+// position + size, as the board stays centred on its line), so it never snaps. The board hugs its words: fit()
+// makes the text box exactly as wide as its longest line. Under reduced motion or a Skip every step lands at once.
 const Caption = {
   el: null, bg: null, txt: null,
   init() { if (!this.el) { this.el = $('#cap'); this.bg = this.el.querySelector('.bg'); this.txt = this.el.querySelector('.txt'); } },
+  // wrapped text would keep the board at its full max-width (empty wood at the right): measure the lines it really
+  // has and make the text box that wide (in layout px: the stage and the board's own entrance are scaled)
+  fit() {
+    const t = this.txt; t.style.width = '';
+    const r = document.createRange(); r.selectNodeContents(t);
+    const rs = [...r.getClientRects()]; if (!rs.length) return;
+    const k = t.getBoundingClientRect().width / (t.offsetWidth || 1) || 1;
+    const w = Math.max(...rs.map((q) => q.right)) - Math.min(...rs.map((q) => q.left));
+    t.style.width = Math.ceil(w / k + 0.5) + 'px';
+  },
   show(text) {
     this.init();
+    text = String(text).replace(/(^|\s)(\S)\s+/g, '$1$2 '); // a one-letter word (x) never ends a line: it stays with the next word
     const { el, bg, txt } = this, up = +gsap.getProperty(el, 'opacity') > 0.05;
     el.classList.add('on');
     gsap.killTweensOf(el);
     if (!up) { // enter: the words are set before it shows
-      gsap.killTweensOf([txt, bg]); txt.textContent = text;
-      gsap.set(txt, { opacity: 1, y: 0 }); gsap.set(bg, { scaleX: 1, scaleY: 1 }); gsap.set(el, { y: 14, scale: 0.97 });
+      gsap.killTweensOf([txt, bg]); txt.textContent = text; this.fit();
+      gsap.set(txt, { opacity: 1, y: 0 }); gsap.set(bg, { x: 0, y: 0, scaleX: 1, scaleY: 1 }); gsap.set(el, { y: 14, scale: 0.97 });
     }
     Motion.to(el, { opacity: 1, y: 0, scale: 1, duration: Motion.DUR.SLOW * 0.75, ease: Motion.EASE.OUT });
     if (up && txt.textContent !== text) this.swap(text);
   },
-  swap(text) { // the old words fade out, the card's backing resizes from the old box to the new one, the new words fade in
+  swap(text) { // the old words fade out, the board glides from the old box to the new one, the new words fade in
     const { el, bg, txt } = this;
     gsap.killTweensOf(txt);
     Motion.to(txt, { opacity: 0, y: -5, duration: Motion.DUR.FAST * 0.8, ease: Motion.EASE.IN, onComplete: () => {
       const a = el.getBoundingClientRect();
-      txt.textContent = text;
-      const b = el.getBoundingClientRect();
+      txt.textContent = text; this.fit();
+      const b = el.getBoundingClientRect(), k = b.width / (el.offsetWidth || 1) || 1;
       gsap.killTweensOf(bg);
-      if (b.width && b.height) gsap.set(bg, { scaleX: a.width / b.width, scaleY: a.height / b.height });
-      Motion.to(bg, { scaleX: 1, scaleY: 1, duration: Motion.DUR.NORMAL + 0.05, ease: Motion.EASE.OUT });
+      if (b.width && b.height) gsap.set(bg, { x: (a.left - b.left) / k, y: (a.top - b.top) / k, scaleX: a.width / b.width, scaleY: a.height / b.height });
+      Motion.to(bg, { x: 0, y: 0, scaleX: 1, scaleY: 1, duration: Motion.DUR.NORMAL + 0.05, ease: Motion.EASE.OUT });
       gsap.set(txt, { y: 6 });
       Motion.to(txt, { opacity: 1, y: 0, duration: Motion.DUR.NORMAL, ease: Motion.EASE.OUT, delay: Motion.d(0.04) });
     } });
@@ -2273,7 +2285,7 @@ function frame(time, deltaMs) {
 const Pics = {
   TITLE: ['bg_sky', 'sun_glow', 'sun_rays', 'bg_mount', 'bg_trees', 'bg_plantL', 'bg_plantR', 'bg_deck', 't_logo', 't_cannon', 'playbtn', 't_cage', 't_x', 't_cage_front'],
   GAME: ['cloud', 'cannon1', 'cannon2', 'cannon1_front', 'cannon2_front', 'rack', 'rack_front', 'fire', 'cage_x', 'xchar', 'hand', 'pause', 'play', 'sound',
-    ...[0, 1, 2, 3, 4, 5, 6, 7].map((i) => `ball_${i}`)],
+    'cap_board', 'cap_leaf_l', 'cap_leaf_r', ...[0, 1, 2, 3, 4, 5, 6, 7].map((i) => `ball_${i}`)],
   game: null, // (a promise: the play scene's pictures and the font)
   // resolves when every picture has arrived and is decoded (so it shows without a hitch), or after cap seconds,
   // so a picture that never comes never holds the game up
@@ -2304,6 +2316,7 @@ async function boot() {
   // …and the rest comes while the player looks at it (nothing of it was asked for before, so it never slowed the
   // start screen): the play scene's pictures (the markup's data-src ones, the tray's balls) + the font, then the sound effects
   for (const im of document.querySelectorAll('img[data-src]')) { im.src = im.dataset.src; im.removeAttribute('data-src'); }
+  $('#cap').classList.add('art'); // (the caption board's wood and leaves: CSS pictures, asked for from here on)
   Rack.balls = ROUNDS[0].balls.map((s, i) => createBall(s, i)); G.rackFor = ROUNDS[0];
   const font = document.fonts && document.fonts.load ? document.fonts.load('600 64px Poppins', '0123456789+−×=').catch(() => {}) : null;
   Pics.game = Pics.load(Pics.GAME, 15, font ? [font] : []);
