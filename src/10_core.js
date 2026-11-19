@@ -20,24 +20,9 @@ const Ease = {
 };
 const rr = (a, b) => a + (b - a) * Math.random();
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
-const later = (ms) => new Promise((r) => setTimeout(r, ms));
+const later = (ms) => new Promise((r) => setTimeout(r, ms)); // boot only (not motion)
 
-// ---------- game clock + promise tweens (they freeze while paused) ----------
-const Clock = { t: 0, paused: false };
-const tweens = new Set();
-function tween(dur, onUpdate, ease = Ease.inOutCubic, delay = 0) {
-  return new Promise((res) => tweens.add({ t: -delay, dur: Math.max(dur, 1e-4), onUpdate, ease, res }));
-}
-const wait = (s) => tween(s, () => {}, Ease.linear);
-function updateTweens(dt) {
-  for (const tw of [...tweens]) {
-    tw.t += dt;
-    if (tw.t < 0) continue;
-    const k = Math.min(1, tw.t / tw.dur);
-    tw.onUpdate(tw.ease(k), k);
-    if (k >= 1) { tweens.delete(tw); tw.res(); }
-  }
-}
+// (the game clock, tween() and wait() live in 12_motion.js: GSAP-driven, time-based)
 const bez = (a, c, b, e) => { const u = 1 - e; return u * u * a + 2 * u * e * c + e * e * b; };
 
 // =====================================================================
@@ -109,7 +94,7 @@ const BALL_INK = ['#a312c0', '#d0106d', '#2f8a00', '#0089a6', '#d8352b', '#1d5fd
 const IMG = 'assets/img/';
 const symHTML = (s) => (s === '÷' ? '<span class="dv"></span>' : s);
 const labelHTML = (op) => symHTML(op.sym) + op.n;
-const cageHTML = () => `<span class="tk cage" data-key="x"><img class="cg" src="${IMG}cage_x.png" alt="x" draggable="false"></span>`;
+const cageHTML = () => `<span class="tk cage" data-key="x"><img class="cg" src="${IMG}cage_x.webp" alt="${T('altX')}" draggable="false"></span>`;
 const tk = (cls, key, inner) => `<span class="tk ${cls}" data-key="${key}">${inner}</span>`;
 function numHTML(fr) {
   const neg = fr.n < 0, a = Math.abs(fr.n);
