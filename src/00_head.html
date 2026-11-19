@@ -5,14 +5,46 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title data-i18n="gameTitle"></title>
 <meta name="description" content="" data-i18n-attr="content:metaDescription">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<!-- No loading screen: the start screen shows as soon as the game and the start screen's pictures are in. So all of
+     it starts downloading with the page itself, before anything else, and first: the scripts (each one waits on the
+     one before it, so none may queue behind a picture), the words, then every picture on the start screen. The play
+     scene's own pictures have data-src in the markup (no download yet): boot gives them their src once the start screen
+     is up, so they arrive while the player looks at it. -->
+<link rel="preload" href="libs/gsap.min.js" as="script">
+<link rel="preload" href="js/i18n.js" as="script">
 <link rel="preload" href="js/script.js" as="script">
+<script>/* the words (js/i18n.js reads the .json, or the .js from disk, where a fetch is blocked) */
+(function () { var l = document.createElement('link'), disk = location.protocol === 'file:'; l.rel = 'preload';
+  if (disk) { l.as = 'script'; l.href = 'locales/locales.js'; } else { l.as = 'fetch'; l.crossOrigin = 'anonymous'; l.href = 'locales/locales.json'; }
+  document.head.appendChild(l); })();
+</script>
+<link rel="preload" as="image" href="assets/img/bg_mount.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/bg_trees.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/bg_lake.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/bg_foreL.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/bg_foreR.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/cloud.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/playbtn.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/bg_plaza.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/bg_rocksL.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/bg_rocksR.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/bg_grass.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/bg_bush.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/bg_tuft1.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/bg_tuft2.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/sun_glow.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/sun_rays.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/t_logo.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/t_cannon.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/t_fire.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/t_cage.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/ball_0.webp" fetchpriority="high">
+<!--FONTS-->
 <style>
-:root{--ink:#1a1740;--gold:#ffcb3d;--orange:#ff9418;--plum:#2a1c5c}
+:root{--ink:#1a1740;--gold:#ffcb3d;--orange:#ff9418;--plum:#2a1c5c;--glass:rgba(28,19,78,.88);--glass-hi:rgba(48,34,120,.94)}
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{width:100%;height:100%;overflow:hidden;background:#3cb8f6;font-family:'Fredoka',ui-rounded,'Arial Rounded MT Bold',system-ui,sans-serif;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:none;color:var(--ink)}
+/* one typeface, one weight: Poppins SemiBold (600), embedded by build.sh. No outlines on text, no fake bold */
+html,body{width:100%;height:100%;overflow:hidden;background:#3cb8f6;font-family:'Poppins',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-weight:600;font-synthesis:none;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:none;color:var(--ink)}
 button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
 img{-webkit-user-drag:none;user-select:none}
 #viewport{position:fixed;inset:0;overflow:hidden;background:linear-gradient(#36b3f5,#9ad9ff)}
@@ -22,68 +54,120 @@ img{-webkit-user-drag:none;user-select:none}
 /* ---------- background: your layer sheet, as parallax layers (bg units = the 1672×941 frame; Stage scales it to cover) ---------- */
 #bg{position:absolute;left:0;top:0;width:1672px;height:941px;transform-origin:0 0;pointer-events:none}
 #bg .bl{position:absolute;display:block;max-width:none;pointer-events:none}
-#bgSky{left:-500px;top:-700px;width:2672px;height:1700px;background:radial-gradient(circle at 1880px 760px,rgba(255,253,228,.75) 0,rgba(255,250,214,.32) 150px,rgba(255,250,214,0) 420px),linear-gradient(#1c9cf0 0,#2aa8f5 700px,#6cc6f8 1000px,#ace3fb 1240px,#bdeafc 1700px)}
+/* the sky brightens toward the sun (top right, SUN in src/32_scenery.js; sky units = bg units + 500, 700) */
+#bgSky{left:-500px;top:-700px;width:2672px;height:1700px;background:radial-gradient(circle at 1990px 792px,rgba(255,253,234,.6) 0,rgba(255,250,222,.3) 190px,rgba(255,250,222,.1) 480px,rgba(255,250,222,0) 820px),linear-gradient(#1c9cf0 0,#2aa8f5 700px,#6cc6f8 1000px,#ace3fb 1240px,#bdeafc 1700px)}
+/* the sun (src/32_scenery.js places it): bloom, two counter-turning glare layers, a lens streak, the white disc */
+#bgSun{left:0;top:0;width:0;height:0}
+#bgSun>*{position:absolute;display:block;max-width:none;pointer-events:none}
+#bgSun .sg{left:-380px;top:-380px;width:760px;height:760px;animation:sglow 5.5s ease-in-out infinite alternate}
+#bgSun .sr{left:-500px;top:-500px;width:1000px;height:1000px;opacity:.6}
+#bgSun .r1{animation:sspin 210s linear infinite,sbreath 4.7s ease-in-out infinite alternate}
+#bgSun .r2{transform:scaleX(-1) rotate(17deg);animation:sspin2 270s linear infinite,sbreath 6.3s -3s ease-in-out infinite alternate-reverse}
+#bgSun .ss{left:-320px;top:-2.5px;width:640px;height:5px;border-radius:50%;opacity:.5;background:linear-gradient(90deg,rgba(255,250,235,0),rgba(255,250,235,.25) 32%,rgba(255,255,255,.85) 50%,rgba(255,250,235,.25) 68%,rgba(255,250,235,0))}
+#bgSun .sd{left:-28px;top:-28px;width:56px;height:56px;border-radius:50%;background:radial-gradient(closest-side,#fff 0,#fff 70%,rgba(255,255,250,.92) 80%,rgba(255,253,240,.4) 91%,rgba(255,250,232,0) 100%);animation:spulse 3.3s ease-in-out infinite alternate}
+@keyframes sglow{from{opacity:.86}to{opacity:1}}
+@keyframes sspin{to{transform:rotate(360deg)}}
+@keyframes sspin2{from{transform:scaleX(-1) rotate(17deg)}to{transform:scaleX(-1) rotate(377deg)}}
+@keyframes sbreath{from{opacity:.42}to{opacity:.82}}
+@keyframes spulse{to{transform:scale(1.07)}}
+/* a warm haze over the far hills near the sun */
+#bgHaze{left:0;top:0;width:1600px;height:1600px;background:radial-gradient(closest-side,rgba(255,250,232,.34),rgba(255,248,226,.13) 42%,rgba(255,248,226,0))}
 #bgMount{left:-134px;top:322px;width:1940px;height:200.5px}
 #bgTrees{left:-134px;top:404px;width:1940px;height:168px}
+/* the lake: the picture, and the canvas that animates it (ripples, the trees' reflection, glints) once it runs */
 #bgLake{left:-134px;top:546px;width:1940px;height:121.5px}
-#bgLake img{position:absolute;inset:0;width:100%;height:100%;display:block}
-#bgLake i{position:absolute;height:5px;border-radius:9px;background:rgba(255,255,255,.95);box-shadow:0 0 6px 1px rgba(255,255,255,.7);opacity:0;animation:glint 3.4s ease-in-out infinite}
-@keyframes glint{0%,100%{opacity:0;transform:scaleX(.3)}45%,55%{opacity:.9;transform:scaleX(1)}}
+#bgLake img,#bgLake canvas{position:absolute;left:0;top:0;width:100%;height:100%;display:block}
+/* the ground, in pieces (src/32_scenery.js builds it): the plants lean on the wind (keyframes made there) */
 #bgGround{left:-60px;top:560px;width:1792px;height:411px}
+#bgGround>*{position:absolute;display:block}
+#bgGround img{position:absolute;left:0;top:0;width:100%;height:100%;display:block;max-width:none}
+#bgGround img.fl{transform:scaleX(-1)}
+.wnd{transform-origin:50% 100%}
+.wg{animation:wgrass 12s linear infinite}
+.wt{animation:wtuft 12s linear infinite}
+.wb{animation:wbush 12s linear infinite}
+.flt{position:absolute;left:0;top:0;width:100%;height:100%;transform-origin:50% 100%;animation:flut 1.7s ease-in-out infinite alternate}
+@keyframes flut{from{transform:skewX(.9deg)}to{transform:skewX(-.9deg)}}
 .fore{transform-origin:50% 100%}
-.fore img{display:block;width:100%;height:100%;transform-origin:50% 100%;animation:sway 4.6s ease-in-out infinite alternate}
+.fore img{display:block;width:100%;height:100%;transform-origin:50% 100%;animation:wfore 12s linear infinite}
 #bgForeL{left:-36px;top:797.5px;width:316px;height:157.5px}
 #bgForeR{left:1439.5px;top:803px;width:262.5px;height:152px}
-#bgForeR img{animation-duration:5.3s;animation-delay:-2.1s}
-@keyframes sway{from{transform:rotate(-1.8deg) skewX(1.2deg)}to{transform:rotate(1.5deg) skewX(-1deg)}}
+/* the lens flare (in the world, under the cloud and cannon; src/32_scenery.js moves it with the camera) */
+#flare{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none}
+#flare i{position:absolute;left:0;top:0;border-radius:50%}
+#flare .fgd{background:radial-gradient(closest-side,rgba(255,244,214,.55),rgba(255,226,170,.2) 58%,rgba(255,226,170,0))}
+#flare .fgh{border-radius:0;clip-path:polygon(25% 6%,75% 6%,100% 50%,75% 94%,25% 94%,0 50%);background:radial-gradient(closest-side,rgba(206,255,236,.22),rgba(150,220,255,.4) 80%,rgba(150,220,255,.18))}
+#flare .fgr{background:radial-gradient(closest-side,rgba(255,255,255,0) 70%,rgba(120,196,255,.28) 78%,rgba(255,236,170,.3) 86%,rgba(255,170,120,.16) 92%,rgba(255,170,120,0))}
+/* the scenery freezes with the game */
+.scnPause #bg *,.scnPause #flare *{animation-play-state:paused !important}
 
 
-/* ---------- the equation cloud ---------- */
-#cloud{position:absolute;left:500px;top:-2px;width:656px;height:300px;transform-origin:50% 62%;will-change:transform}
-#cloud .cl{position:absolute;inset:0;width:100%;height:100%}
-#eqBox{position:absolute;left:328px;top:164px;width:0;height:0}
-#eq{position:absolute;left:0;top:0;transform:translate(-50%,-50%);display:flex;align-items:center;white-space:nowrap;font-weight:700;font-size:94px;line-height:1;color:var(--ink);-webkit-text-stroke:2.5px var(--ink);transform-origin:0 0}
-#eq.wob{animation:eqwob .3s ease-in-out 3}
+/* ---------- the equation cloud: the question sits right on the cloud ---------- */
+/* (far off in the sky: Cloud.apply draws it, label and equation included, at CLOUD_FAR; lifted so its top stays near the screen's top edge) */
+#cloud{position:absolute;left:500px;top:-23px;width:656px;height:300px;transform-origin:50% 62%;will-change:transform}
+/* the cloud art: no outline, soft and hazy (tools/soft_cloud.py), where the painted cloud was less its old blue stroke */
+#cloud .cl{position:absolute;left:10px;top:10px;width:636px;height:281px}
+/* No box: the question sits right on the cloud (the user asked to remove the card on 19 Nov). A small dark label
+   (the same dark glass + gold ring as Skip and the caption) names the task, under the cloud's top bump; the equation
+   sits in the cloud's widest part below it, always fitted inside the cloud (EqUI.maxW / maxH). Measured on cloud.webp,
+   in #cloud box px: the art is ≥ 520 px wide from y 115 to 250, and its middle is x 328 */
+#qCard{position:absolute;left:0;top:0;width:656px;height:0;pointer-events:none}
+#qTab{position:absolute;left:328px;top:80px;translate:-50% -50%;padding:7px 24px;border-radius:99px;background:var(--glass);box-shadow:0 0 0 3px #ffd23d,0 5px 12px rgba(20,10,60,.24);color:#fff;font-size:25px;line-height:1.2;letter-spacing:.01em;white-space:nowrap}
+#qTab .v{color:#ffd23d}
+#eqBox{position:absolute;left:328px;top:184px;width:0;height:0} /* (the middle of the cloud's body, below the label) */
+#eq{position:absolute;left:0;top:0;transform:translate(-50%,-50%);display:flex;align-items:center;white-space:nowrap;font-size:70px;line-height:1;letter-spacing:-.01em;font-variant-numeric:lining-nums;color:var(--ink);transform-origin:0 0}
+#eq.wob{animation:eqwob .45s ease-in-out 3}
 @keyframes eqwob{25%{rotate:-3deg}75%{rotate:3deg}}
 .tk{display:inline-flex;align-items:center;justify-content:center;position:relative;flex:none}
 .op{margin:0 .17em}
 .eqs{margin:0 .24em}
-.paren{font-weight:600;transform:scaleY(1.15);margin:0 .02em}
+.paren{transform:scaleY(1.12);margin:0 .02em}
 .frac{display:inline-flex;flex-direction:column;align-items:center;font-size:.78em;margin:0 .06em}
 .frac>.fn,.frac>.fd{display:flex;align-items:center;justify-content:center;padding:0 .12em}
-.frac>.fb{align-self:stretch;height:.1em;min-height:5px;border-radius:9px;background:currentColor;margin:.07em 0}
+.frac>.fb{align-self:stretch;height:.08em;min-height:4px;border-radius:9px;background:currentColor;margin:.08em 0}
 .ng{margin-right:.04em}
-.dv{display:inline-block;position:relative;width:.58em;height:.68em;flex:none}
-.dv::before{content:'';position:absolute;left:0;right:0;top:calc(50% - .07em);height:.14em;background:currentColor;border-radius:1em}
-.dv::after{content:'';position:absolute;left:50%;top:.02em;width:.17em;height:.17em;margin-left:-.085em;border-radius:50%;background:currentColor;box-shadow:0 .47em 0 currentColor}
-.inc{color:var(--tok);-webkit-text-stroke:3px var(--tok)}
+/* ÷ drawn to the same stroke weight as Poppins SemiBold's + − = */
+.dv{display:inline-block;position:relative;width:.56em;height:.62em;flex:none}
+.dv::before{content:'';position:absolute;left:.02em;right:.02em;top:calc(50% - .045em);height:.09em;background:currentColor;border-radius:1em}
+.dv::after{content:'';position:absolute;left:50%;top:.04em;width:.13em;height:.13em;margin-left:-.065em;border-radius:50%;background:currentColor;box-shadow:0 .41em 0 currentColor}
+.inc{color:var(--tok)}
 .inc .op{margin:0 .12em 0 .17em}
-.hid{opacity:0;transform:scale(.2)}
-.pop{animation:pop .5s cubic-bezier(.2,1.7,.45,1) both}
-@keyframes pop{0%{opacity:0;transform:scale(.15)}100%{opacity:1;transform:scale(1)}}
-.van{animation:van .46s ease-in forwards}
-@keyframes van{0%{opacity:1;transform:scale(1)}35%{opacity:1;transform:scale(1.3) translateY(-.06em)}100%{opacity:0;transform:scale(.05)}}
-.msg{display:flex;flex-direction:column;align-items:center;color:#7b2ff0;-webkit-text-stroke:3px #7b2ff0}
-.msg .m1{font-size:.56em}
-.msg .m2{font-size:1em;margin-top:.06em}
+.hid{opacity:0;transform:scale(.4)}
+/* a term arriving: fades up from 40 % with a small overshoot (back.out ~1.25), then rests */
+.pop{animation:pop .6s cubic-bezier(.3,1.3,.6,1) both}
+@keyframes pop{0%{opacity:0;transform:scale(.4)}40%{opacity:1}100%{opacity:1;transform:scale(1)}}
+/* the terms about to combine light up together: one soft gold pill behind each side's group, so "+5 −5" reads as
+   one group and "7 −5" as another (EqUI.pair places it, in #eq's own units, under the terms) */
+.hlg{position:absolute;box-sizing:content-box;padding:.06em .16em;margin:-.06em 0 0 -.16em;border-radius:.3em;pointer-events:none;
+  background:linear-gradient(#fff0b0,#ffe07a);box-shadow:0 0 0 .035em rgba(255,176,30,.5),0 .05em .14em rgba(170,100,0,.16);animation:hlin .55s cubic-bezier(.22,1,.36,1) both}
+.hlg.out{animation:hlout .7s ease-in forwards}
+@keyframes hlin{from{opacity:0;transform:scale(.86,.5)}to{opacity:1;transform:none}}
+@keyframes hlout{from{opacity:1}to{opacity:0}}
+/* terms that cancel: a small lift, then shrink + fade (ease-in; its length is set from Motion.BEAT.CANCEL, which the timeline waits for) */
+.van{animation:van .7s cubic-bezier(.5,0,.75,.45) forwards}
+@keyframes van{0%{opacity:1;transform:none}30%{opacity:1;transform:scale(1.06) translateY(-.04em)}100%{opacity:0;transform:scale(.35) translateY(-.08em)}}
+.msg{display:flex;flex-direction:column;align-items:center;color:#7b2ff0}
+.msg .m1{font-size:.5em;color:var(--ink);letter-spacing:.01em}
+.msg .m2{font-size:1em;margin-top:.04em}
 /* the cage around x */
-.cage{height:1.95em;margin:0 .02em;-webkit-text-stroke:0}
+.cage{height:1.72em;margin:0 .02em}
 .cage img{height:100%;width:auto;display:block;transform-origin:50% 90%}
 .cage.push img{animation:cpush 1.2s ease-in-out 2}
 @keyframes cpush{0%,100%{transform:none}20%{transform:translateX(-4%) rotate(-5deg)}35%{transform:translateX(-5%) scaleX(.96)}55%{transform:translateX(4%) rotate(5deg)}70%{transform:translateX(5%) scaleX(.96)}}
-.cage.rattle img{animation:rattle .09s linear 16}
+.cage.rattle img{animation:rattle .16s ease-in-out 8} /* (a rocking "not yet", ~6 per second: 11 per second read as jitter) */
 @keyframes rattle{25%{transform:translateX(-6%) rotate(-6deg)}75%{transform:translateX(6%) rotate(6deg)}}
 .cage.glowx img{filter:drop-shadow(0 0 10px #fff) drop-shadow(0 0 24px #c58bff)}
 .cage.open img{animation:copen .5s ease-out}
 /* freed: the happy x replaces the cage so the cloud reads “x = 2” */
-.cage.free img{height:78%;animation:xfree .6s cubic-bezier(.2,1.7,.45,1) both,xhop .8s .6s ease-in-out infinite;filter:drop-shadow(0 0 8px #fff) drop-shadow(0 0 18px rgba(197,139,255,.85))}
+.cage.free img{height:78%;animation:xfree .8s cubic-bezier(.25,1.45,.45,1) both,xpulse 1.4s .85s ease-in-out infinite;filter:drop-shadow(0 0 8px #fff) drop-shadow(0 0 18px rgba(197,139,255,.85))}
 @keyframes xfree{0%{transform:scale(.2) rotate(-25deg)}100%{transform:none}}
-@keyframes xhop{50%{transform:translateY(-9%) rotate(5deg)}}
+@keyframes xpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}} /* the freed x rests on the cloud and pulses, in step with “= 2” */
 .tk.eqs.win{margin-left:.42em}
-.tk.win{color:#7a22d6;-webkit-text-stroke-color:#7a22d6;text-shadow:0 0 16px rgba(255,214,70,.85),0 0 32px rgba(255,180,30,.5);animation:winpop .65s cubic-bezier(.2,1.7,.45,1) both,winglow 1.1s .65s ease-in-out infinite alternate}
-@keyframes winpop{0%{transform:scale(1)}50%{transform:scale(1.4)}100%{transform:scale(1.18)}}
-@keyframes winglow{from{transform:scale(1.18)}to{transform:scale(1.26)}}
-#eq.fadeout{opacity:0 !important;transition:opacity .4s !important}
+.tk.num.win{margin-left:.16em} /* (both grow 18 %: keeps “= 2” apart) */
+.tk.win{color:#7a22d6;text-shadow:0 0 16px rgba(255,214,70,.85),0 0 32px rgba(255,180,30,.5);animation:winpop .8s cubic-bezier(.22,1,.36,1) both,winglow 1.4s .85s ease-in-out infinite}
+@keyframes winpop{0%{transform:scale(1)}45%{transform:scale(1.3)}100%{transform:scale(1.18)}}
+@keyframes winglow{0%,100%{transform:scale(1.18)}50%{transform:scale(1.26)}}
+#eq.fadeout{opacity:0 !important;transition:opacity .6s ease-in !important}
 @keyframes copen{40%{transform:scale(1.15) rotate(-6deg)}}
 
 /* ---------- cannon, sockets, FIRE ---------- */
@@ -94,9 +178,10 @@ img{-webkit-user-drag:none;user-select:none}
 .sglow{position:absolute;border-radius:50%;pointer-events:none;opacity:0;box-shadow:0 0 0 7px rgba(255,236,120,.95),0 0 34px 16px rgba(255,196,40,.9),inset 0 0 26px 8px rgba(255,220,90,.7);transition:opacity .2s}
 .sglow.on{opacity:1;animation:sg .5s ease-in-out infinite alternate}
 @keyframes sg{to{transform:scale(1.08)}}
-.stag{position:absolute;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:12px;background:#3d2a6b;border:4px solid var(--gold);color:#fff;font-weight:700;font-size:27px;display:grid;place-items:center;box-shadow:0 4px 0 rgba(0,0,0,.2);transition:transform .3s}
-.stag.pulse{animation:tagp 1s ease-in-out 2}
-@keyframes tagp{50%{transform:scale(1.4)}}
+/* socket order markers (1, 2): the same dark-glass chip as the caption and Skip */
+.stag{position:absolute;width:42px;height:42px;margin:-21px 0 0 -21px;border-radius:50%;background:var(--glass);box-shadow:0 0 0 2.5px var(--gold),0 4px 10px rgba(20,10,60,.3);color:#fff;font-size:22px;line-height:1;display:grid;place-items:center;padding-top:1px}
+.stag.pulse{animation:tagp .9s ease-in-out 2}
+@keyframes tagp{50%{transform:scale(1.22)}}
 #fireBtn{position:absolute;cursor:pointer;transition:transform .12s ease-out;transform-origin:50% 60%}
 #fireBtn img{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none}
 #fireBtn .gr{filter:grayscale(1) brightness(1.06) contrast(.85);opacity:0;transition:opacity .25s ease-in}#fireBtn.off .gr{opacity:1;transition-timing-function:ease-out}
@@ -119,7 +204,7 @@ img{-webkit-user-drag:none;user-select:none}
 .ball{position:absolute;left:0;top:0;width:112px;height:112px;margin:-56px 0 0 -56px;cursor:pointer;touch-action:none}
 .ball.mv{will-change:transform}
 .ball img{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-.ball b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:52px;letter-spacing:-1px;color:var(--ink);-webkit-text-stroke:2.4px var(--ink);padding-bottom:4px;pointer-events:none;text-shadow:0 3px 0 rgba(255,255,255,.3)}
+.ball b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:48px;line-height:1;letter-spacing:-.02em;color:var(--ink);padding-top:2px;pointer-events:none;text-shadow:0 2px 0 rgba(255,255,255,.28)}
 .ball b .dv{margin-right:.03em}
 .ball .gl{position:absolute;inset:-34%;border-radius:50%;pointer-events:none;opacity:0;background:radial-gradient(closest-side,rgba(255,251,208,.95),rgba(255,214,40,.75) 48%,rgba(255,196,0,0))}
 .ball.guide img{filter:drop-shadow(0 0 9px #fff6a0) drop-shadow(0 0 20px #ffc800)}
@@ -131,7 +216,7 @@ img{-webkit-user-drag:none;user-select:none}
 .ball.seated .ao{opacity:1}
 .bshadow{position:absolute;width:98px;height:36px;margin:-18px 0 0 -49px;border-radius:50%;background:radial-gradient(ellipse at center,rgba(18,22,70,.5) 0,rgba(18,22,70,.25) 45%,rgba(18,22,70,0) 72%);opacity:0;transition:opacity .25s;pointer-events:none}
 .bshadow.on{opacity:1}
-.xfly{position:absolute;left:0;top:0;width:112px;height:115px;margin:-57.5px 0 0 -56px;pointer-events:none}
+.xfly{position:absolute;left:0;top:0;width:121px;height:115px;margin:-57.5px 0 0 -60.5px;pointer-events:none}
 .xfly img{width:100%;height:100%;display:block;filter:drop-shadow(0 0 10px rgba(255,255,255,.9)) drop-shadow(0 0 22px rgba(197,139,255,.8))}
 /* ---------- ground contact: shadow groups multiply onto the plaza; light + ring groups paint normally so colour reads on bright sand ---------- */
 #ground{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none}
@@ -144,11 +229,13 @@ img{-webkit-user-drag:none;user-select:none}
 .gsh .glow{background:radial-gradient(closest-side,rgba(90,236,255,.62),rgba(90,236,255,.28) 50%,rgba(90,236,255,0));filter:blur(2px)}
 .gsh .gold{border:3px solid rgba(255,248,205,.95);box-shadow:0 0 6px 2px rgba(255,214,70,.95),0 0 18px 7px rgba(255,176,20,.65),inset 0 0 8px 2px rgba(255,214,70,.8)}
 
-/* ---------- caption bubble (temporary VO) ---------- */
+/* ---------- caption (what the voice says): a compact dark-glass card that hugs its line ----------
+   Caption (src/20_audio.js) fades it in/out and cross-fades a new line with GSAP (transform + opacity only) */
 #overlay{position:absolute;inset:0;pointer-events:none}
-#cap{position:absolute;left:58px;top:420px;width:440px;padding:22px 26px 22px 70px;border-radius:28px;background:rgba(30,20,82,.9);color:#fff;font-weight:600;font-size:30px;line-height:1.25;box-shadow:0 0 0 4px var(--gold),0 14px 30px rgba(0,0,0,.25);opacity:0;transform:translateY(16px) scale(.96);transition:opacity .2s ease-in,transform .2s ease-in}
-#cap.on{opacity:1;transform:none;transition:opacity .25s cubic-bezier(.22,1,.36,1),transform .25s cubic-bezier(.22,1,.36,1)}
-#cap svg{position:absolute;left:22px;top:24px;width:34px;height:34px}
+#cap{position:absolute;left:56px;top:424px;max-width:450px;padding:16px 24px 17px 62px;color:#fff;font-size:26px;line-height:1.36;letter-spacing:.003em;opacity:0;transform-origin:0 50%}
+#cap .bg{position:absolute;inset:0;border-radius:22px;background:var(--glass);box-shadow:0 0 0 2px rgba(255,210,61,.85),0 12px 28px rgba(20,10,60,.28);transform-origin:0 0}
+#cap .txt{display:block;position:relative}
+#cap svg{position:absolute;left:20px;top:19px;width:28px;height:28px}
 
 /* ---------- HUD (from the art: pause, sound) ---------- */
 #hud{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .3s ease-out}
@@ -160,7 +247,7 @@ img{-webkit-user-drag:none;user-select:none}
   mask-image:radial-gradient(ellipse var(--rx) var(--ry) at var(--x) var(--y),transparent 0,transparent 78%,#000 100%)}
 #spotRing{position:absolute;left:0;top:0;width:200px;height:200px;border-radius:50%;pointer-events:none;opacity:0;
   border:5px solid rgba(255,228,120,.95);box-shadow:0 0 16px 5px rgba(255,196,50,.55),inset 0 0 12px 3px rgba(255,220,100,.35)}
-#spotHand{position:absolute;left:0;top:0;width:96px;height:116px;margin-left:-40px;pointer-events:none;opacity:0;transform-origin:40px 0;overflow:visible;filter:drop-shadow(0 6px 7px rgba(20,10,60,.35))}
+#spotHand{position:absolute;left:0;top:0;width:90px;height:126.9px;margin:-32.6px 0 0 -34.4px;display:block;max-width:none;pointer-events:none;opacity:0;transform-origin:34.4px 32.6px;filter:drop-shadow(0 6px 7px rgba(20,10,60,.35))} /* your hand (art/ui/hand.webp); its fingertip is the point that taps */
 body.spot #hud.on{opacity:.5}
 #hud.on{opacity:1}
 .hbtn{position:absolute;top:max(10px,2.4vh);width:clamp(46px,5.3vw,96px);aspect-ratio:132/133;pointer-events:auto;transition:transform .12s;filter:drop-shadow(0 4px 6px rgba(0,0,0,.18))}
@@ -169,11 +256,12 @@ body.spot #hud.on{opacity:.5}
 #pauseBtn{left:max(10px,2vw)}
 #sndBtn{left:calc(max(10px,2vw) + clamp(46px,5.3vw,96px) + max(8px,1vw))}
 #sndBtn.muted::after{content:'';position:absolute;left:14%;right:14%;top:47%;height:9%;background:#e8132b;border-radius:9px;transform:rotate(-40deg);box-shadow:0 0 0 3px #fff}
-#skipBtn{position:absolute;top:max(10px,2.4vh);right:max(10px,2vw);height:clamp(40px,4.6vw,64px);padding:0 clamp(14px,1.6vw,24px) 0 clamp(16px,1.8vw,26px);display:flex;align-items:center;gap:.45em;border-radius:99px;background:rgba(30,20,82,.9);color:#fff;font-weight:700;font-size:clamp(17px,1.9vw,26px);box-shadow:0 0 0 3px var(--gold),0 6px 14px rgba(0,0,0,.22);opacity:0;pointer-events:none;transition:background-color .15s ease-out}
+#skipBtn{position:absolute;top:max(10px,2.4vh);right:max(10px,2vw);height:clamp(40px,4.4vw,58px);padding:0 clamp(14px,1.5vw,22px) 0 clamp(16px,1.7vw,24px);display:flex;align-items:center;gap:.4em;border-radius:99px;background:var(--glass);color:#fff;font-size:clamp(16px,1.7vw,23px);line-height:1;letter-spacing:.01em;box-shadow:0 0 0 2px rgba(255,210,61,.85),0 6px 16px rgba(20,10,60,.24);opacity:0;pointer-events:none;transition:background-color .15s ease-out,scale .12s ease-out}
 #skipBtn.on{pointer-events:auto}
-#skipBtn:hover{background:rgba(52,36,128,.95)}
-#skipBtn:active{transform:scale(.96)}
-#skipBtn svg{width:.95em;height:.95em;flex:none}
+#skipBtn:hover{background:var(--glass-hi)}
+#skipBtn:active{scale:.95} /* (scale, not transform: GSAP owns its transform for the enter/exit) */
+#skipBtn span{padding-top:.08em}
+#skipBtn svg{width:.9em;height:.9em;flex:none}
 #fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none}
 /* flying balls ride above the particles (so a ball and its label read through the muzzle blast), in a copy of
    the stage + camera transform that Stage keeps in step with the world */
@@ -205,36 +293,26 @@ body.lowfx #spot .sl{-webkit-backdrop-filter:none;backdrop-filter:none;backgroun
 #playBtn .rp{position:absolute;inset:6%;border-radius:50%;border:5px solid rgba(255,232,140,.9);opacity:0;pointer-events:none}
 #playBtn.live .rp{animation:ripple 2.2s ease-out infinite}
 @keyframes ripple{0%{transform:scale(.95);opacity:.8}100%{transform:scale(1.45);opacity:0}}
-#credits{position:fixed;right:10px;bottom:6px;font-size:11px;font-weight:500;color:rgba(255,255,255,.95);text-shadow:0 1px 2px rgba(20,10,60,.8);pointer-events:none;transition:opacity .4s ease-out}
-#credits.hide{opacity:0;transition:opacity .3s ease-in}
 
 /* ---------- end ---------- */
-#endUI{position:fixed;left:50%;bottom:5vh;transform:translate(-50%,30px);display:flex;gap:3vmin;align-items:center;opacity:0;pointer-events:none;transition:opacity .25s ease-in,transform .25s ease-in}
-#endUI.on{opacity:1;transform:translate(-50%,0);pointer-events:auto;transition:opacity .5s cubic-bezier(.22,1,.36,1),transform .5s cubic-bezier(.34,1.4,.64,1)}
-.rbtn{width:clamp(76px,14vmin,124px);aspect-ratio:1;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 34% 26%,#ffe1a1 0 7%,#ffb03b 26%,#ff8a0d 58%,#ef6400 100%);box-shadow:0 0 0 .6vmin #fff,0 1vmin 0 .6vmin #b84e00,0 2.2vmin 4vmin rgba(20,10,60,.4)}
-.rbtn svg{width:48%;height:48%}
+/* the Play again button sits in the clear sky between the score cloud and the cannon (stage units, in #overlay) */
+#endUI{position:absolute;left:836px;top:404px;width:112px;height:112px;margin:-56px 0 0 -56px;opacity:0;pointer-events:none;transform:translateY(14px) scale(.92);transition:opacity .2s ease-in,transform .2s ease-in}
+#endUI.on{opacity:1;transform:none;pointer-events:auto;transition:opacity .4s cubic-bezier(.22,1,.36,1),transform .5s cubic-bezier(.34,1.3,.64,1)}
+.rbtn{width:100%;height:100%;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 34% 26%,#ffe1a1 0 7%,#ffb03b 26%,#ff8a0d 58%,#ef6400 100%);box-shadow:0 0 0 5px #fff,0 7px 0 5px #b84e00,0 16px 28px rgba(20,10,60,.38);transition:scale .12s ease-out}
+.rbtn:active{scale:.94}
+.rbtn svg{width:46%;height:46%}
 
-/* ---------- rotate hint + loading ---------- */
-#rotate{position:fixed;inset:0;display:none;place-items:center;text-align:center;background:rgba(20,12,60,.88);color:#fff;font-weight:700;font-size:22px;padding:30px;z-index:20}
+/* ---------- rotate hint ---------- */
+#rotate{position:fixed;inset:0;display:none;place-items:center;text-align:center;background:rgba(20,12,60,.9);color:#fff;font-size:20px;line-height:1.45;padding:30px;z-index:20}
 #rotate .ph{width:70px;height:110px;border:6px solid #fff;border-radius:16px;margin:0 auto 20px;animation:rot 2s ease-in-out infinite}
 @keyframes rot{40%,70%{transform:rotate(90deg)}}
-#rotate button{margin-top:22px;padding:10px 22px;border-radius:99px;background:#fff;color:#4a2a8a;font-weight:700;font-size:17px}
+#rotate button{margin-top:22px;padding:11px 24px 10px;border-radius:99px;background:#fff;color:#3a2280;font-size:16px;letter-spacing:.01em}
 @media (orientation:portrait) and (max-aspect-ratio:3/4){#rotate:not(.dismissed){display:grid}}
-/* ---------- loading (js/loader.js): the start screen itself, with a horizontal bar where the Play button will appear ---------- */
+/* ---------- first paint: no loading screen. Until the start screen's pictures are in (usually well under a second)
+   the screen is just the sky (#viewport's gradient); then the scene fades in and the start screen plays its intro ---------- */
 html:not(.fit) #stage,html:not(.fit) #stageTop{visibility:hidden} /* (until fitStage has scaled it to the screen: no unscaled first frame) */
-#world{opacity:0}                                      /* the painted scene fades in once it is laid out and has arrived */
-#playBtn{opacity:0}                                    /* Title pops it in where the bar was */
-#loadBar{position:absolute;left:536px;top:519px;width:600px;height:58px;transform-origin:50% 50%}   /* centred on TL.play */
-#loadBar .lbTrack{position:absolute;inset:0;border-radius:99px;background:linear-gradient(#21144b,#3b2a86);box-shadow:0 0 0 5px #ffd23d,0 0 0 9px #d27400,0 14px 26px rgba(20,10,60,.42),inset 0 6px 10px rgba(0,0,0,.5)}
-#loadBar .lbClip{position:absolute;left:8px;top:8px;right:8px;bottom:8px;border-radius:99px;overflow:hidden}
-#loadBar .lbFill{position:absolute;inset:0;border-radius:99px;overflow:hidden;transform:translateX(-100%);background:linear-gradient(#fff27c,#ffc928 46%,#ff9412)}
-#loadBar .lbStripes{position:absolute;top:0;bottom:0;left:-48px;width:calc(100% + 48px);background:repeating-linear-gradient(45deg,rgba(255,255,255,.32) 0 16.97px,rgba(255,255,255,0) 16.97px 33.94px)}
-#loadBar .lbGloss{position:absolute;left:14px;right:14px;top:4px;height:36%;border-radius:99px;background:linear-gradient(rgba(255,255,255,.85),rgba(255,255,255,0))}
-#loadBar .lbFlash{position:absolute;inset:-16px -10px;border-radius:99px;opacity:0;pointer-events:none;background:radial-gradient(closest-side,rgba(255,255,236,1),rgba(255,240,170,.75) 62%,rgba(255,240,170,0))}
-#loadBar .lbBall{position:absolute;left:0;top:50%;width:74px;height:74px;margin:-37px 0 0 -37px;transform:translateX(29px);filter:drop-shadow(0 5px 5px rgba(20,10,60,.45))}
-#loadText{position:absolute;left:436px;top:600px;width:800px;display:flex;justify-content:center;gap:.28em;color:#fff;font-weight:700;font-size:38px;line-height:1.2;letter-spacing:.01em;opacity:0;pointer-events:none;
-  -webkit-text-stroke:8px #2a1c5c;paint-order:stroke fill;text-shadow:0 5px 8px rgba(20,10,60,.45)}
-#loadText .lbPct{min-width:2.6em;text-align:left}
+#world{opacity:0}                                      /* the painted scene fades in once its pictures are in (boot) */
+#playBtn{opacity:0}                                    /* Title pops it in */
 #flash{position:fixed;inset:0;background:radial-gradient(circle at 50% 25%,rgba(255,255,240,.85),rgba(255,255,255,0) 60%);opacity:0;transition:opacity .5s;pointer-events:none}
 #flash.on{opacity:1;transition:opacity .08s}
 @media (prefers-reduced-motion:reduce){
@@ -247,45 +325,38 @@ html:not(.fit) #stage,html:not(.fit) #stageTop{visibility:hidden} /* (until fitS
 <div id="viewport">
   <div id="stage">
     <div id="world" class="title">
-      <div id="bg"><i class="bl" id="bgSky"></i><img class="bl" id="bgMount" src="assets/img/bg_mount.webp" alt=""><img class="bl" id="bgTrees" src="assets/img/bg_trees.webp" alt=""><div class="bl" id="bgLake"><img src="assets/img/bg_lake.webp" alt=""><i style="left:16%;top:30%;width:70px"></i><i style="left:31%;top:62%;width:54px;animation-delay:-1.2s"></i><i style="left:47%;top:40%;width:80px;animation-delay:-2.3s"></i><i style="left:61%;top:70%;width:60px;animation-delay:-.6s"></i><i style="left:74%;top:34%;width:66px;animation-delay:-1.8s"></i><i style="left:86%;top:58%;width:50px;animation-delay:-2.8s"></i></div><img class="bl" id="bgGround" src="assets/img/bg_ground.webp" alt=""><div class="bl fore" id="bgForeL"><img src="assets/img/bg_foreL.webp" alt=""></div><div class="bl fore" id="bgForeR"><img src="assets/img/bg_foreR.webp" alt=""></div></div>
-      <div id="cloud"><img class="cl" src="assets/img/cloud.webp" alt=""><div id="eqBox"><div id="eq"></div></div></div>
+      <div id="bg"><i class="bl" id="bgSky"></i><div class="bl" id="bgSun"></div><img class="bl" id="bgMount" src="assets/img/bg_mount.webp" alt=""><img class="bl" id="bgTrees" src="assets/img/bg_trees.webp" alt=""><i class="bl" id="bgHaze"></i><div class="bl" id="bgLake"><img src="assets/img/bg_lake.webp" alt=""></div><div class="bl" id="bgGround"></div><div class="bl fore" id="bgForeL"><img src="assets/img/bg_foreL.webp" alt=""></div><div class="bl fore" id="bgForeR"><img src="assets/img/bg_foreR.webp" alt=""></div></div>
+      <div id="flare"></div>
+      <div id="cloud"><img class="cl" src="assets/img/cloud.webp" alt=""><div id="qCard"><span id="qTab" data-i18n-html="qTask"></span></div><div id="eqBox"><div id="eq"></div></div></div>
       <div id="ground"></div>
       <div id="cannon">
-        <div id="cannonBody"><img id="c1" src="assets/img/cannon1.webp" alt=""><img id="c2" src="assets/img/cannon2.webp" alt="" style="display:none"></div>
+        <div id="cannonBody"><img id="c1" data-src="assets/img/cannon1.webp" alt=""><img id="c2" data-src="assets/img/cannon2.webp" alt="" style="display:none"></div>
         <div id="sockFx"></div>
-        <button id="fireBtn" class="off" data-i18n-attr="aria-label:btnFire"><i class="fgl"></i><img src="assets/img/fire.webp" alt="" data-i18n-attr="alt:btnFire"><img class="gr" src="assets/img/fire.webp" alt=""></button>
+        <button id="fireBtn" class="off" data-i18n-attr="aria-label:btnFire"><i class="fgl"></i><img data-src="assets/img/fire.webp" alt="" data-i18n-attr="alt:btnFire"><img class="gr" data-src="assets/img/fire.webp" alt=""></button>
       </div>
-      <img id="rack" class="spr" src="assets/img/rack.webp" alt="">
+      <img id="rack" class="spr" data-src="assets/img/rack.webp" alt="">
       <div id="bshadows"></div>
       <div id="balls"></div>
-      <div id="cannonFront"><div id="cannonFrontBody"><img id="c1f" src="assets/img/cannon1_front.webp" alt=""><img id="c2f" src="assets/img/cannon2_front.webp" alt="" style="display:none"></div></div>
-      <img id="rackFront" class="spr" src="assets/img/rack_front.webp" alt="">
+      <div id="cannonFront"><div id="cannonFrontBody"><img id="c1f" data-src="assets/img/cannon1_front.webp" alt=""><img id="c2f" data-src="assets/img/cannon2_front.webp" alt="" style="display:none"></div></div>
+      <img id="rackFront" class="spr" data-src="assets/img/rack_front.webp" alt="">
       <div id="hglows"></div>
     </div>
     <div id="thumb"><div id="sunGlow"></div><div id="rays"></div>
-      <div id="loadBar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-i18n-attr="aria-label:loading"><i class="lbTrack"></i><div class="lbClip"><div class="lbFill"><i class="lbStripes"></i><i class="lbGloss"></i></div></div><i class="lbFlash"></i><img class="lbBall" src="assets/img/ball_7.webp" alt=""></div>
-      <div id="loadText" aria-hidden="true"><span data-i18n="loading"></span><span class="lbPct"></span></div>
       <button id="playBtn" data-i18n-attr="aria-label:btnPlay"><span class="pg"></span><span class="rp"></span><img src="assets/img/playbtn.webp" alt="" data-i18n-attr="alt:btnPlay"></button></div>
     <div id="spot"><div class="sl"></div><div class="sl"></div></div>
     <div id="overlay">
       <div id="spotRing"></div>
-      <svg id="spotHand" viewBox="0 0 96 116" aria-hidden="true">
-        <g fill="#1b1240" stroke="#1b1240" stroke-width="7" stroke-linejoin="round"><rect x="31" y="2" width="18" height="60" rx="9"/><rect x="22" y="44" width="56" height="50" rx="20"/><circle cx="57" cy="49" r="9"/><circle cx="67" cy="57" r="9"/><circle cx="72" cy="69" r="8"/><ellipse cx="23" cy="64" rx="12" ry="8" transform="rotate(-35 23 64)"/><rect x="26" y="88" width="48" height="22" rx="7"/></g>
-        <g fill="#fff"><rect x="31" y="2" width="18" height="60" rx="9"/><rect x="22" y="44" width="56" height="50" rx="20"/><circle cx="57" cy="49" r="9"/><circle cx="67" cy="57" r="9"/><circle cx="72" cy="69" r="8"/><ellipse cx="23" cy="64" rx="12" ry="8" transform="rotate(-35 23 64)"/></g>
-        <rect x="26" y="88" width="48" height="22" rx="7" fill="#e7deff"/><path d="M29 97h42" stroke="#c4b6f0" stroke-width="3" stroke-linecap="round"/>
-        <path d="M50 50q5 5 0 10M60 59q5 4 1 10M68 70q4 3 0 8" fill="none" stroke="#1b1240" stroke-width="2.6" stroke-linecap="round"/>
-      </svg>
-      <div id="cap"><svg viewBox="0 0 24 24" fill="none" stroke="#ffd23d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h3l5-4v14l-5-4H4z" fill="#ffd23d"/><path d="M16 8.5a5 5 0 0 1 0 7"/></svg><span class="txt"></span></div>
+      <img id="spotHand" data-src="assets/img/hand.webp" alt="" aria-hidden="true" draggable="false">
+      <div id="cap"><i class="bg"></i><svg viewBox="0 0 24 24" fill="none" stroke="#ffd23d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h3l5-4v14l-5-4H4z" fill="#ffd23d"/><path d="M16 8.5a5 5 0 0 1 0 7"/></svg><span class="txt"></span></div>
+      <div id="endUI"><button id="againBtn" class="rbtn" data-i18n-attr="aria-label:btnPlayAgain"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg></button></div>
     </div>
   </div>
   <canvas id="fx"></canvas>
   <div id="stageTop"><div id="worldTop"><div id="fly"></div></div></div>
   <div id="flash"></div>
   <div id="hud">
-    <button id="pauseBtn" class="hbtn" data-i18n-attr="aria-label:btnPause"><img src="assets/img/pause.webp" alt=""></button>
-    <button id="sndBtn" class="hbtn" data-i18n-attr="aria-label:btnSound"><img src="assets/img/sound.webp" alt=""></button>
+    <button id="pauseBtn" class="hbtn" data-i18n-attr="aria-label:btnPause"><img data-src="assets/img/pause.webp" alt=""></button>
+    <button id="sndBtn" class="hbtn" data-i18n-attr="aria-label:btnSound"><img data-src="assets/img/sound.webp" alt=""></button>
     <button id="skipBtn" data-i18n-attr="aria-label:btnSkip"><span data-i18n="btnSkip"></span><svg viewBox="0 0 24 24" fill="#ffd23d" aria-hidden="true"><path d="M4 5.5v13l9-6.5zM13 5.5v13l9-6.5z"/></svg></button>
   </div>
-  <div id="credits" class="hide" data-i18n-html="credits"></div>
-  <div id="endUI"><button id="againBtn" class="rbtn" data-i18n-attr="aria-label:btnPlayAgain"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg></button></div>
   <div id="rotate"><div><div class="ph"></div><span data-i18n-html="rotateHint"></span><br><button id="rotateOk" data-i18n="btnPlayAnyway"></button></div></div></div>

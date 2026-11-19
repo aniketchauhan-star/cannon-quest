@@ -15,11 +15,13 @@ const CANNON = { x: 836, bottom: 762, h: 342, src: { 1: [474, 388], 2: [577, 389
 // tray art (a cupless trough): ball spots along its floor (holesX, holeY), bottom edge and feet in source px; a seated ball's centre sits `seat` px below (+) / above (−) its spot
 const RACK = { left: 271, top: 798, w: 1130, srcW: 1428, holesX: [145.1, 307.4, 469.6, 631.9, 794.1, 956.4, 1118.6, 1280.9], holeY: 61, bot: 160, edges: [40, 1388], seat: -8 };
 const BALL_D = 112, MUZZLE = { x: CANNON.x, y: CANNON.bottom - CANNON.h + 14 };
-// the equation cloud (smaller and high in the sky, well clear of the cannon): where a shot hits, and its middle
-const CLOUD_HIT = { x: 828, y: 196 }, CLOUD_MID = { x: 828, y: 150 };
+// the equation cloud, far off in the sky and well clear of the cannon: Cloud.apply draws #cloud (card included) at
+// CLOUD_FAR of its size, about its transform-origin (world 828, 163). Where a shot hits (on the card), and its middle
+const CLOUD_FAR = 0.88, CLOUD_HIT = { x: 828, y: 174 }, CLOUD_MID = { x: 828, y: 133 };
 // background layers from art/background/background_layers.png: how much each follows the camera (1 = the plaza;
 // less = farther away, so it drifts less; more = nearer). Moved by transform only, when the camera moves.
-const PARALLAX = [['#bgSky', 0.35], ['#bgMount', 0.55], ['#bgTrees', 0.72], ['#bgLake', 0.86], ['#bgForeL', 1.1], ['#bgForeR', 1.1]];
+// The sun moves with the sky; the warm haze near it sits with the far hills (src/32_scenery.js).
+const PARALLAX = [['#bgSky', 0.35], ['#bgSun', 0.35], ['#bgMount', 0.55], ['#bgTrees', 0.72], ['#bgHaze', 0.6], ['#bgLake', 0.86], ['#bgForeL', 1.1], ['#bgForeR', 1.1]];
 
 // =====================================================================
 //  CAMERA RIG (docs/GAME_PROMPT.md §7–8). Three parts, added every frame:
@@ -30,7 +32,9 @@ const PARALLAX = [['#bgSky', 0.35], ['#bgMount', 0.55], ['#bgTrees', 0.72], ['#b
 //  Then a final clamp keeps the painted background covering the screen, shake and rotation included.
 //  Rotation is about the screen centre. One transform write per frame, only when it changed.
 // =====================================================================
-const CAM = { SMOOTH: 0.09, SHAKE: 22, ROT: 1.2, FREQ: 24, DECAY: 1.6, ZMIN: 1, ZMAX: 1.25 };
+// (SMOOTH: the follow's lag in seconds; a little longer = a softer camera. FREQ: the shake's speed; 15 Hz reads as a
+// rounded wiggle, 24 Hz read as jitter. Both changed on 19 Nov 2026, when the user asked for smoother motion)
+const CAM = { SMOOTH: 0.14, SHAKE: 22, ROT: 1.0, FREQ: 15, DECAY: 1.4, ZMIN: 1, ZMAX: 1.25 };
 function smoothDamp(cur, target, vel, key, st, dt) { // (critically damped follow; Game Programming Gems 4, 1.10)
   const om = 2 / st, x = om * dt, ex = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x);
   const ch = cur - target, tmp = (vel[key] + om * ch) * dt;
@@ -294,29 +298,33 @@ const Cloud = {
   init() { this.el = $('#cloud'); },
   squash() { this.sq.kick(1); }, // a ball hits it: wide-and-flat, then it springs back
   apply(t, dt = 0) {
-    const by = Motion.reduced ? 0 : Math.sin(t * 1.1) * 5, q = this.sq.update(dt);
-    const sx = this.s * (1 + 0.05 * q), sy = this.s * (1 - 0.05 * q);
-    const tr = `translate(${this.x.toFixed(1)}px,${(this.y + by).toFixed(1)}px) rotate(${this.rot.toFixed(2)}deg) scale(${sx.toFixed(4)},${sy.toFixed(4)})`, op = this.a.toFixed(3);
+    // a calm, far-off drift: a slow rise and fall (~11 s) and a slower sideways sway (~23 s); still with reduced motion
+    const calm = !Motion.reduced, by = calm ? Math.sin(t * 0.55) * 4 : 0, bx = calm ? Math.sin(t * 0.27 + 1) * 5 : 0, q = this.sq.update(dt);
+    const s = this.s * CLOUD_FAR, sx = s * (1 + 0.05 * q), sy = s * (1 - 0.05 * q);
+    const tr = `translate(${(this.x + bx).toFixed(1)}px,${(this.y + by).toFixed(1)}px) rotate(${this.rot.toFixed(2)}deg) scale(${sx.toFixed(4)},${sy.toFixed(4)})`, op = this.a.toFixed(3);
     if (tr !== this.lastTr) { this.el.style.transform = tr; this.lastTr = tr; }
     if (op !== this.lastOp) { this.el.style.opacity = op; this.lastOp = op; }
   },
-  // a new equation arrives (concept reveal, 0.8 s, ease-out with a little overshoot)
+  // a new question arrives: the cloud sails in with its card (ease-out, a soft settle), then the card's tab drops on
   async enter(fromX = 1250) {
     Object.assign(this, { x: fromX, y: -40, s: 1, a: 1, blur: 0, rot: 0 });
+    QCard.hide();
     Sound.swoosh();
-    await tween(0.8, (e) => { this.x = lerp(fromX, 0, e); this.y = lerp(-40, 0, e); }, Ease.outBack);
+    await tween(Motion.BEAT.CLOUD_IN, (e) => { this.x = lerp(fromX, 0, e); this.y = lerp(-40, 0, e); }, Ease.outBackSoft);
+    QCard.pop();
   },
   // in a round's timeline: floats away (ease-in), dissolves (ease-in), or wobbles
   leaveTL(tl, pos, toX = -1250) {
     let x0 = 0;
     tl.call(() => { x0 = this.x; Sound.swoosh(); }, null, pos);
-    drive(0.7, (e) => { this.x = lerp(x0, toX, e); this.y = -60 * e; this.rot = -5 * e; }, Ease.inCubic, tl, pos);
+    drive(Motion.BEAT.LEAVE, (e) => { this.x = lerp(x0, toX, e); this.y = -60 * e; this.rot = -5 * e; }, Ease.inQuad, tl, pos);
   },
   clearTL(tl, pos) {
-    tl.call(() => FX.puffs(CLOUD_MID.x, CLOUD_MID.y, 560, 26), null, pos);
-    drive(0.7, (e) => { this.s = 1 + 0.22 * e; this.a = 1 - e; this.y = -30 * e; }, Ease.inQuad, tl, pos);
+    tl.call(() => FX.puffs(CLOUD_MID.x, CLOUD_MID.y, 560 * CLOUD_FAR, 26), null, pos);
+    drive(Motion.BEAT.CLEAR, (e) => { this.s = 1 + 0.18 * e; this.a = 1 - e; this.y = -30 * e; }, Ease.inQuad, tl, pos);
   },
-  wobbleTL(tl, pos) { drive(0.9, (e, k) => { this.rot = Math.sin(k * Math.PI * 6) * 3.2 * (1 - k); this.s = 1 + Math.sin(k * Math.PI * 8) * 0.025 * (1 - k); }, Ease.linear, tl, pos); },
+  // "not yet": a slow rock that dies away (2 swings, not 3 quick ones)
+  wobbleTL(tl, pos) { drive(Motion.BEAT.RATTLE, (e, k) => { this.rot = Math.sin(k * Math.PI * 4) * 3 * (1 - k); this.s = 1 + Math.sin(k * Math.PI * 6) * 0.02 * (1 - k); }, Ease.linear, tl, pos); },
 };
 
 // ---------- ground contact helpers: a 'shadow' group multiplies onto the plaza, a 'light' group screens ----------
@@ -380,9 +388,10 @@ const Cannon = {
   async morph(n) {
     if (n === this.n) return;
     Sound.whoosh(0.4);
-    await tween(0.22, (e) => (this.morphS = 1 - 0.18 * e), Ease.inQuad);
+    const M = Motion.BEAT.MORPH;
+    await tween(M * 0.4, (e) => (this.morphS = 1 - 0.18 * e), Ease.inQuad);
     this.setN(n); FX.smoke(CANNON.x, CANNON.bottom - 140, 14, 260); this.groundDust(false); Sound.clunk(); Stage.hit({ trauma: 0.1, ky: 4 });
-    await tween(0.45, (e) => (this.morphS = 0.82 + 0.18 * e), Ease.outBack);
+    await tween(M * 0.6, (e) => (this.morphS = 0.82 + 0.18 * e), Ease.outBackSoft);
   },
   setFireActive(on) {
     if (on === this.active) return;
@@ -496,7 +505,12 @@ function ballHome(b) {
   if (b.where === 'loading') { const p = Cannon.socketPos(b.socket); return { x: p.x, y: p.y + 6, s: p.s * 0.35 }; }
   return Rack.restPos(b.holder);
 }
-function flyBall(b, dur = 0.55, arc = 230) { b.flight = { fx: b.x, fy: b.y, fs: b.s, t: 0, dur, arc, spin: (Math.random() < 0.5 ? -1 : 1) * rr(260, 420) }; }
+// a ball's flight: one smooth turn on a long arc (none on a short hop), eased with the flight so it lands upright,
+// with nothing left to unwind (no fast spin, no spin-back after it lands)
+function flyBall(b, dur = Motion.BEAT.TAP_FLY, arc = 230) {
+  const turn = arc > 60 ? (Math.random() < 0.5 ? -1 : 1) * 360 : 0;
+  b.flight = { fx: b.x, fy: b.y, fs: b.s, t: 0, dur, arc, r0: b.r, r1: turn };
+}
 function updateBalls(dt, t) {
   const seated = new Array(8).fill(false);
   for (const b of Rack.balls) {
@@ -508,8 +522,8 @@ function updateBalls(dt, t) {
       const k = clamp(f.t / f.dur, 0, 1), e = Ease.inOutCubic(k);
       const my = Math.min(f.fy, h.y) - f.arc;
       b.x = bez(f.fx, (f.fx + h.x) / 2, h.x, e); b.y = bez(f.fy, my, h.y, e); b.s = lerp(f.fs, h.s, e);
-      b.r += f.spin * dt * (1 - k);
-      if (k >= 1) { b.flight = null; b.land = 1; const cb = b.onLand; b.onLand = null; if (cb) cb(); }
+      b.r = lerp(f.r0, f.r1, e);
+      if (k >= 1) { b.flight = null; b.land = 1; b.r = 0; const cb = b.onLand; b.onLand = null; if (cb) cb(); } // (a full turn = upright)
     } else {
       const gh = b.guide && b.where === 'rack' && !Motion.reduced ? Math.abs(Math.sin(t * 3.4)) * 22 : 0;
       b.x = h.x; b.y = h.y - gh - b.hop * 34 - b.hover * 6 - b.drop;
@@ -540,11 +554,11 @@ function updateBalls(dt, t) {
 //  EQUATION UI — tokens glide (FLIP) when the equation changes
 // =====================================================================
 const EqUI = {
-  el: null, maxW: 556,
+  el: null, maxW: 470, maxH: 126, // (the cloud's body below its label, with a margin: the equation always stays inside the cloud)
   init() { this.el = $('#eq'); this.el.style.transformOrigin = '50% 50%'; },
   fit() {
     this.el.style.transform = 'translate(-50%,-50%)';
-    const w = this.el.offsetWidth || 1, k = Math.min(1, this.maxW / w);
+    const w = this.el.offsetWidth || 1, h = this.el.offsetHeight || 1, k = Math.min(1, this.maxW / w, this.maxH / h);
     this.el.style.transform = `translate(-50%,-50%) scale(${k.toFixed(4)})`;
   },
   render(html, flip = true) {
@@ -564,7 +578,8 @@ const EqUI = {
       if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5 && Math.abs(sc - 1) < 0.01) return;
       if (Motion.still()) return;
       e.style.willChange = 'transform';
-      gsap.fromTo(e, { x: dx, y: dy, scale: sc }, { x: 0, y: 0, scale: 1, duration: 0.56, ease: 'back.out(1.2)', clearProps: 'transform', onComplete: () => (e.style.willChange = '') });
+      // terms glide from their old place to their new one (ease-in-out: a move within the card, so no overshoot)
+      gsap.fromTo(e, { x: dx, y: dy, scale: sc }, { x: 0, y: 0, scale: 1, duration: Motion.BEAT.SETTLE, ease: 'power2.inOut', clearProps: 'transform', onComplete: () => (e.style.willChange = '') });
     });
   },
   setEq(eq, flip = true) { this.render(eqHTML(eq), flip); },
@@ -573,17 +588,46 @@ const EqUI = {
     this.render(impactHTML(eq, op, color), true);
     return [this.el.querySelector('[data-key="inL"]'), this.el.querySelector('[data-key="inR"]')];
   },
-  // simplifying, step 1: the terms that cancel vanish (CSS .van: transform + opacity, 0.46 s)
-  vanish(next) {
-    const tpl = document.createElement('div'); tpl.innerHTML = eqHTML(next);
-    const keep = new Set([...tpl.querySelectorAll('[data-key]')].map((e) => e.dataset.key));
+  // the next equation's terms: key → what it shows
+  nextTerms(next) { const tpl = document.createElement('div'); tpl.innerHTML = eqHTML(next); return new Map([...tpl.querySelectorAll('[data-key]')].map((e) => [e.dataset.key, e.innerHTML])); },
+  // the terms that are not in the next equation (the outermost of each: a bracket that goes takes its insides along)
+  leaving(after) {
+    const out = [];
     this.el.querySelectorAll('[data-key]').forEach((e) => {
-      if (keep.has(e.dataset.key) || (e.parentElement && e.parentElement.closest('.van'))) return;
-      if ([...e.querySelectorAll('[data-key]')].some((c) => keep.has(c.dataset.key))) return;
-      e.classList.add('van');
+      if (after.has(e.dataset.key) || out.some((o) => o.contains(e))) return;
+      if ([...e.querySelectorAll('[data-key]')].some((c) => after.has(c.dataset.key))) return;
+      out.push(e);
     });
+    return out;
   },
-  // step 2: the simplified equation glides into place, and the numbers that changed pop
+  // simplifying, step 1: the terms that combine light up together, so the eye links them before anything moves:
+  // one soft gold pill behind each side's group, "+5 −5" (they cancel) and "7 −5" (they become 2). CSS .hlg
+  pair(next) {
+    const after = this.nextTerms(next);
+    const changed = [...this.el.querySelectorAll('[data-key]')].filter((e) => {
+      const k = e.dataset.key;
+      return k !== 'x' && after.has(k) && !e.querySelector('[data-key]') && after.get(k) !== e.innerHTML;
+    });
+    const lit = [...this.leaving(after), ...changed], eqs = this.el.querySelector('[data-key="eq"]');
+    if (!lit.length || !eqs) return;
+    const R = this.el.getBoundingClientRect(), s = R.width / (this.el.offsetWidth || 1) || 1, m = eqs.getBoundingClientRect(), mid = m.left + m.width / 2;
+    const rects = lit.map((e) => e.getBoundingClientRect());
+    for (const side of [rects.filter((r) => r.right <= mid), rects.filter((r) => r.left >= mid)]) {
+      if (!side.length) continue;
+      const l = Math.min(...side.map((r) => r.left)), r = Math.max(...side.map((q) => q.right));
+      const t = Math.min(...side.map((q) => q.top)), b = Math.max(...side.map((q) => q.bottom));
+      const pill = document.createElement('i'); pill.className = 'hlg'; // (in #eq's own units: it is drawn under the terms)
+      Object.assign(pill.style, { left: (l - R.left) / s + 'px', top: (t - R.top) / s + 'px', width: (r - l) / s + 'px', height: (b - t) / s + 'px' });
+      this.el.prepend(pill);
+    }
+  },
+  // step 2: the terms that cancel fade away, and the pills with them (CSS .van / .hlg.out: transform + opacity, for Motion.BEAT.CANCEL)
+  vanish(next) {
+    const d = Motion.d(Motion.BEAT.CANCEL) + 's';
+    this.leaving(this.nextTerms(next)).forEach((e) => { e.style.animationDuration = d; e.classList.add('van'); });
+    this.el.querySelectorAll('.hlg').forEach((p) => { p.style.animationDuration = d; p.classList.add('out'); });
+  },
+  // step 3: the simplified equation glides into place, and the numbers that changed pop
   settle(next) {
     const html = eqHTML(next), tpl = document.createElement('div'); tpl.innerHTML = html;
     const after = new Map([...tpl.querySelectorAll('[data-key]')].map((e) => [e.dataset.key, e.innerHTML]));
@@ -595,6 +639,22 @@ const EqUI = {
     });
   },
   worldAt(elm) { const r = elm.getBoundingClientRect(); return Stage.s2w(r.left + r.width / 2, r.top + r.height / 2); },
+};
+
+// ---------- the question's label on the cloud (#qTab): it names the task, by key ----------
+// It travels with the cloud. With each new question it drops in just after the cloud lands (transform + opacity
+// only); at the end it reads "Your score".
+const QCard = {
+  tab: null, key: 'qTask',
+  el() { return this.tab || (this.tab = $('#qTab')); },
+  label(key) { if (key === this.key) return; this.key = key; this.el().innerHTML = T(key); },
+  hide() { const t = this.el(); gsap.killTweensOf(t); gsap.set(t, { opacity: 0 }); },
+  pop() {
+    const t = this.el(); gsap.killTweensOf(t);
+    if (Motion.still()) { gsap.set(t, { opacity: 1, y: 0, scale: 1 }); return; }
+    gsap.set(t, { opacity: 0, y: -14, scale: 0.86 });
+    Motion.to(t, { opacity: 1, y: 0, scale: 1, duration: Motion.DUR.REVEAL, ease: Motion.EASE.POP });
+  },
 };
 
 // =====================================================================
@@ -676,8 +736,10 @@ const Spot = {
       const hx = (r.gx / 0.8) * r.sx, hy = (r.gy / 0.8) * r.sy;
       if (press > 0.9 && !this.tapped) { this.tapped = true; FX.uiMode = true; FX.ring(r.x, r.y, '#fff6c8', Math.min(hx, hy) * 0.9); FX.uiMode = false; }
       if (press === 0) this.tapped = false;
-      const ax = Math.min(hx, 110) * 0.3, ay = Math.min(hy, 110) * 0.38;
-      const ht = `translate(${(r.x + ax + 26 * (1 - press)).toFixed(1)}px,${(r.y + ay + 30 * (1 - press)).toFixed(1)}px) rotate(-26deg) scale(${(1 - 0.12 * press).toFixed(3)})`;
+      const ax = Math.min(hx, 110) * 0.17, ay = Math.min(hy, 110) * 0.2;
+      const lowest = (Stage.H - Stage.oy) / Stage.S - 112; // the whole hand stays on screen, even for the tray's balls
+      const fy = Math.min(r.y + ay + 20 * (1 - press), lowest + 20 * (1 - press) * 0.4);
+      const ht = `translate(${(r.x + ax + 14 * (1 - press)).toFixed(1)}px,${fy.toFixed(1)}px) rotate(-28deg) scale(${(1 - 0.1 * press).toFixed(3)})`;
       if (ht !== this.lastHand) { this.hand.style.transform = ht; this.lastHand = ht; }
     }
   },

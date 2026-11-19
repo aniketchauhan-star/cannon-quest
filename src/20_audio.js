@@ -1,6 +1,6 @@
 
 // =====================================================================
-//  AUDIO — real recorded CC0 foley (embedded), teen-style music tracks,
+//  AUDIO — real recorded CC0 foley (js/sfx.js), teen-style music tracks,
 //  waterside ambience, voice-over + captions. Synth = fallback only.
 // =====================================================================
 const Sound = {
@@ -21,11 +21,19 @@ const Sound = {
     const vg = ctx.createGain(); vg.gain.value = 0.25; this.verb.connect(vg); vg.connect(comp);
     this.noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
     const nd = this.noiseBuf.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
-    if (typeof SFX_DATA !== 'undefined') for (const [k, b64] of Object.entries(SFX_DATA)) {
+    this.loadSfx();
+  },
+  // the recorded effects (SFX_DATA, in js/sfx.js, which boot fetches once the start screen is up): decoded once the
+  // sound is on (init, on the Play tap) and they are here, whichever comes last (js/sfx.js calls this as it arrives).
+  // Until then the synth fallback plays.
+  loadSfx() {
+    if (!this.ctx || this.sfxIn || typeof SFX_DATA === 'undefined') return;
+    this.sfxIn = true;
+    for (const [k, b64] of Object.entries(SFX_DATA)) {
       try {
         const bin = atob(b64), u = new Uint8Array(bin.length);
         for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
-        ctx.decodeAudioData(u.buffer).then((b) => { this.buf[k] = b; if (k === 'water' && this.ambientOn) this.startAmbient(); }).catch(() => {});
+        this.ctx.decodeAudioData(u.buffer).then((b) => { this.buf[k] = b; if (k === 'water' && this.ambientOn) this.startAmbient(); }).catch(() => {});
       } catch (e) { /* keep synth fallback */ }
     }
   },
@@ -122,19 +130,20 @@ const Sound = {
   },
 };
 
-// ---------- background music: teen-style chill electronic track ----------
-const TRACKS = { chill: 'assets/music/chillwave.webm' };
+// ---------- background music: "Blue Skies" by HoliznaCC0, a happy lo-fi beat (CC0 public domain, see CREDITS.md) ----------
+// (trimmed before its silent tail, with a short fade at each end, so the loop has no gap)
+const TRACKS = { lofi: 'assets/music/blueskies.webm' };
 // a short buzz on phones that support it (never when muted or with reduced motion)
 const Haptic = { buzz(p) { if (Sound.muted || Motion.still() || !navigator.vibrate) return; try { navigator.vibrate(p); } catch (e) { /* ignore */ } } };
 
 const Music = {
-  el: null, choice: 'chill', level: 0.36, target: 0, on: false, paused: false, vol: 0, hitT: 0,
+  el: null, choice: 'lofi', level: 0.36, target: 0, on: false, paused: false, vol: 0, hitT: 0,
   start() { this.on = true; this.setTrack(this.choice); },
   setTrack(name) {
     this.choice = name;
     if (this.el) { this.el.pause(); this.el = null; }
     if (name === 'off' || !this.on) return;
-    const a = new Audio(TRACKS[name] || TRACKS.chill);
+    const a = new Audio(TRACKS[name] || TRACKS.lofi);
     a.loop = true; a.preload = 'auto'; a.volume = 0; a.muted = Sound.muted;
     this.el = a; this.target = this.level;
     if (!this.paused) { const p = a.play(); if (p && p.catch) p.catch(() => { const retry = () => { if (this.el === a && !this.paused) a.play().catch(() => {}); removeEventListener('pointerdown', retry); }; addEventListener('pointerdown', retry); }); }
@@ -152,6 +161,48 @@ const Music = {
     this.hitT = Math.max(0, this.hitT - dt * 2.5);
     const v = clamp(this.vol * (1 - 0.55 * Math.sin(Math.min(1, this.hitT * 1.25) * Math.PI / 2)), 0, 1);
     if (Math.abs(v - this.el.volume) > 0.002) this.el.volume = v;
+  },
+};
+
+// ---------- the caption card (what the voice is saying) ----------
+// GSAP, transform + opacity only (animation skill): it rises in (ease-out), sinks away (ease-in), and a new
+// line while it is up cross-fades its words while the card's backing (.bg) glides to the new size (FLIP), so
+// it never snaps. Under reduced motion or a Skip every step lands at once (Motion.d).
+const Caption = {
+  el: null, bg: null, txt: null,
+  init() { if (!this.el) { this.el = $('#cap'); this.bg = this.el.querySelector('.bg'); this.txt = this.el.querySelector('.txt'); } },
+  show(text) {
+    this.init();
+    const { el, bg, txt } = this, up = +gsap.getProperty(el, 'opacity') > 0.05;
+    el.classList.add('on');
+    gsap.killTweensOf(el);
+    if (!up) { // enter: the words are set before it shows
+      gsap.killTweensOf([txt, bg]); txt.textContent = text;
+      gsap.set(txt, { opacity: 1, y: 0 }); gsap.set(bg, { scaleX: 1, scaleY: 1 }); gsap.set(el, { y: 14, scale: 0.97 });
+    }
+    Motion.to(el, { opacity: 1, y: 0, scale: 1, duration: Motion.DUR.SLOW * 0.75, ease: Motion.EASE.OUT });
+    if (up && txt.textContent !== text) this.swap(text);
+  },
+  swap(text) { // the old words fade out, the card's backing resizes from the old box to the new one, the new words fade in
+    const { el, bg, txt } = this;
+    gsap.killTweensOf(txt);
+    Motion.to(txt, { opacity: 0, y: -5, duration: Motion.DUR.FAST * 0.8, ease: Motion.EASE.IN, onComplete: () => {
+      const a = el.getBoundingClientRect();
+      txt.textContent = text;
+      const b = el.getBoundingClientRect();
+      gsap.killTweensOf(bg);
+      if (b.width && b.height) gsap.set(bg, { scaleX: a.width / b.width, scaleY: a.height / b.height });
+      Motion.to(bg, { scaleX: 1, scaleY: 1, duration: Motion.DUR.NORMAL + 0.05, ease: Motion.EASE.OUT });
+      gsap.set(txt, { y: 6 });
+      Motion.to(txt, { opacity: 1, y: 0, duration: Motion.DUR.NORMAL, ease: Motion.EASE.OUT, delay: Motion.d(0.04) });
+    } });
+  },
+  hide() {
+    this.init();
+    if (!this.el.classList.contains('on')) return;
+    this.el.classList.remove('on');
+    gsap.killTweensOf(this.el);
+    Motion.to(this.el, { opacity: 0, y: -6, scale: 0.98, duration: Motion.DUR.FAST + 0.03, ease: Motion.EASE.IN });
   },
 };
 
@@ -211,11 +262,10 @@ const VO = {
   },
   // say a line by key: caption + clip (or the device voice); resolves when it has been said, or at once when stopped
   async say(key, hold = 0.5) {
-    const text = T(key), my = ++this.token, cap = $('#cap');
+    const text = T(key), my = ++this.token;
     if (this.cur) { try { this.cur.pause(); } catch (e) { /* ignore */ } this.cur = null; } // never let two lines overlap
     if (this.finish) this.finish();
-    cap.querySelector('.txt').textContent = text;
-    cap.classList.add('on');
+    Caption.show(text);
     Music.duck(true);
     const est = 0.9 + text.length * 0.058;
     const spoken = new Promise((resolve) => {
@@ -236,7 +286,7 @@ const VO = {
     if (this.busy === spoken) this.busy = null;
     if (my !== this.token) return;
     await wait(hold);
-    if (my === this.token) { cap.classList.remove('on'); Music.duck(false); }
+    if (my === this.token) { Caption.hide(); Music.duck(false); }
   },
   // say a line once the one being said has ended, so lines follow each other instead of cutting each other
   // off (a newer line, or stop(), drops it: the newest moment wins)
@@ -248,7 +298,7 @@ const VO = {
   },
   stop() {
     this.token++;
-    $('#cap').classList.remove('on');
+    Caption.hide();
     if (this.cur) { try { this.cur.pause(); } catch (e) { /* ignore */ } this.cur = null; }
     this.utter = null;
     if (window.speechSynthesis && (speechSynthesis.speaking || speechSynthesis.pending)) { speechSynthesis.cancel(); this.cancelAt = performance.now(); }

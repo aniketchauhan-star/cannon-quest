@@ -4,7 +4,7 @@ A 2D algebra game built from your art. Load operation balls into the cannon, fir
 It is based on the *Cannon Quest* deck, the POD A stand-up brief (16 Nov 2026), and the mockups and asset sheets you supplied.
 
 ## Play
-- Double-click **`index.html`** in Chrome, Edge or Safari. It works offline, apart from the Google font on first load.
+- Double-click **`index.html`** in Chrome, Edge or Safari. It works fully offline: the font (Poppins SemiBold) is built into the page.
 - Keep the `assets/`, `js/`, `libs/` and `locales/` folders next to `index.html`.
 - Works best in landscape. On a phone held upright, a "turn your device" hint appears; tap "Play anyway" to dismiss it.
 
@@ -22,8 +22,12 @@ It is based on the *Cannon Quest* deck, the POD A stand-up brief (16 Nov 2026), 
   - Every few seconds the cannon fires one ball (smoke, fireball, recoil) in a low arc under the logo. It hits the cage, which rattles while the cloud squashes. Nothing stays on screen, so it never gets cluttered.
 - **Background:** built from your layer sheet `art/background/background_layers.png` (sky, mountains, trees, lake, plaza, rocks, plants), with no painted clouds, so the equation cloud is the only cloud in the sky.
   - The layers move at different speeds as the camera moves and shakes (parallax): the mountains drift least, and the corner plants move a little more than the plaza. This gives the scene depth.
-  - The lake glints, and the corner plants sway.
-  - `tools/cut_bg_layers.py` → `tools/upscale2x.py` (EDSR) → `tools/compose_bg.py` rebuild the layers. Each layer's parallax amount is in `PARALLAX` in `src/30_stage.js`.
+  - The scene is alive (`src/32_scenery.js`):
+    - **Wind:** every grass tuft, bush and corner plant sways on one gust curve. Each gust travels across the bank from left to right. It runs as CSS keyframes, so it stays smooth even when the game is busy.
+    - **Water:** a canvas animates the lake. The water ripples, the far trees are mirrored in it, and glints twinkle, thickest under the sun.
+    - **Sun:** a real-looking sun in the top right: a blown-out white disc, a soft bloom, slowly turning glare rays, a warm haze over the far hills, and a faint lens flare that follows the camera.
+    - All of it freezes on pause and stands still under reduced motion. On slow devices the water is drawn lighter.
+  - `tools/cut_bg_layers.py` → `tools/upscale2x.py` (EDSR) → `tools/compose_bg.py` rebuild the layers. The ground comes out in pieces (plaza, rocks, each grass tuft and bush), with their positions in `bg_ground.json` (copied into `GROUND` in `src/32_scenery.js`). `tools/make_sun.py` draws `sun_glow` and `sun_rays`. Each layer's parallax amount is in `PARALLAX` in `src/30_stage.js`.
 - **Equation cloud:** smaller (about 80%) and high in the sky, well clear of the cannon.
 - **Cannon blast:** a white-hot flash, then an orange fireball that cools to red, a shock ring, falling embers, and thick grey smoke. The smoke billows out, rolls sideways, then rises and drifts off on the breeze. The sound is real recordings only: a close gun crack, a recorded boom with its rumble, and a distant echo off the lake (see `CREDITS.md`). The ball's whoosh is a real swung metal tube.
   - Pressing Play bursts the start screen away. The cloud then floats down, the cannon pops up and the tray slides in.
@@ -49,6 +53,7 @@ It is based on the *Cannon Quest* deck, the POD A stand-up brief (16 Nov 2026), 
   - Particles don't create new memory each frame.
   - Slower devices automatically get fewer particles and a simpler tutorial dim, changed only between shots.
 - **Words by key:** every line of text and every voice clip is looked up by a key (`T('key')`), with the English in `locales/locales.json`. `index.html?lan=xx` picks a language once one is added.
+- **Type and UI:** one typeface at one weight, **Poppins SemiBold (600)**, with no outlines on text. The caption, Skip and the socket markers (1, 2) share one look: a dark-glass chip with a thin gold edge. The caption hugs its line. When a new line comes in, the old words fade out, the card glides to its new size, and the new words fade in (`Caption` in `src/20_audio.js`). Play again sits under the score cloud.
 
 ## Files
 ```
@@ -68,20 +73,22 @@ cannon quest/
 | Path | What it is |
 |---|---|
 | `index.html`, `js/script.js` | The game, built from `src/` by `./build.sh` |
-| `js/loader.js` | The loading screen, built from `src/05_loader.js`. It shows the start screen with a horizontal bar where Play appears. The bar fills by bytes (`build.sh` writes each image's size into the file), then it flashes and turns into the Play button |
+| `js/sfx.js` | The sound effects (`assets/sfx/*.webm`), embedded by `build.sh` so they also play from disk. The game fetches it once the start screen is up |
+| (no loading screen) | Opening the link shows the start screen as soon as its own pictures are in (about 1.3 s on 4G; at once from disk). `src/00_head.html` preloads the scripts, the words and every start-screen picture first. The play scene's pictures (`data-src` in the markup, `Pics.GAME` in `src/40_game.js`) and `js/sfx.js` are fetched only once the start screen shows, so they never slow it. `Title.exit` waits for them if Play is tapped first |
 | `locales/locales.json` | Every word the game shows or says, by key (English). `locales.js` is a generated copy for opening from disk |
 | `js/i18n.js` | Looks words and voice clips up by key (`T('key')`, `I18n.voice('key')`) |
 | `libs/gsap.min.js` | GSAP 3.15.0, the animation library, bundled locally |
+| `assets/fonts/` | Poppins SemiBold (`poppins-600-latin*.woff2`, SIL OFL). `build.sh` embeds it into `index.html` (as `src/02_fonts.html`), because Chrome blocks font files on pages opened from disk |
 | `assets/img/` | The sprites, cut from the sheets in `art/` and upscaled (EDSR super-resolution) so they stay sharp on retina screens. Start-screen sprites are named `t_*`; `bg_*.webp` are the background layers. All images are WebP |
 | `assets/sfx/` | Recorded sound effects (CC0 / public domain), Opus `.webm` |
-| `assets/music/` | Background music: "Chill Wave", a teen-style chill electronic track (Opus `.webm`) |
+| `assets/music/` | Background music: "Blue Skies" by HoliznaCC0, a happy lo-fi beat, CC0 public domain (Opus `.webm`) |
 | `assets/VO/en/` | Voice clips, one per key (`<key>.webm`), from Aamir's studio |
 
 **Working files (the game doesn't need these to run)**
 | Path | What it is |
 |---|---|
 | `src/` | The game's source code and page, in the order `build.sh` joins them |
-| `build.sh` | Rebuilds `index.html`, `js/script.js`, `js/loader.js` and `locales/locales.js` from `src/` and `locales/locales.json` |
+| `build.sh` | Rebuilds `index.html` (with the font embedded at the `<!--FONTS-->` line of `src/00_head.html`), `js/script.js`, `js/sfx.js` and `locales/locales.js` from `src/` and `locales/locales.json` |
 | `tools/` | `vo_studio.mjs` (makes the clips in the studio), `vo_build.sh` (turns them into `.webm`), `gen_locales.mjs` (run by `build.sh`) |
 | `art/sprite_sheets/` | `1.png`–`4.png`: the glossy sheets every current sprite is cut from. `flat_sprites.png`: a flat-art sheet that was tried and dropped |
 | `art/start_screen/` | `thumbnail.png` (start-screen sheet; the logo `t_logo.png` still comes from it) and `play_button.png` |
