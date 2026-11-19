@@ -142,6 +142,11 @@ img{-webkit-user-drag:none;user-select:none}
 #cannonBody,#cannonFrontBody{position:absolute;width:0;height:0;transform-origin:0 0}
 #cannonBody img,#cannonFrontBody img{position:absolute;bottom:0;transform:translateX(-50%);left:0}
 #cannonFront{position:absolute;left:0;top:0;pointer-events:none}
+/* a loaded socket's dark lining (the hole's art is lit at the bottom, which made the ball look pushed up): an even,
+   deep socket all round the ball, a little darker under the ring's top lip */
+.sbk{position:absolute;display:block;border-radius:50%;pointer-events:none;opacity:0;transition:opacity .2s ease-out;
+  background:radial-gradient(circle at 50% 46%,#2b1306 0,#1a0903 58%,#0d0401 100%);box-shadow:inset 0 5px 7px rgba(0,0,0,.65)}
+.sbk.on{opacity:1}
 .sglow{position:absolute;border-radius:50%;pointer-events:none;opacity:0;box-shadow:0 0 0 7px rgba(255,236,120,.95),0 0 34px 16px rgba(255,196,40,.9),inset 0 0 26px 8px rgba(255,220,90,.7);transition:opacity .2s}
 .sglow.on{opacity:1;animation:sg .5s ease-in-out infinite alternate}
 @keyframes sg{to{transform:scale(1.08)}}

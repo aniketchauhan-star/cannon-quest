@@ -663,9 +663,10 @@ const CANNON = { x: 836, bottom: 762, h: 360, src: { 1: [613, 449], 2: [613, 449
   // cannon is not centred on its sprite, so the button is placed by this, never by the sprite's middle. FIRE's
   // picture (fire.webp, 244×101) has its pill in the middle 240×97: it is sized so the pill fills the recess exactly
   fire: { cx: 314.0, cy: 357.5, w: 240, h: 97, art: [244, 101, 240, 97] },
-  // a loaded ball sits wholly inside its socket: its painted orb is this much of the hole's width, so a thin dark
-  // rim shows all round and the gold ring never covers the ball
-  seat: 0.93 };
+  // a loaded ball sits wholly inside its socket: its painted orb is this much of the hole's width, so an even dark
+  // rim shows all round and the gold ring never covers the ball. (The hole's art is dark at the top and lit brown
+  // at the bottom, which made a centred ball look pushed up: a loaded socket gets a dark lining, .sbk, behind it)
+  seat: 0.88 };
 const BALL_ART = 0.96; // the orb's share of its picture (ball_*.webp: the orb is ~161 of 168 px)
 // tray art (wooden, metal corners; its plain middle stretched to hold 8 balls): ball spots along its floor (holesX,
 // holeY), the bottom edge and the outer edges in source px; a seated ball's centre sits `seat` px below (+) / above (−) its spot
@@ -1037,8 +1038,12 @@ const Cannon = {
     this.fitFire(); // (each round: by now the word is in, whatever the language)
     this.c1.style.display = this.c1f.style.display = n === 1 ? '' : 'none'; this.c2.style.display = this.c2f.style.display = n === 2 ? '' : 'none';
     const fx = $('#sockFx'); fx.innerHTML = '';
-    this.sock = []; this.tags = [];
+    this.sock = []; this.tags = []; this.backs = [];
     this.holes(n).forEach((h, i) => {
+      // the socket's dark lining, shown while a ball sits in it (the ring's inner edge, so the ring covers its rim)
+      const k = document.createElement('i'); k.className = 'sbk'; const kd = h.r * 2 + 1;
+      Object.assign(k.style, { left: h.x - kd / 2 + 'px', top: h.y - kd / 2 + 'px', width: kd + 'px', height: kd + 'px' });
+      fx.appendChild(k); this.backs.push(k);
       const g = document.createElement('div'); g.className = 'sglow';
       const d = h.r * 2.55; Object.assign(g.style, { left: h.x - d / 2 + 'px', top: h.y - d / 2 + 'px', width: d + 'px', height: d + 'px' });
       fx.appendChild(g); this.sock.push(g);
@@ -1186,7 +1191,7 @@ function flyBall(b, dur = Motion.BEAT.TAP_FLY, arc = 230) {
   b.flight = { fx: b.x, fy: b.y, fs: b.s, t: 0, dur, arc, r0: b.r, r1: turn };
 }
 function updateBalls(dt, t) {
-  const seated = new Array(8).fill(false);
+  const seated = new Array(8).fill(false), full = [];
   for (const b of Rack.balls) {
     if (b.where === 'gone') { b.el.classList.add('gone'); continue; }
     const h = ballHome(b);
@@ -1221,8 +1226,10 @@ function updateBalls(dt, t) {
     b.el.classList.toggle('hov', b.hover > 0.5);
     b.el.classList.toggle('seated', !b.flight && !!b.isSeated);
     b.el.classList.toggle('insock', !b.flight && b.where === 'socket'); // (sunk into the barrel: a soft inner shade)
+    if (b.where === 'socket' && (!b.flight || b.flight.t > b.flight.dur * 0.7)) full[b.socket] = true; // (lined as it arrives)
   }
   if (Rack.shadows) Rack.shadows.forEach((d, i) => d.classList.toggle('on', seated[i]));
+  if (Cannon.backs) Cannon.backs.forEach((k, i) => k.classList.toggle('on', !!full[i]));
 }
 
 // =====================================================================
