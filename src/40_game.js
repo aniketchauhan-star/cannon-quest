@@ -268,9 +268,23 @@ function playShots() {
   });
 }
 
-// ---- tutorials (first entry only), every line by key; Skip ends the tutorial ----
+// ---- tutorials (first game on this device only), every line by key; Skip ends the tutorial ----
+// What has been taught is saved in this browser once the player fires (or taps Skip), so a reload or a new visit
+// goes straight into play, like Play again does. A reload mid-tutorial, before that, shows it again.
+// (A test hook: ?tutorial in the address forgets it, so the tutorials play again.)
+const Taught = {
+  KEY: 'cannonQuest.taught',
+  load() {
+    try {
+      if (new URLSearchParams(location.search).has('tutorial')) { localStorage.removeItem(this.KEY); return; }
+      const t = JSON.parse(localStorage.getItem(this.KEY) || '{}');
+      G.taught1 = !!t.load; G.taughtSeq = !!t.seq;
+    } catch (e) { /* storage blocked (private window, file:// in some browsers): the tutorials simply play */ }
+  },
+  save() { try { localStorage.setItem(this.KEY, JSON.stringify({ load: G.taught1, seq: G.taughtSeq })); } catch (e) {} },
+};
 function skipTutorial() {
-  G.tutSkip = true;
+  G.tutSkip = true; Taught.save();
   VO.stop(); Spot.hide(); G.spotOnly = null;
   Rack.balls.forEach((b) => (b.guide = false));
   if (G.hooks) { G.hooks.onFill = null; G.hooks.softSpot = false; }
@@ -360,6 +374,7 @@ async function playRound(sid, i) {
   if (after) after();
   await fired;
   if (sid !== G.session) return;
+  if (after) Taught.save(); // this round's tutorial is done: it never plays again on this device
   G.spotOnly = null; Spot.hide();
   G.inputOn = false; G.hooks = {}; Cannon.setFireActive(false);
   Rack.balls.forEach((b) => (b.guide = false));
@@ -491,7 +506,7 @@ function frame(time, deltaMs) {
 // preloads them); the play scene's arrive while the player is on the start screen (Title.exit waits for them,
 // in case Play is tapped first) ----
 const Pics = {
-  TITLE: ['bg_sky', 'bg_clouds', 'bg_mount', 'bg_trees', 'bg_plantL', 'bg_plantR', 'bg_deck', 't_logo', 't_cannon', 'playbtn', 't_cage', 't_x', 't_cage_front'],
+  TITLE: ['bg_sky', 'sun_glow', 'sun_rays', 'bg_mount', 'bg_trees', 'bg_plantL', 'bg_plantR', 'bg_deck', 't_logo', 't_cannon', 'playbtn', 't_cage', 't_x', 't_cage_front'],
   GAME: ['cloud', 'cannon1', 'cannon2', 'cannon1_front', 'cannon2_front', 'rack', 'rack_front', 'fire', 'cage_x', 'xchar', 'hand', 'pause', 'play', 'sound',
     ...[0, 1, 2, 3, 4, 5, 6, 7].map((i) => `ball_${i}`)],
   game: null, // (a promise: the play scene's pictures and the font)
@@ -516,6 +531,7 @@ async function boot() {
   wireInput();
   gsap.ticker.add(frame);
   window.__cqBooted = true; window.__cq = { G, Clock, Rack, Sound, Music, Stage, EqUI, VO, Motion, Skip, Spot, Title, Cloud, Cannon, TimeFx, Perf, FX, Pics };
+  Taught.load(); // the tutorials already seen on this device are not played again
   // the start screen: the scene fades in while the title plays its intro, and the Play button pops in
   G.state = 'title';
   Title.start();
