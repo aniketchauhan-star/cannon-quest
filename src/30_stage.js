@@ -4,24 +4,29 @@
 //  (zoom / pan / shake), particles, and the scene sprites.
 // =====================================================================
 const DW = 1672, DH = 941, CX = DW / 2, CY = DH / 2;
-// (measured on the art cut from new.png, see tools/cut_new_art.py; cannon 1's baked-in FIRE plate is painted out, the game's FIRE button sits there)
-const CANNON = { x: 836, bottom: 762, h: 342, src: { 1: [474, 388], 2: [577, 389] },
+// (measured on the art cut from the user's UI sheet art/sprite_sheets/ui_elements.png by tools/cut_ui_elements.py:
+// the wooden cannon with leaves, its FIRE pill a dark recess where the game's FIRE button sits; cannon 2 is the same
+// cannon with two smaller sockets, on the same canvas)
+const CANNON = { x: 836, bottom: 762, h: 360, src: { 1: [613, 449], 2: [613, 449] },
   // centre + inner radius of each gold socket ring (the dark hole's edge): x and r as fractions of the sprite width, y of its height
-  holes: { 1: [[0.5002, 0.4735, 0.0965]], 2: [[0.3812, 0.5059, 0.0748], [0.6185, 0.5064, 0.0754]] },
-  // base footprint width + the two cyan light strips (centre, width) as fractions of each sprite
-  foot: { 1: { w: 0.9494, strips: [[0.1603, 0.1435], [0.8407, 0.1414]] }, 2: { w: 0.9567, strips: [[0.1482, 0.1334], [0.8562, 0.1317]] } },
-  // the FIRE plate on the front of the base: width (× h), centre height above the ground (× h), height/width of its art
-  fire: { w: 0.597, y: 0.19, ar: 140 / 304 } };
-// tray art (a cupless trough): ball spots along its floor (holesX, holeY), bottom edge and feet in source px; a seated ball's centre sits `seat` px below (+) / above (−) its spot
-const RACK = { left: 271, top: 798, w: 1130, srcW: 1428, holesX: [145.1, 307.4, 469.6, 631.9, 794.1, 956.4, 1118.6, 1280.9], holeY: 61, bot: 160, edges: [40, 1388], seat: -8 };
-const BALL_D = 112, MUZZLE = { x: CANNON.x, y: CANNON.bottom - CANNON.h + 14 };
+  holes: { 1: [[0.5074, 0.4095, 0.1002]], 2: [[0.3921, 0.4206, 0.0782], [0.6227, 0.4206, 0.0782]] },
+  // base footprint width (fraction of the sprite); the wooden base has no light strips
+  foot: { 1: { w: 0.8546, strips: [] }, 2: { w: 0.8546, strips: [] } },
+  // the FIRE pill on the front: width (× h), centre height above the ground (× h), height/width of its art
+  fire: { w: 0.5351, y: 0.2044, ar: 0.4045 } };
+// tray art (wooden, metal corners; its plain middle stretched to hold 8 balls): ball spots along its floor (holesX,
+// holeY), the bottom edge and the outer edges in source px; a seated ball's centre sits `seat` px below (+) / above (−) its spot
+const RACK = { left: 166, top: 780, w: 1340, srcW: 1618, holesX: [212.3, 382.4, 552.5, 722.7, 892.8, 1063.0, 1233.1, 1403.2], holeY: 59.5, bot: 185.4, edges: [2, 1616], seat: 0 };
+const BALL_D = 122, MUZZLE = { x: CANNON.x, y: CANNON.bottom - CANNON.h + 14 }; // (BALL_D = the .ball size in the CSS)
 // the equation cloud, far off in the sky and well clear of the cannon: Cloud.apply draws #cloud (card included) at
 // CLOUD_FAR of its size, about its transform-origin (world 828, 163). Where a shot hits (on the card), and its middle
 const CLOUD_FAR = 0.88, CLOUD_HIT = { x: 828, y: 174 }, CLOUD_MID = { x: 828, y: 133 };
-// background layers from art/background/background_layers.png: how much each follows the camera (1 = the plaza;
-// less = farther away, so it drifts less; more = nearer). Moved by transform only, when the camera moves.
-// The sun moves with the sky; the warm haze near it sits with the far hills (src/32_scenery.js).
-const PARALLAX = [['#bgSky', 0.35], ['#bgSun', 0.35], ['#bgMount', 0.55], ['#bgTrees', 0.72], ['#bgHaze', 0.6], ['#bgLake', 0.86], ['#bgForeL', 1.1], ['#bgForeR', 1.1]];
+// background layers cut from the user's deck picture (tools/cut_deck_bg.py): how much each follows the camera (1 =
+// the deck, with its railing and plants, where the cannon stands; less = farther away, so it drifts less). Moved by
+// transform only, when the camera moves. Each layer holds ~25 bg px of picture under the edge of the one in front
+// of it, which is as far as these factors ever pull two layers apart (widest phone, camera up at the cloud): keep
+// the steps between them this small, or a layer's hidden edge would show.
+const PARALLAX = [['#bgSky', 0.62], ['#bgClouds', 0.62], ['#bgMount', 0.74], ['#bgTrees', 0.88]];
 
 // =====================================================================
 //  CAMERA RIG (docs/GAME_PROMPT.md §7–8). Three parts, added every frame:
@@ -351,6 +356,8 @@ const Cannon = {
     const fw = CANNON.h * CANNON.fire.w, fh = fw * CANNON.fire.ar, fcy = CANNON.bottom - CANNON.h * CANNON.fire.y; // FIRE sits on the base, like the mockup
     Object.assign(this.fire.style, { left: CANNON.x - fw / 2 + 'px', top: fcy - fh / 2 + 'px', width: fw + 'px', height: fh + 'px' });
     this.fireBox = { x: CANNON.x, y: fcy, w: fw, h: fh };
+    this.fireText = this.fire.querySelector('.ft'); this.fireFont = fh * 0.62; // the word's size, from the pill's height (about the painted word's size)
+    this.fitFire();
     const gr = $('#ground');
     this.gShadow = groundGroup(gr, 'shadow', CANNON.x, CANNON.bottom); // planted on the plaza
     this.gLight = groundGroup(gr, 'light', CANNON.x, CANNON.bottom);   // cyan strips spilling onto the ground
@@ -362,8 +369,16 @@ const Cannon = {
   },
   // a loaded ball fills the whole socket; its edge tucks under the gold ring (the ring is redrawn above the balls)
   socketPos(i, n = this.n) { const h = this.holes(n)[i] || this.holes(n)[0]; return { x: h.x, y: h.y, s: (h.r * 2 * 1.07) / (BALL_D * 0.99) }; },
+  // the word on FIRE (T('btnFire')) at its size, shrunk if a longer word would run past the pill's straight middle
+  fitFire() {
+    const t = this.fireText; if (!t) return;
+    t.style.fontSize = this.fireFont + 'px';
+    const room = this.fireBox.w * 0.78, w = t.offsetWidth; // (the span is as wide as its word)
+    if (w > room) t.style.fontSize = (this.fireFont * room / w).toFixed(1) + 'px';
+  },
   setN(n) {
     this.n = n;
+    this.fitFire(); // (each round: by now the word is in, whatever the language)
     this.c1.style.display = this.c1f.style.display = n === 1 ? '' : 'none'; this.c2.style.display = this.c2f.style.display = n === 2 ? '' : 'none';
     const fx = $('#sockFx'); fx.innerHTML = '';
     this.sock = []; this.tags = [];
@@ -371,7 +386,10 @@ const Cannon = {
       const g = document.createElement('div'); g.className = 'sglow';
       const d = h.r * 2.55; Object.assign(g.style, { left: h.x - d / 2 + 'px', top: h.y - d / 2 + 'px', width: d + 'px', height: d + 'px' });
       fx.appendChild(g); this.sock.push(g);
-      if (n > 1) { const t = document.createElement('div'); t.className = 'stag'; t.textContent = i + 1; Object.assign(t.style, { left: h.x + 'px', top: h.y - h.r - 50 + 'px' }); fx.appendChild(t); this.tags.push(t); }
+      if (n > 1) { // the order markers sit beside the sockets, 1 on the left, 2 on the right (above them is the barrel)
+        const t = document.createElement('div'); t.className = 'stag'; t.textContent = i + 1;
+        Object.assign(t.style, { left: h.x + (i === 0 ? -1 : 1) * (h.r + 38) + 'px', top: h.y + 'px' }); fx.appendChild(t); this.tags.push(t);
+      }
     });
     const [sw, sh] = CANNON.src[n], w = sw * CANNON.h / sh, fw = (this.footW = w * CANNON.foot[n].w);
     this.gShadow.innerHTML = ''; this.gLight.innerHTML = '';
@@ -641,15 +659,16 @@ const EqUI = {
   worldAt(elm) { const r = elm.getBoundingClientRect(); return Stage.s2w(r.left + r.width / 2, r.top + r.height / 2); },
 };
 
-// ---------- the question's label on the cloud (#qTab): it names the task, by key ----------
-// It travels with the cloud. With each new question it drops in just after the cloud lands (transform + opacity
-// only); at the end it reads "Your score".
+// ---------- the label on the cloud (#qTab), by key ----------
+// During play the cloud has no label, only the equation (the user removed "Find the value of x" on 19 Nov). At the
+// end it reads "Your score": it travels with the cloud and drops in just after the cloud lands (transform + opacity).
 const QCard = {
-  tab: null, key: 'qTask',
+  tab: null, key: null,
   el() { return this.tab || (this.tab = $('#qTab')); },
-  label(key) { if (key === this.key) return; this.key = key; this.el().innerHTML = T(key); },
+  label(key) { if (key === this.key) return; this.key = key; this.el().innerHTML = key ? T(key) : ''; },
   hide() { const t = this.el(); gsap.killTweensOf(t); gsap.set(t, { opacity: 0 }); },
   pop() {
+    if (!this.key) return this.hide(); // no label to show
     const t = this.el(); gsap.killTweensOf(t);
     if (Motion.still()) { gsap.set(t, { opacity: 1, y: 0, scale: 1 }); return; }
     gsap.set(t, { opacity: 0, y: -14, scale: 0.86 });
