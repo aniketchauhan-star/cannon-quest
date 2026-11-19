@@ -14,7 +14,7 @@
 #
 # Layers, back to front (bg units = the 1672x941 frame; saved at 2x):
 #   bg_sky                 the sky without its clouds (a smooth fit; a gradient, so it is saved small and stretched)
-#   bg_clouds              the five clouds, lifted off the sky (each one drifts on its own: src/32_scenery.js)
+#   (the five painted clouds are lifted off the sky but not saved: the user wants only the equation cloud, 19 Nov)
 #   bg_mount               the mountains
 #   bg_trees               the forest and the big trees
 #   bg_plantL, bg_plantR   the two leafy plants behind the railing (they sway in the wind)
@@ -339,7 +339,7 @@ def bbox(a, pad=U(2)):
 ones = np.ones((H, W), np.float32)
 boxes = {}
 boxes['bg_sky'] = save('bg_sky', sky, ones, (0, 0, W, H), q='lossless', small=8)  # (a smooth gradient: 1/4 size)
-boxes['bg_clouds'] = save('bg_clouds', cl_col, cl_a, bbox(cl_a))
+# (the painted clouds are not saved: the only cloud in the game is the equation's, the user's choice of 19 Nov)
 # the mountains: from the ridge down to well past the deepest spot the trees let them show through
 mvis = (m_a > 0) & ~tree_zone
 mb = bbox(m_a)

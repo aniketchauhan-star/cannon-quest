@@ -33,7 +33,8 @@ const CLOUD_FAR = 0.88, CLOUD_HIT = { x: 828, y: 174 }, CLOUD_MID = { x: 828, y:
 // transform only, when the camera moves. Each layer holds ~25 bg px of picture under the edge of the one in front
 // of it, which is as far as these factors ever pull two layers apart (widest phone, camera up at the cloud): keep
 // the steps between them this small, or a layer's hidden edge would show.
-const PARALLAX = [['#bgSky', 0.62], ['#bgClouds', 0.62], ['#bgMount', 0.74], ['#bgTrees', 0.88]];
+// (the sun moves with the sky, the birds fly between the hills and the trees, the mist / light / leaves go with the trees)
+const PARALLAX = [['#bgSky', 0.62], ['#bgSun', 0.62], ['#bgMount', 0.74], ['#bgBirds', 0.8], ['#bgTrees', 0.88], ['#bgJungle', 0.88]];
 
 // =====================================================================
 //  CAMERA RIG (docs/GAME_PROMPT.md §7–8). Three parts, added every frame:
