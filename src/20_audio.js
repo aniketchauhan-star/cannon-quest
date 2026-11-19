@@ -130,20 +130,21 @@ const Sound = {
   },
 };
 
-// ---------- background music: "Blue Skies" by HoliznaCC0, a happy lo-fi beat (CC0 public domain, see CREDITS.md) ----------
-// (trimmed before its silent tail, with a short fade at each end, so the loop has no gap)
-const TRACKS = { lofi: 'assets/music/blueskies.webm' };
+// ---------- background music: "Bravery Run" (OpenGameArt, CC0 public domain, see CREDITS.md) ----------
+// upbeat game music, electric guitar + synth at 170 bpm (the user, 19 Nov: a gamified track for teens). It was made
+// to loop (exactly 316 beats), so it is stored whole, with no fades, and loops without a seam
+const TRACKS = { game: 'assets/music/braveryrun.webm' };
 // a short buzz on phones that support it (never when muted or with reduced motion)
 const Haptic = { buzz(p) { if (Sound.muted || Motion.still() || !navigator.vibrate) return; try { navigator.vibrate(p); } catch (e) { /* ignore */ } } };
 
 const Music = {
-  el: null, choice: 'lofi', level: 0.36, target: 0, on: false, paused: false, vol: 0, hitT: 0,
+  el: null, choice: 'game', level: 0.36, target: 0, on: false, paused: false, vol: 0, hitT: 0,
   start() { this.on = true; this.setTrack(this.choice); },
   setTrack(name) {
     this.choice = name;
     if (this.el) { this.el.pause(); this.el = null; }
     if (name === 'off' || !this.on) return;
-    const a = new Audio(TRACKS[name] || TRACKS.lofi);
+    const a = new Audio(TRACKS[name] || TRACKS.game);
     a.loop = true; a.preload = 'auto'; a.volume = 0; a.muted = Sound.muted;
     this.el = a; this.target = this.level;
     if (!this.paused) { const p = a.play(); if (p && p.catch) p.catch(() => { const retry = () => { if (this.el === a && !this.paused) a.play().catch(() => {}); removeEventListener('pointerdown', retry); }; addEventListener('pointerdown', retry); }); }

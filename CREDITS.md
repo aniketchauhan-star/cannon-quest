@@ -4,11 +4,10 @@
 All game art comes from the files you supplied, kept in `art/`: the sprite sheets (`art/sprite_sheets/`), the start-screen sheet and Play button (`art/start_screen/`), and the deck background picture with its parts sheet (`art/background/`).
 
 ## Music
-**"Blue Skies"** by HoliznaCC0, from the *Happy Lo-Fi (Lofi Collection)* on OpenGameArt:
-[opengameart.org/content/happy-lo-fi-lofi-collection](https://opengameart.org/content/happy-lo-fi-lofi-collection).
-Released as **CC0 (public domain)**: "This music is public domain CC0, so use it how you want!" No credit is required; it is given here anyway.
-Stored as `assets/music/blueskies.webm` (Opus, 64 kbps). It is trimmed at 172.3 s, before the track's silent tail, with a 0.4 s fade-in and a 2.5 s fade-out so the loop has no gap. Its loudness is matched to the previous track (−12.5 LUFS).
-It replaced "Chill Wave" by Kevin MacLeod (CC BY 4.0) on 19 Nov 2026, at the user's request for a copyright-free track.
+**"Bravery Run"** by MintoDog, on OpenGameArt: [opengameart.org/content/bravery-run](https://opengameart.org/content/bravery-run).
+Uplifting electric guitar and synth game music at 170 bpm, made to loop. Released as **CC0 (public domain)**. No credit is required; it is given here anyway.
+Stored as `assets/music/braveryrun.webm` (Opus, 80 kbps): the whole 111.5 s loop (316 beats), with no fades, so it loops without a seam. It is turned down 4.7 dB to −14 LUFS, about as loud as the track before it.
+It replaced "Blue Skies" by HoliznaCC0 (CC0 lo-fi) on 19 Nov 2026, when the user asked for gamified music for teens. That had replaced "Chill Wave" by Kevin MacLeod (CC BY 4.0) earlier the same day.
 
 ## Voice-over
 Every line is made in Aamir's TTS studio **Ai Wala Human By Aamir**, in one man's voice (since 18 Nov 2026, at the user's request; by default **Male Child (Energetic)**, which is Gemini voice Puck, an adult man's upbeat voice), with `tools/vo_studio.mjs`. Until the studio's clips are in `assets/VO/en/`, the lines are read by the device's own voice (a man's where the device has one). The earlier Kokoro clips were removed on 18 Nov 2026: the project's rules allow only the studio's voice.

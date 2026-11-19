@@ -465,20 +465,21 @@ const Sound = {
   },
 };
 
-// ---------- background music: "Blue Skies" by HoliznaCC0, a happy lo-fi beat (CC0 public domain, see CREDITS.md) ----------
-// (trimmed before its silent tail, with a short fade at each end, so the loop has no gap)
-const TRACKS = { lofi: 'assets/music/blueskies.webm' };
+// ---------- background music: "Bravery Run" (OpenGameArt, CC0 public domain, see CREDITS.md) ----------
+// upbeat game music, electric guitar + synth at 170 bpm (the user, 19 Nov: a gamified track for teens). It was made
+// to loop (exactly 316 beats), so it is stored whole, with no fades, and loops without a seam
+const TRACKS = { game: 'assets/music/braveryrun.webm' };
 // a short buzz on phones that support it (never when muted or with reduced motion)
 const Haptic = { buzz(p) { if (Sound.muted || Motion.still() || !navigator.vibrate) return; try { navigator.vibrate(p); } catch (e) { /* ignore */ } } };
 
 const Music = {
-  el: null, choice: 'lofi', level: 0.36, target: 0, on: false, paused: false, vol: 0, hitT: 0,
+  el: null, choice: 'game', level: 0.36, target: 0, on: false, paused: false, vol: 0, hitT: 0,
   start() { this.on = true; this.setTrack(this.choice); },
   setTrack(name) {
     this.choice = name;
     if (this.el) { this.el.pause(); this.el = null; }
     if (name === 'off' || !this.on) return;
-    const a = new Audio(TRACKS[name] || TRACKS.lofi);
+    const a = new Audio(TRACKS[name] || TRACKS.game);
     a.loop = true; a.preload = 'auto'; a.volume = 0; a.muted = Sound.muted;
     this.el = a; this.target = this.level;
     if (!this.paused) { const p = a.play(); if (p && p.catch) p.catch(() => { const retry = () => { if (this.el === a && !this.paused) a.play().catch(() => {}); removeEventListener('pointerdown', retry); }; addEventListener('pointerdown', retry); }); }
@@ -658,8 +659,14 @@ const CANNON = { x: 836, bottom: 762, h: 360, src: { 1: [613, 449], 2: [613, 449
   holes: { 1: [[0.5074, 0.4095, 0.1002]], 2: [[0.3921, 0.4206, 0.0782], [0.6227, 0.4206, 0.0782]] },
   // base footprint width (fraction of the sprite); the wooden base has no light strips
   foot: { 1: { w: 0.8546, strips: [] }, 2: { w: 0.8546, strips: [] } },
-  // the FIRE pill on the front: width (× h), centre height above the ground (× h), height/width of its art
-  fire: { w: 0.5351, y: 0.2044, ar: 0.4045 } };
+  // the dark recess inside the gold FIRE bezel, in sprite px (both cannons share it): centre + size. The art's
+  // cannon is not centred on its sprite, so the button is placed by this, never by the sprite's middle. FIRE's
+  // picture (fire.webp, 244×101) has its pill in the middle 240×97: it is sized so the pill fills the recess exactly
+  fire: { cx: 314.0, cy: 357.5, w: 240, h: 97, art: [244, 101, 240, 97] },
+  // a loaded ball sits wholly inside its socket: its painted orb is this much of the hole's width, so a thin dark
+  // rim shows all round and the gold ring never covers the ball
+  seat: 0.93 };
+const BALL_ART = 0.96; // the orb's share of its picture (ball_*.webp: the orb is ~161 of 168 px)
 // tray art (wooden, metal corners; its plain middle stretched to hold 8 balls): ball spots along its floor (holesX,
 // holeY), the bottom edge and the outer edges in source px; a seated ball's centre sits `seat` px below (+) / above (−) its spot
 const RACK = { left: 166, top: 780, w: 1340, srcW: 1618, holesX: [212.3, 382.4, 552.5, 722.7, 892.8, 1063.0, 1233.1, 1403.2], holeY: 59.5, bot: 185.4, edges: [2, 1616], seat: 0 };
@@ -999,9 +1006,12 @@ const Cannon = {
     this.front = $('#cannonFront'); this.front.style.transformOrigin = this.el.style.transformOrigin; this.c1f = $('#c1f'); this.c2f = $('#c2f');
     for (const id of ['#cannonBody', '#cannonFrontBody']) Object.assign($(id).style, { left: CANNON.x + 'px', top: CANNON.bottom + 'px' });
     this.c1.style.height = this.c2.style.height = this.c1f.style.height = this.c2f.style.height = CANNON.h + 'px';
-    const fw = CANNON.h * CANNON.fire.w, fh = fw * CANNON.fire.ar, fcy = CANNON.bottom - CANNON.h * CANNON.fire.y; // FIRE sits on the base, like the mockup
-    Object.assign(this.fire.style, { left: CANNON.x - fw / 2 + 'px', top: fcy - fh / 2 + 'px', width: fw + 'px', height: fh + 'px' });
-    this.fireBox = { x: CANNON.x, y: fcy, w: fw, h: fh };
+    // FIRE fills the recess in the cannon's gold bezel, centred on it (pressed, it sinks into the dark recess)
+    const F = CANNON.fire, [sw, sh] = CANNON.src[1], sc = CANNON.h / sh, [aw, ah, pw, ph] = F.art;
+    const fcx = CANNON.x + (F.cx - sw / 2) * sc, fcy = CANNON.bottom - CANNON.h + F.cy * sc;
+    const fw = F.w * sc * (aw / pw), fh = F.h * sc * (ah / ph);
+    Object.assign(this.fire.style, { left: fcx - fw / 2 + 'px', top: fcy - fh / 2 + 'px', width: fw + 'px', height: fh + 'px' });
+    this.fireBox = { x: fcx, y: fcy, w: fw, h: fh };
     this.fireText = this.fire.querySelector('.ft'); this.fireFont = fh * 0.62; // the word's size, from the pill's height (about the painted word's size)
     this.fitFire();
     const gr = $('#ground');
@@ -1013,8 +1023,8 @@ const Cannon = {
     const [sw, sh] = CANNON.src[n], sc = CANNON.h / sh, w = sw * sc, left = CANNON.x - w / 2, top = CANNON.bottom - CANNON.h;
     return CANNON.holes[n].map(([fx, fy, fr]) => ({ x: left + fx * w, y: top + fy * CANNON.h, r: fr * w }));
   },
-  // a loaded ball fills the whole socket; its edge tucks under the gold ring (the ring is redrawn above the balls)
-  socketPos(i, n = this.n) { const h = this.holes(n)[i] || this.holes(n)[0]; return { x: h.x, y: h.y, s: (h.r * 2 * 1.07) / (BALL_D * 0.99) }; },
+  // a loaded ball sits wholly inside its socket, centred, with a thin dark rim all round (CANNON.seat)
+  socketPos(i, n = this.n) { const h = this.holes(n)[i] || this.holes(n)[0]; return { x: h.x, y: h.y, s: (h.r * 2 * CANNON.seat) / (BALL_D * BALL_ART) }; },
   // the word on FIRE (T('btnFire')) at its size, shrunk if a longer word would run past the pill's straight middle
   fitFire() {
     const t = this.fireText; if (!t) return;
@@ -1210,6 +1220,7 @@ function updateBalls(dt, t) {
     b.el.classList.toggle('guide', b.guide && b.where === 'rack');
     b.el.classList.toggle('hov', b.hover > 0.5);
     b.el.classList.toggle('seated', !b.flight && !!b.isSeated);
+    b.el.classList.toggle('insock', !b.flight && b.where === 'socket'); // (sunk into the barrel: a soft inner shade)
   }
   if (Rack.shadows) Rack.shadows.forEach((d, i) => d.classList.toggle('on', seated[i]));
 }
