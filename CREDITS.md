@@ -39,6 +39,12 @@ They are stored as Opus (`assets/sfx/*.webm`) to keep the game small.
 | toggle, click, tick | Fire button and UI | toggle_002, click_002, tick_002 |
 | cloth | x landing on the plaza | cloth2 |
 | water | Lake-side ambience | sfx100v2_loop_water_01 |
+| swish | Start screen: the sign and the cage falling | [BigSoundBank #1799](https://bigsoundbank.com/whoosh-6-s1799.html), "Whoosh 6", a wooden sheet swung through the air (CC0) |
+| knock | Start screen: the CANNON QUEST sign landing | [BigSoundBank #1588](https://bigsoundbank.com/gavel-1-blow-s1588.html), "Gavel 1 blow", a wooden gavel (CC0) |
+| thud | Start screen: the cannon planting itself, the sign's and the cage's weight | [BigSoundBank #1841](https://bigsoundbank.com/jumping-on-wooden-pontoon-1-s1841.html), "Jumping on wooden pontoon 1" (CC0) |
+| clang | Start screen: the golden cage landing on the deck | [BigSoundBank #234](https://bigsoundbank.com/iron-bar-falling-1-s0234.html), "Iron bar falling 1" (CC0) |
+| roll | Start screen: the cannon sliding in (low-passed) | [BigSoundBank #1316](https://bigsoundbank.com/devil-handling-1-s1316.html), "Devil handling 1", a hand truck rolling (CC0) |
+| cork | Start screen: the Play button popping up | [BigSoundBank #648](https://bigsoundbank.com/champagne-cork-2-s0648.html), "Champagne cork 2" (CC0) |
 
 ## Libraries and fonts
 - GSAP 3.15.0 by GreenSock, bundled locally in `libs/gsap.min.js` (free under the GSAP Standard License)

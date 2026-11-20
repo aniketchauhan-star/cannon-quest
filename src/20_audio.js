@@ -7,7 +7,10 @@
 // a test robot (Playwright, headless Chrome: navigator.webdriver) never makes a sound: no music, no effects, no voice
 const SILENT = !!navigator.webdriver;
 const Sound = {
-  ctx: null, master: null, sfx: null, verb: null, noiseBuf: null, muted: SILENT, buf: {}, ambientOn: false, ambient: null,
+  ctx: null, master: null, sfx: null, verb: null, noiseBuf: null, muted: SILENT, buf: {}, dec: {}, ambientOn: false, ambient: null,
+  // made at boot, so the start screen can be heard. A browser keeps a page silent until its first tap or key (its
+  // autoplay rule; an app's web view or a returning visitor may be let through at once), so the sound may start
+  // "suspended": listen() wakes it on that first touch, wherever it lands
   init() {
     if (this.ctx) { this.resume(); return; }
     const AC = window.AudioContext || window.webkitAudioContext;
@@ -26,19 +29,38 @@ const Sound = {
     const nd = this.noiseBuf.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
     this.loadSfx();
   },
-  // the recorded effects (SFX_DATA, in js/sfx.js, which boot fetches once the start screen is up): decoded once the
-  // sound is on (init, on the Play tap) and they are here, whichever comes last (js/sfx.js calls this as it arrives).
-  // Until then the synth fallback plays.
+  // the recorded effects (SFX_DATA): the start screen's few come with the page (js/sfx_title.js), the rest once it is
+  // up (js/sfx.js, fetched by boot). Each is decoded once, as soon as the sound is made and its data is here,
+  // whichever comes last (each file calls this as it arrives). Until then a game effect falls back to the synth.
   loadSfx() {
-    if (!this.ctx || this.sfxIn || typeof SFX_DATA === 'undefined') return;
-    this.sfxIn = true;
+    if (!this.ctx || typeof SFX_DATA === 'undefined') return;
     for (const [k, b64] of Object.entries(SFX_DATA)) {
+      if (this.dec[k]) continue;
       try {
         const bin = atob(b64), u = new Uint8Array(bin.length);
         for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
-        this.ctx.decodeAudioData(u.buffer).then((b) => { this.buf[k] = b; if (k === 'water' && this.ambientOn) this.startAmbient(); }).catch(() => {});
-      } catch (e) { /* keep synth fallback */ }
+        this.dec[k] = this.ctx.decodeAudioData(u.buffer).then((b) => { this.buf[k] = b; if (k === 'water' && this.ambientOn) this.startAmbient(); }).catch(() => {});
+      } catch (e) { this.dec[k] = Promise.resolve(); /* keep synth fallback */ }
     }
+  },
+  ready() { return Promise.all(Object.values(this.dec)); }, // every effect whose data is here, decoded
+  // can a sound be heard right now? (the browser lets the page play, and the sound is on). A sound started while the
+  // page is still held silent would wait, then burst out with all the others on the first tap: the start screen asks first
+  live() { return !!this.ctx && this.ctx.state === 'running' && !this.muted && !Motion.skipping; },
+  // wake the sound on the first tap, click or key anywhere (the browser allows it from then on). On iOS a silent
+  // sound started inside that touch is what really opens it
+  listen() {
+    if (!this.ctx || this.ctx.state === 'running') return;
+    const evs = ['pointerdown', 'touchend', 'keydown'];
+    const off = () => { for (const e of evs) removeEventListener(e, wake, true); };
+    const wake = () => {
+      const c = this.ctx; if (!c) return;
+      try { const s = c.createBufferSource(); s.buffer = c.createBuffer(1, 1, c.sampleRate); s.connect(c.destination); s.start(0); } catch (e) { /* ignore */ }
+      const p = c.state === 'suspended' ? c.resume() : null;
+      if (p && p.then) p.then(() => { if (c.state === 'running') off(); }).catch(() => {});
+      else if (c.state === 'running') off();
+    };
+    for (const e of evs) addEventListener(e, wake, true);
   },
   resume() { if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); },
   suspend() { if (this.ctx && this.ctx.state === 'running') this.ctx.suspend(); },
@@ -122,6 +144,34 @@ const Sound = {
   swoosh() { if (!this.play('airlong', { vol: 0.32, rate: 1.15 })) this.noise({ dur: 1.2, vol: 0.08, type: 'bandpass', f: 300, f2: 1600, q: 0.8, attack: 0.5 }); },
   land() { this.play('woodhit2', { vol: 0.38, rate: 0.72 }); if (!this.play('cloth', { vol: 0.5 })) this.tone({ type: 'triangle', f: 160, f2: 80, dur: 0.18, vol: 0.2 }); },
   cheer() { [1, 1.26, 1.5, 2].forEach((r, i) => this.play('glass2', { vol: 0.3, rate: r, t: i * 0.07, verb: 0.35 })); },
+  // ---- the start screen's entrance (Title.cues): each piece arrives with its own recorded sound, never a synth
+  // stand-in (CREDITS.md: swish = a wooden sheet swung through the air, knock = a wooden gavel, thud = a jump on a
+  // wooden pontoon, clang = an iron bar falling, roll = a hand truck rolling, cork = a champagne cork popping)
+  swish(v = 1, rate = 1, pan = 0) { this.play('swish', { vol: 0.5 * v, rate, pan, verb: 0.12, vary: 0.03 }); },
+  // the CANNON QUEST sign drops in: a wooden knock with some body (b = which bounce: 0 the first, loudest)
+  signLand(b) {
+    const v = [1, 0.42, 0.18][b] ?? 0;
+    this.play('knock', { vol: 0.72 * v, rate: 1 + 0.05 * b, verb: 0.2, pan: 0 });
+    if (!b) this.play('thud', { vol: 0.32, rate: 1.35, t: 0.004, verb: 0.15, pan: 0 });
+  },
+  // the cannon slides in over the deck on its wooden base, and plants itself with a heavy thud (its iron fittings knock)
+  rollIn() { this.play('roll', { vol: 0.42, rate: 0.9, verb: 0.08, pan: -0.35, vary: 0.02 }); },
+  cannonLand() {
+    this.play('thud', { vol: 0.85, rate: 0.88, verb: 0.15, pan: -0.3 });
+    this.play('latch', { vol: 0.2, rate: 0.78, t: 0.02, pan: -0.3 });
+  },
+  // the golden cage drops onto the deck and bounces: a metal clang + the wood under it, its bars ringing (b = which bounce)
+  cageLand(b) {
+    if (b === 0) {
+      this.play('clang', { vol: 0.5, rate: 0.84, verb: 0.22, pan: 0.35 });
+      this.play('thud', { vol: 0.55, rate: 1.1, t: 0.003, verb: 0.12, pan: 0.35 });
+      this.play('metal2', { vol: 0.16, rate: 1.1, t: 0.07, pan: 0.45 });
+    } else if (b === 1) {
+      this.play('clang', { vol: 0.22, rate: 0.92, verb: 0.2, pan: 0.35 });
+      this.play('woodhit2', { vol: 0.18, rate: 0.9, pan: 0.35 });
+    } else if (b === 2) this.play('metal3', { vol: 0.12, rate: 1.2, pan: 0.35 });
+  },
+  cork() { this.play('cork', { vol: 0.45, rate: 0.92, verb: 0.18, pan: 0, vary: 0.02 }); }, // Play pops up
   startAmbient() { // gentle lake-side water bed
     this.ambientOn = true;
     const b = this.buf.water;

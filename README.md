@@ -21,7 +21,12 @@ It is based on the *Cannon Quest* deck, the POD A stand-up brief (16 Nov 2026), 
   - The CANNON QUEST plaque is at the top, the wooden cannon at the bottom left, and the golden cage at the bottom right with x inside it. The Play button sits in the middle; it is smaller than in the mockup (176 art px instead of 257), as you asked.
   - x is really inside the cage: the cage is two layers (its whole picture behind x, and only its front bars, top ring and base lip in front of x).
   - x wants out. In a loop of about 10 s it peeks through the bars, shoves the left bars, then the right bars, jumps and bonks the roof, then grabs the bars and rattles them, then rests and tries again. The cage answers every time: it tips onto its edge and wiggles back, hops and thuds down (with dust), or shakes.
-  - The logo bounces in, the cannon slides in, and the cage drops onto the deck. Play pops in, floats a little over its shadow and pulses a soft ripple.
+  - The pieces come in one after another, each with its own real recorded sound (CC0, see `CREDITS.md`; `Title.IN` and `Title.cues` in `src/35_title.js`, `Sound.signLand` / `rollIn` / `cannonLand` / `cageLand` / `cork` in `src/20_audio.js`):
+    - the CANNON QUEST sign drops from the sky with a swish and bounces into place with a wooden knock;
+    - the cannon slides in from the left over the deck (a soft roll) and plants itself with a heavy thud and a puff of dust;
+    - the golden cage falls with a swish and bounces on the deck: a metal clang on wood, then smaller clinks;
+    - Play pops up (a cork pop), floats a little over its shadow and pulses a soft ripple. x starts struggling once everything is in (3 s).
+  - A browser keeps a page silent until its first tap or key (its autoplay rule). So on a first visit opened straight from a link or from disk, the entrance may play without sound; from the first tap anywhere, x's struggle is heard (`Sound.listen`). An app's web view, or a browser that already trusts the site, plays the entrance with its sounds. The six entrance clips come with the page in their own small file (`js/sfx_title.js`, 35 KB), so they are ready when it plays.
   - Pressing Play fires the cannon, bursts the button, and sends the logo up, the cannon left and the cage right.
   - Under reduced motion everything is simply in place and x sits still.
   - To recut the pieces: `tools/cut_start_screen.py` (EDSR 2×; the cage and x 4×) prints each piece's box for `TL` in `src/35_title.js`.
@@ -88,7 +93,8 @@ cannon quest/
 | Path | What it is |
 |---|---|
 | `index.html`, `js/script.js` | The game, built from `src/` by `./build.sh` |
-| `js/sfx.js` | The sound effects (`assets/sfx/*.webm`), embedded by `build.sh` so they also play from disk. The game fetches it once the start screen is up |
+| `js/sfx_title.js` | The start screen's six entrance sounds (`TITLE_SFX` in `build.sh`), embedded the same way. The page loads it with itself, so they are ready when the entrance plays |
+| `js/sfx.js` | The other sound effects (`assets/sfx/*.webm`), embedded by `build.sh` so they also play from disk. The game fetches it once the start screen is up |
 | (no loading screen) | Opening the link shows the start screen as soon as its own pictures are in (about 1.3 s on 4G; at once from disk). `src/00_head.html` preloads the scripts, the words and every start-screen picture first. The play scene's pictures (`data-src` in the markup, `Pics.GAME` in `src/40_game.js`) and `js/sfx.js` are fetched only once the start screen shows, so they never slow it. `Title.exit` waits for them if Play is tapped first |
 | `locales/locales.json` | Every word the game shows or says, by key (English). `locales.js` is a generated copy for opening from disk |
 | `js/i18n.js` | Looks words and voice clips up by key (`T('key')`, `I18n.voice('key')`) |
@@ -103,7 +109,7 @@ cannon quest/
 | Path | What it is |
 |---|---|
 | `src/` | The game's source code and page, in the order `build.sh` joins them |
-| `build.sh` | Rebuilds `index.html` (with the font embedded at the `<!--FONTS-->` line of `src/00_head.html`), `js/script.js`, `js/sfx.js` and `locales/locales.js` from `src/` and `locales/locales.json` |
+| `build.sh` | Rebuilds `index.html` (with the font embedded at the `<!--FONTS-->` line of `src/00_head.html`), `js/script.js`, `js/sfx_title.js`, `js/sfx.js` and `locales/locales.js` from `src/` and `locales/locales.json` |
 | `tools/` | `vo_split.py` (cuts a recording of the lines into the voice clips; `--script` writes `docs/VO_RECORD.txt`), `vo_data.mjs` (run by `build.sh`: which lines have a recorded clip), `gen_locales.mjs` (run by `build.sh`), `cut_ui_elements.py` (cuts the cannon, FIRE, tray and balls), `cut_start_screen.py` (cuts the start screen), `cut_question_board.py` (the caption board), `upscale2x.py` + `cut_deck_bg.py` (the background layers) |
 | `art/sprite_sheets/` | `ui_elements.png`: the UI sheet the cannon, FIRE button, tray and balls are cut from (`tools/cut_ui_elements.py`). `new.png`: the cloud, cage, x and buttons (`tools/cut_new_art.py`). `1.png`–`4.png`: older glossy sheets. `flat_sprites.png`: a flat-art sheet that was tried and dropped |
 | `art/start_screen/` | `start_sheet.png` (the start-screen sheet: logo, cannon, Play button, cage, x; cut by `tools/cut_start_screen.py`) and `start_mockup.png` (the layout it follows). Older, no longer used: `thumbnail.png` and `play_button.png` |

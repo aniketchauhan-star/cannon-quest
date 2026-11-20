@@ -342,7 +342,10 @@ const VO_WORDS = {}; // when each word of a clip starts (s from the clip's start
 // a test robot (Playwright, headless Chrome: navigator.webdriver) never makes a sound: no music, no effects, no voice
 const SILENT = !!navigator.webdriver;
 const Sound = {
-  ctx: null, master: null, sfx: null, verb: null, noiseBuf: null, muted: SILENT, buf: {}, ambientOn: false, ambient: null,
+  ctx: null, master: null, sfx: null, verb: null, noiseBuf: null, muted: SILENT, buf: {}, dec: {}, ambientOn: false, ambient: null,
+  // made at boot, so the start screen can be heard. A browser keeps a page silent until its first tap or key (its
+  // autoplay rule; an app's web view or a returning visitor may be let through at once), so the sound may start
+  // "suspended": listen() wakes it on that first touch, wherever it lands
   init() {
     if (this.ctx) { this.resume(); return; }
     const AC = window.AudioContext || window.webkitAudioContext;
@@ -361,19 +364,38 @@ const Sound = {
     const nd = this.noiseBuf.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
     this.loadSfx();
   },
-  // the recorded effects (SFX_DATA, in js/sfx.js, which boot fetches once the start screen is up): decoded once the
-  // sound is on (init, on the Play tap) and they are here, whichever comes last (js/sfx.js calls this as it arrives).
-  // Until then the synth fallback plays.
+  // the recorded effects (SFX_DATA): the start screen's few come with the page (js/sfx_title.js), the rest once it is
+  // up (js/sfx.js, fetched by boot). Each is decoded once, as soon as the sound is made and its data is here,
+  // whichever comes last (each file calls this as it arrives). Until then a game effect falls back to the synth.
   loadSfx() {
-    if (!this.ctx || this.sfxIn || typeof SFX_DATA === 'undefined') return;
-    this.sfxIn = true;
+    if (!this.ctx || typeof SFX_DATA === 'undefined') return;
     for (const [k, b64] of Object.entries(SFX_DATA)) {
+      if (this.dec[k]) continue;
       try {
         const bin = atob(b64), u = new Uint8Array(bin.length);
         for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
-        this.ctx.decodeAudioData(u.buffer).then((b) => { this.buf[k] = b; if (k === 'water' && this.ambientOn) this.startAmbient(); }).catch(() => {});
-      } catch (e) { /* keep synth fallback */ }
+        this.dec[k] = this.ctx.decodeAudioData(u.buffer).then((b) => { this.buf[k] = b; if (k === 'water' && this.ambientOn) this.startAmbient(); }).catch(() => {});
+      } catch (e) { this.dec[k] = Promise.resolve(); /* keep synth fallback */ }
     }
+  },
+  ready() { return Promise.all(Object.values(this.dec)); }, // every effect whose data is here, decoded
+  // can a sound be heard right now? (the browser lets the page play, and the sound is on). A sound started while the
+  // page is still held silent would wait, then burst out with all the others on the first tap: the start screen asks first
+  live() { return !!this.ctx && this.ctx.state === 'running' && !this.muted && !Motion.skipping; },
+  // wake the sound on the first tap, click or key anywhere (the browser allows it from then on). On iOS a silent
+  // sound started inside that touch is what really opens it
+  listen() {
+    if (!this.ctx || this.ctx.state === 'running') return;
+    const evs = ['pointerdown', 'touchend', 'keydown'];
+    const off = () => { for (const e of evs) removeEventListener(e, wake, true); };
+    const wake = () => {
+      const c = this.ctx; if (!c) return;
+      try { const s = c.createBufferSource(); s.buffer = c.createBuffer(1, 1, c.sampleRate); s.connect(c.destination); s.start(0); } catch (e) { /* ignore */ }
+      const p = c.state === 'suspended' ? c.resume() : null;
+      if (p && p.then) p.then(() => { if (c.state === 'running') off(); }).catch(() => {});
+      else if (c.state === 'running') off();
+    };
+    for (const e of evs) addEventListener(e, wake, true);
   },
   resume() { if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); },
   suspend() { if (this.ctx && this.ctx.state === 'running') this.ctx.suspend(); },
@@ -457,6 +479,34 @@ const Sound = {
   swoosh() { if (!this.play('airlong', { vol: 0.32, rate: 1.15 })) this.noise({ dur: 1.2, vol: 0.08, type: 'bandpass', f: 300, f2: 1600, q: 0.8, attack: 0.5 }); },
   land() { this.play('woodhit2', { vol: 0.38, rate: 0.72 }); if (!this.play('cloth', { vol: 0.5 })) this.tone({ type: 'triangle', f: 160, f2: 80, dur: 0.18, vol: 0.2 }); },
   cheer() { [1, 1.26, 1.5, 2].forEach((r, i) => this.play('glass2', { vol: 0.3, rate: r, t: i * 0.07, verb: 0.35 })); },
+  // ---- the start screen's entrance (Title.cues): each piece arrives with its own recorded sound, never a synth
+  // stand-in (CREDITS.md: swish = a wooden sheet swung through the air, knock = a wooden gavel, thud = a jump on a
+  // wooden pontoon, clang = an iron bar falling, roll = a hand truck rolling, cork = a champagne cork popping)
+  swish(v = 1, rate = 1, pan = 0) { this.play('swish', { vol: 0.5 * v, rate, pan, verb: 0.12, vary: 0.03 }); },
+  // the CANNON QUEST sign drops in: a wooden knock with some body (b = which bounce: 0 the first, loudest)
+  signLand(b) {
+    const v = [1, 0.42, 0.18][b] ?? 0;
+    this.play('knock', { vol: 0.72 * v, rate: 1 + 0.05 * b, verb: 0.2, pan: 0 });
+    if (!b) this.play('thud', { vol: 0.32, rate: 1.35, t: 0.004, verb: 0.15, pan: 0 });
+  },
+  // the cannon slides in over the deck on its wooden base, and plants itself with a heavy thud (its iron fittings knock)
+  rollIn() { this.play('roll', { vol: 0.42, rate: 0.9, verb: 0.08, pan: -0.35, vary: 0.02 }); },
+  cannonLand() {
+    this.play('thud', { vol: 0.85, rate: 0.88, verb: 0.15, pan: -0.3 });
+    this.play('latch', { vol: 0.2, rate: 0.78, t: 0.02, pan: -0.3 });
+  },
+  // the golden cage drops onto the deck and bounces: a metal clang + the wood under it, its bars ringing (b = which bounce)
+  cageLand(b) {
+    if (b === 0) {
+      this.play('clang', { vol: 0.5, rate: 0.84, verb: 0.22, pan: 0.35 });
+      this.play('thud', { vol: 0.55, rate: 1.1, t: 0.003, verb: 0.12, pan: 0.35 });
+      this.play('metal2', { vol: 0.16, rate: 1.1, t: 0.07, pan: 0.45 });
+    } else if (b === 1) {
+      this.play('clang', { vol: 0.22, rate: 0.92, verb: 0.2, pan: 0.35 });
+      this.play('woodhit2', { vol: 0.18, rate: 0.9, pan: 0.35 });
+    } else if (b === 2) this.play('metal3', { vol: 0.12, rate: 1.2, pan: 0.35 });
+  },
+  cork() { this.play('cork', { vol: 0.45, rate: 0.92, verb: 0.18, pan: 0, vary: 0.02 }); }, // Play pops up
   startAmbient() { // gentle lake-side water bed
     this.ambientOn = true;
     const b = this.buf.water;
@@ -1785,10 +1835,15 @@ const Scenery = {
 //  (art/start_screen/start_sheet.png, cut by tools/cut_start_screen.py). The CANNON QUEST plaque on top, the
 //  wooden cannon on the left, a small Play button in the middle, and the golden cage on the right with x INSIDE
 //  it (drawn between the cage's back and its front bars).
+//  It comes in one piece after another (Title.IN), each on its own beat and with its own real recorded sound
+//  (Title.cues → Sound.signLand / rollIn / cannonLand / cageLand / cork): the CANNON QUEST sign drops from the sky
+//  and bounces into place, the cannon slides in from the left and plants itself, the cage drops onto the deck and
+//  bounces, then Play pops up. (A browser lets a page sound only after its first tap, so on a first visit the entrance
+//  may play silent; x's struggle is heard from the first tap anywhere: Sound.listen.)
 //  x wants out. In a loop it peeks through the bars, shoves the left bars, shoves the right bars, jumps at the
 //  roof and rattles the bars, and the cage rocks on its edge, hops and wiggles each time (one GSAP timeline;
 //  the cage's rock, jolt and squash are springs, so every wiggle settles by itself).
-//  Time-based (Clock / GSAP), transform + opacity only. Reduced motion: it is simply there, x sits still.
+//  Time-based (Clock / GSAP), transform + opacity only. Reduced motion: it is simply there, x sits still, no sounds.
 // =====================================================================
 const TL = (() => { // art space (1672×941). Boxes = where the mockup draws each piece (tools/cut_start_screen.py prints them)
   const cannon = { x: 122.3, y: 401.3, w: 525.7, h: 485.2 }, cage = { x: 1092.1, y: 348.9, w: 382.1, h: 505.3 };
@@ -1812,6 +1867,26 @@ const Title = {
   // shake (0..1: x rattling the bars). x: its pose from the timeline, plus a squash spring for landings
   rock: new Spring(2.3, 0.2), jolt: new Spring(6, 0.3), squash: new Spring(4.2, 0.32), xsq: new Spring(5, 0.3),
   cg: { hop: 0, shake: 0 }, xs: { x: 0, y: 0, r: 0, sx: 1, sy: 1 },
+  // the entrance: [start, length] in s after the start screen shows. One after another (the user, 20 Nov: "the text
+  // come and cannon and the cage come"), so each lands on its own beat and its sound is heard on its own
+  IN: { logo: [0.2, 0.85], cannon: [0.7, 0.8], cage: [1.15, 0.9], play: [1.8, 0.6], escape: 3 },
+  BOUNCE: [1 / 2.75, 2 / 2.75, 2.5 / 2.75], // where Ease.outBounce touches down (its first fall, then two bounces)
+  CANNON_STOP: 0.58,                         // where Ease.outBack slides furthest (it stops, then settles back)
+  Q: [], q: 0,
+  // when each arrival is heard, in s after the start: a swish as the sign / the cage falls (its loudest part just
+  // before the touch-down), a knock / clang on each touch-down, the cannon's roll and its thud where it stops, a pop for Play
+  cues() {
+    const I = this.IN, B = this.BOUNCE, at = (k, f) => I[k][0] + I[k][1] * f;
+    return [
+      [at('logo', B[0]) - 0.2, () => Sound.swish(0.42, 0.9)],
+      ...B.map((f, i) => [at('logo', f), () => Sound.signLand(i)]),
+      [I.cannon[0], () => Sound.rollIn()],
+      [at('cannon', this.CANNON_STOP), () => Sound.cannonLand()],
+      [at('cage', B[0]) - 0.2, () => Sound.swish(0.36, 1.1, 0.3)],
+      ...B.map((f, i) => [at('cage', f), () => Sound.cageLand(i)]),
+      [I.play[0] + 0.06, () => Sound.cork()],
+    ].sort((a, b) => a[0] - b[0]);
+  },
   init() {
     const box = $('#thumb'); this.box = box; this.play = $('#playBtn'); this.pg = this.play.querySelector('.pg');
     const img = (src, cls, parent, before = null) => {
@@ -1856,12 +1931,13 @@ const Title = {
   hideAll() { for (const el of this.box.querySelectorAll('.tp, .gsh, #playBtn')) el.style.opacity = 0; }, // (each piece enters in update)
   start() {
     this.active = true; this.t0 = Clock.t; this.box.classList.add('live');
+    this.Q = this.cues(); this.q = 0;
     if (!Motion.reduced) this.tl = this.escape();
   },
   // x tries to get out: one looping timeline (~10 s). The cage answers (rocks, hops, rattles) from the callbacks
   escape() {
     const X = this.xs, C = this.cg, S = TL.room.side, U = TL.room.up;
-    const tl = gsap.timeline({ repeat: -1, delay: 1.9 });
+    const tl = gsap.timeline({ repeat: -1, delay: this.IN.escape }); // (once everything has come in)
     // 1. it peeks out through the bars: left, then right
     tl.to(X, { x: -12, r: -7, duration: 0.5, ease: 'sine.inOut' })
       .to(X, { x: 12, r: 7, duration: 0.7, ease: 'sine.inOut' }, '+=0.25')
@@ -1901,17 +1977,17 @@ const Title = {
     this.rock.kick(side * 4.2); this.jolt.kick(side * 5);
     const p = this.at(side < 0 ? TL.bars.l : TL.bars.r, TL.x.y + TL.x.h * 0.45);
     FX.uiMode = true; FX.burst(p.x, p.y, '#ffd34d', 9, 260, { g: 300, dir: side < 0 ? Math.PI : 0, spread: 1.1, size: 0.6 }); FX.uiMode = false;
-    if (Sound.ctx) Sound.rattle();
+    if (Sound.live()) Sound.rattle();
   },
   bonk() { // x's head hits the top ring
     const p = this.at(TL.cage.w / 2, TL.bars.top);
     FX.uiMode = true; FX.burst(p.x, p.y, '#ffd34d', 8, 220, { g: 300, dir: -Math.PI / 2, spread: 1.2, size: 0.6 }); FX.uiMode = false;
-    if (Sound.ctx) Sound.clunk();
+    if (Sound.live()) Sound.clunk();
   },
   thud() { // the cage lands back on the deck: it squashes, x squashes, a puff of dust each side
     this.squash.kick(0.05); this.xsq.kick(0.08); this.rock.kick((Math.random() < 0.5 ? -1 : 1) * 1.2);
     this.cageDust(false);
-    if (Sound.ctx) Sound.land();
+    if (Sound.live()) Sound.land();
   },
   cageDust(big) {
     const cg = TL.cage, r = cg.w * 0.46, x = cg.x + cg.w / 2;
@@ -1939,18 +2015,21 @@ const Title = {
     if (!this.active) return;
     const R = Motion.reduced, tt = R ? 0 : t;               // reduced motion: everything in place at once, nothing idles
     const T = R ? 99 : t - this.t0, X = this.exiting ? (R ? 99 : t - this.exitT) : -1;
-    const pr = (s, d) => clamp((T - s) / d, 0, 1);
+    const pr = (s, d) => clamp((T - s) / d, 0, 1), I = this.IN, prIn = (k) => pr(I[k][0], I[k][1]);
     const ex = (s, d) => (X < 0 ? 0 : clamp((X - s) / d, 0, 1));
+    // the entrance's sounds, each on its moment (none under reduced motion, nothing heard while the page is held
+    // silent, and none once Play is tapped: the start screen is leaving)
+    while (this.q < this.Q.length && T >= this.Q[this.q][0]) { const c = this.Q[this.q++]; if (!R && !this.exiting && Sound.live()) c[1](); }
     // cannon: slides in from the left, breathes, recoils when Play fires it, slides out
     this.kick = Math.max(0, this.kick - dt * 3.2);
-    const ck = Math.sin(this.kick * Math.PI), cIn = Ease.outBack(pr(0.3, 0.75)), cOut = Ease.inBack(ex(0.08, 0.5));
-    const cdx = -640 * (1 - cIn) - 760 * cOut - 18 * ck, cdy = 8 * ck, breathe = 1 + Math.sin(tt * 2.4) * 0.006, cOp = pr(0.3, 0.2);
+    const cP = prIn('cannon'), ck = Math.sin(this.kick * Math.PI), cIn = Ease.outBack(cP), cOut = Ease.inBack(ex(0.08, 0.5));
+    const cdx = -640 * (1 - cIn) - 760 * cOut - 18 * ck, cdy = 8 * ck, breathe = 1 + Math.sin(tt * 2.4) * 0.006, cOp = pr(I.cannon[0], 0.2);
     this.set(this.cannon, cdx, cdy, -2 * ck, breathe, cOp);
     this.set(this.cSh, cdx, 0, 0, 1, cOp);
-    if (!this.cLanded && pr(0.3, 0.75) >= 1) { this.cLanded = true; if (!R) this.titleDust(true); }
+    if (!this.cLanded && cP >= this.CANNON_STOP) { this.cLanded = true; if (!R) this.titleDust(true); } // (where it stops sliding)
     // the cage: drops onto the deck (with bounces), then x's struggle rocks, hops, rattles and squashes it
-    const gIn = pr(0.45, 0.9), drop = 1 - Ease.outBounce(gIn), gOut = Ease.inBack(ex(0.05, 0.55));
-    if (!this.landed && gIn >= 0.364) { this.landed = true; if (!R) { this.cageDust(true); this.squash.kick(0.06); this.xsq.kick(0.1); } } // (the bounce's first touch-down)
+    const gIn = prIn('cage'), drop = 1 - Ease.outBounce(gIn), gOut = Ease.inBack(ex(0.05, 0.55));
+    if (!this.landed && gIn >= this.BOUNCE[0]) { this.landed = true; if (!R) { this.cageDust(true); this.squash.kick(0.06); this.xsq.kick(0.1); } } // (the bounce's first touch-down)
     const rock = this.rock.update(dt), jolt = this.jolt.update(dt), sq = this.squash.update(dt), xsq = this.xsq.update(dt);
     const sh = this.cg.shake, w7 = R ? 0 : Math.sin(tt * Math.PI * 2 * 7), w7b = R ? 0 : Math.sin(tt * Math.PI * 2 * 7 + 1.3);
     const rot = rock + sh * 0.9 * w7b + 6 * gOut;
@@ -1966,14 +2045,14 @@ const Title = {
     const xUp = clamp(-xs.y / 30, 0, 1); // its shadow on the cage floor
     this.set(this.xShadow, xs.x, 0, 0, 1 - 0.35 * xUp, 0.9 - 0.5 * xUp);
     // logo: bounces down from the sky, floats, flashes now and then (a brighter copy fades in and out)
-    const lIn = Ease.outBounce(pr(0.12, 0.8)), lOut = Ease.inBack(ex(0.04, 0.55));
+    const lIn = Ease.outBounce(prIn('logo')), lOut = Ease.inBack(ex(0.04, 0.55));
     const flash = R ? 0 : Math.max(0, Math.sin(clamp(((T - 3) % 5) / 0.55, 0, 1) * Math.PI));
-    const ly = -560 * (1 - lIn) - 760 * lOut + Math.sin(tt * 1.6) * 6, lr = Math.sin(tt * 1.1) * 1 - 8 * lOut, ls = 1 + Math.sin(tt * 2.2) * 0.01, lo = pr(0.12, 0.15);
+    const ly = -560 * (1 - lIn) - 760 * lOut + Math.sin(tt * 1.6) * 6, lr = Math.sin(tt * 1.1) * 1 - 8 * lOut, ls = 1 + Math.sin(tt * 2.2) * 0.01, lo = pr(I.logo[0], 0.15);
     this.set(this.logo, 0, ly, lr, ls, lo);
     this.set(this.logoLit, 0, ly, lr, ls, lo * flash * 0.85);
     // Play: pops in, floats a little over the deck (its shadow answers), reacts to hover / press, bursts on exit
     this.press = Math.max(0, this.press - dt * 4);
-    const pIn = pr(0.2, 0.7), pk = Ease.outBack(pIn);
+    const pIn = prIn('play'), pk = Ease.outBack(pIn);
     const pX = ex(0, 0.12), pBoom = ex(0.12, 0.25), bob = R ? 0 : Math.sin(tt * 2.1) * 5;
     const psc = pk * (1 + 0.02 * Math.sin(tt * 3.4) + (this.hover ? 0.08 : 0) - this.press * 0.12) * (1 - 0.15 * pX + 0.5 * pBoom);
     this.set(this.play, 0, bob, 0, Math.max(0.001, psc), Math.min(1, pIn * 3) * (1 - pBoom));
@@ -2607,11 +2686,15 @@ const Pics = {
 };
 async function boot() {
   Motion.init();
+  // the sound, now, so the start screen can be heard (its own few effects came with the page: js/sfx_title.js).
+  // Where the browser still holds the page silent, it wakes on the first tap or key (Sound.listen)
+  Sound.init(); Sound.listen();
   // lay the scene out at once (it stays hidden, over the plain sky, until its pictures are in)
   Scenery.build(); FX.init(); Stage.init(); Perf.init();
   removeEventListener('resize', fitStage); // (index.html's first fit; the game's Stage keeps the screen fitted from here)
   Object.assign(Stage.cam, { fx: CX, fy: CY, z: 1.05 }); Stage.snap(); Stage.update(0);
   await Pics.load(Pics.TITLE, 8); // usually in already: they have been downloading since the page's <head>
+  if (Sound.live()) await Promise.race([Sound.ready(), later(1000)]); // (sound allowed at once: the entrance's sounds are decoded first)
   Cloud.init(); Cannon.init(); Rack.init(); EqUI.init(); Title.init(); Spot.init(); Skip.init();
   wireInput();
   gsap.ticker.add(frame);
