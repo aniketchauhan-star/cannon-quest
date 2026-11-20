@@ -2445,9 +2445,10 @@ function playShots() {
 }
 
 // ---- the tutorial: ONE, on the first screen (x + 5 = 7) of the first game on this device, and on no other screen
-// (user, 20 Nov). The spotlight shows the three parts in turn: the equation, then the cannon, then the orbs; then
-// the hand taps the glowing −5 and the player taps it (or drags it, or presses its key): it flies into the cannon,
-// and the cannon fires it at the cloud by itself. Every line by key; Skip ends it.
+// (user, 20 Nov). Five steps: the spotlight shows the three parts in turn (1 the equation, 2 the cannon, 3 the
+// orbs); 4 the hand taps the glowing −5 and the player taps it (or drags it, or presses its key): it flies into the
+// cannon; 5 the hand moves to FIRE and the player taps it (or presses Enter), and the shot goes (user, 20 Nov: "the 5
+// one is click fire button"; before, the cannon fired by itself). Every line by key; Skip ends it.
 // It plays every time the game is opened (user, 20 Nov: "in this screen, add a tutorial part": it had been saved in
 // the browser after one showing, so it never came again). Only Play again, in the same visit, goes straight into play.
 function skipTutorial() {
@@ -2462,6 +2463,7 @@ const eqSpot = () => Spot.boxOf(EqUI.el);
 const cannonSpot = () => Spot.boxOf([$('#c1'), $('#c2'), $('#fireBtn')]); // (the hidden body has no box, so only the one showing counts)
 const orbsSpot = () => Spot.boxOf(Rack.balls.filter((b) => b.where === 'rack').map((b) => b.el));
 const ballSpot = (b) => () => { const r = Rack.restPos(b.holder); return Spot.worldBox(r.x, r.y - 11, BALL_D, BALL_D + 22); }; // (room for its hop above the cup)
+const fireSpot = () => Spot.boxOf($('#fireBtn'));
 async function tutorialLoad() {
   G.taught1 = true; G.tutSkip = false;
   Skip.show(skipTutorial);
@@ -2487,12 +2489,16 @@ async function tutorialLoad() {
     if (gb) { G.spotOnly = gb; Spot.show(ballSpot(gb), { hand: true, sx: 1.2, sy: 1.2, pad: 26, also: sockSpot(0), sx2: 1.25, sy2: 1.25, pad2: 26 }); }
     else Rack.glowWave();
     VO.say('tutTapOrb', 0.5);
-    // 5) it flies into the cannon; once it has landed in its socket, the cannon fires it at the cloud by itself
+    // 5) it flies into the cannon; once it has landed in its socket, the spotlight moves to FIRE (the loaded socket
+    // stays clear beside it) and the hand taps it. The −5 stays in now: only FIRE answers (it may be tapped at once)
     G.hooks.onFill = (filled, n) => {
-      if (G.tutSkip || filled !== n || G.hooks.autoFire) return;
-      G.hooks.autoFire = true; G.spotOnly = 'fire'; // (the −5 stays in; FIRE may still be tapped in the meantime)
-      Spot.hide();
-      wait(Motion.BEAT.TAP_FLY + 0.45).then(() => { if (!G.tutSkip && G.fireResolve) tapFire(); });
+      if (G.tutSkip || filled !== n || G.hooks.fireStep) return;
+      G.hooks.fireStep = true; G.spotOnly = 'fire';
+      wait(Motion.BEAT.TAP_FLY + 0.15).then(() => {
+        if (G.tutSkip || !G.fireResolve) return; // (skipped, or FIRE already tapped)
+        Spot.show(fireSpot, { hand: true, sx: 1.12, sy: 1.3, pad: 20, also: sockSpot(0), sx2: 1.25, sy2: 1.25, pad2: 26 });
+        VO.say('tutTapFire', 0.5);
+      });
     };
   };
 }
