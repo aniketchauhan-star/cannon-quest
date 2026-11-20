@@ -1999,7 +1999,7 @@ const Title = {
 // =====================================================================
 const G = {
   state: 'boot', session: 0, idx: 0, freed: 0, eq: null, sockets: [], inputOn: false, fireResolve: null, hooks: {},
-  taught1: false, tutSkip: false, dragOnly: false, idle: 0, rackFor: null, firstEntry: false, paused: false, helping: false, tl: null,
+  taught1: false, tutSkip: false, idle: 0, rackFor: null, firstEntry: false, paused: false, helping: false, tl: null,
   welcome: null, said: { freed: 0, stuck: 0, next: 0 },
 };
 // ---- the voice's lines through a session, in order: welcome → tutorial → a short intro on every other
@@ -2056,8 +2056,6 @@ function tapBall(b, tap = false) { // (tap: a press on the screen; false: a key)
   if (G.spotOnly && G.spotOnly !== b) { Sound.nope(); Spot.nudge(); return; } // guided step: only the highlighted ball
   idleReset();
   if (b.where === 'rack') {
-    // the lesson is the drag: a tap on the −5 doesn't load it, the ball leans toward the cannon and the hand shows the carry again
-    if (tap && G.dragOnly) { Sound.tick(); Spot.nudge(); tween(0.5, (e, k) => (b.hop = Math.sin(k * Math.PI) * 0.5), Ease.linear); return; }
     const i = G.sockets.indexOf(null);
     if (i < 0) { Sound.nope(); Cannon.pulseSockets(); tween(0.5, (e, k) => (b.hop = Math.sin(k * Math.PI) * 0.5), Ease.linear); return; }
     seat(b, i);
@@ -2367,13 +2365,11 @@ function playShots() {
   });
 }
 
-// ---- the tutorial: ONE, on the first shot of the first game on this device (x, then drag the glowing −5 into the
-// cannon, then FIRE). Every line by key; Skip ends it. There is no other tutorial: the user (19 Nov) wants only this
-// first −5 shot taught, so the two-socket rounds just start (their 1 and 2 markers stay on the cannon).
-// The −5 must be DRAGGED in (user, 20 Nov: "−5 need to drag to the cannon and fire only"): a hand carries a
-// see-through −5 from the tray into the socket, over and over, until the player does it; a tap on the −5 only
-// replays the hand. (A key still loads it, for keyboard players.) Then only FIRE can be pressed.
-// It is saved in this browser once the player fires (or taps Skip), so a reload or a new visit goes straight into
+// ---- the tutorial: ONE, on the first screen (x + 5 = 7) of the first game on this device, and on no other screen
+// (user, 20 Nov). The spotlight shows the three parts in turn: the equation, then the cannon, then the orbs; then
+// the hand taps the glowing −5 and the player taps it (or drags it, or presses its key): it flies into the cannon,
+// and the cannon fires it at the cloud by itself. Every line by key; Skip ends it.
+// It is saved in this browser once the shot goes (or Skip is tapped), so a reload or a new visit goes straight into
 // play, like Play again does. A reload mid-tutorial, before that, shows it again.
 // (A test hook: ?tutorial in the address forgets it, so the tutorial plays again.)
 const Taught = {
@@ -2388,43 +2384,47 @@ const Taught = {
 };
 function skipTutorial() {
   G.tutSkip = true; Taught.save();
-  VO.stop(); Spot.hide(); G.spotOnly = null; G.dragOnly = false;
+  VO.stop(); Spot.hide(); G.spotOnly = null;
   Rack.balls.forEach((b) => (b.guide = false));
   if (G.hooks) { G.hooks.onFill = null; G.hooks.softSpot = false; }
 }
-const fireSpot = () => { const f = Cannon.fireBox; return Spot.worldBox(f.x, f.y, f.w, f.h); };
 const sockSpot = (i = 0) => () => { const h = Cannon.holes()[i]; return Spot.worldBox(h.x, h.y, h.r * 2, h.r * 2); };
-// the drag lesson's two ends, in stage units: the ball in its cup → the socket (with the scale the ball has in each)
-const dragFrom = (b) => () => { const r = Rack.restPos(b.holder), p = Stage.w2st(r.x, r.y); return { x: p.x, y: p.y, s: Stage.z }; };
-const dragTo = (i = 0) => () => { const q = Cannon.socketPos(i), p = Stage.w2st(q.x, q.y); return { x: p.x, y: p.y, s: q.s * Stage.z }; };
+// the three parts the tutorial shows, as boxes on screen (stage units)
+const eqSpot = () => Spot.boxOf(EqUI.el);
+const cannonSpot = () => Spot.boxOf([$('#c1'), $('#c2'), $('#fireBtn')]); // (the hidden body has no box, so only the one showing counts)
+const orbsSpot = () => Spot.boxOf(Rack.balls.filter((b) => b.where === 'rack').map((b) => b.el));
+const ballSpot = (b) => () => { const r = Rack.restPos(b.holder); return Spot.worldBox(r.x, r.y - 11, BALL_D, BALL_D + 22); }; // (room for its hop above the cup)
 async function tutorialLoad() {
   G.taught1 = true; G.tutSkip = false;
   Skip.show(skipTutorial);
-  const cage = EqUI.cage(); if (cage) cage.classList.add('push');
-  // 1) this is x; everything else blurs
-  Spot.show(() => Spot.boxOf(EqUI.cage()), { sx: 1.15, sy: 1.08, pad: 30 });
-  await VO.say('tutFreeX', 0.35);
+  // 1) the equation, 2) the cannon, 3) the orbs: one at a time, everything else dimmed and blurred
+  const parts = [
+    [eqSpot, { sx: 1.08, sy: 1.25, pad: 30 }, 'tutEquation'],
+    [cannonSpot, { sx: 1.12, sy: 1.12, pad: 20 }, 'tutCannon'],
+    [orbsSpot, { sx: 1.5, sy: 2, pad: 24 }, 'tutOrbs'],
+  ];
+  for (const [box, o, line] of parts) {
+    if (G.tutSkip) return null;
+    Spot.show(box, o);
+    if (line === 'tutOrbs') Rack.glowWave();
+    await VO.say(line, 0.5);
+  }
+  if (G.tutSkip) return null;
   return () => {
     if (G.tutSkip) return;
-    // 2) drag the glowing −5 into the cannon: two clear holes, the −5 (with room for its hop above the cup) and the
-    // socket, each in a gold ring, and the hand carrying a see-through −5 from one to the other. Only the −5 moves.
+    // 4) tap the glowing −5: the hand taps it, and only it can be loaded (a key or a drag loads it too)
     const guide = ROUNDS[G.idx].guide || [];
     Rack.balls.forEach((b) => (b.guide = guide.some((g) => parseOp(g).label === b.op.label)));
     const gb = Rack.balls.find((b) => b.guide);
-    if (gb) {
-      G.spotOnly = gb; G.dragOnly = true;
-      Spot.show(() => { const r = Rack.restPos(gb.holder); return Spot.worldBox(r.x, r.y - 11, BALL_D, BALL_D + 22); },
-        { sx: 1.2, sy: 1.2, pad: 26, also: sockSpot(0), sx2: 1.25, sy2: 1.25, pad2: 26, ring2: true, drag: { ball: gb, from: dragFrom(gb), to: dragTo(0) } });
-    } else Rack.glowWave();
-    VO.say('tutDragOp', 0.5);
-    // 3) once it is in, the spotlight moves to FIRE (the loaded socket stays clear above it, so the −5 shows in place)
+    if (gb) { G.spotOnly = gb; Spot.show(ballSpot(gb), { hand: true, sx: 1.2, sy: 1.2, pad: 26, also: sockSpot(0), sx2: 1.25, sy2: 1.25, pad2: 26 }); }
+    else Rack.glowWave();
+    VO.say('tutTapOrb', 0.5);
+    // 5) it flies into the cannon; once it has landed in its socket, the cannon fires it at the cloud by itself
     G.hooks.onFill = (filled, n) => {
-      if (G.tutSkip) return;
-      if (filled === n && !G.hooks.saidFire) {
-        G.hooks.saidFire = true; G.dragOnly = false;
-        if (G.spotOnly) { G.spotOnly = 'fire'; wait(0.45).then(() => { if (G.spotOnly === 'fire' && !G.tutSkip) Spot.show(fireSpot, { hand: true, sx: 1.12, sy: 1.45, pad: 24, also: sockSpot(0), sx2: 1, sy2: 1, pad2: 22 }); }); }
-        VO.say('tutTapFireOne', 0.5);
-      }
+      if (G.tutSkip || filled !== n || G.hooks.autoFire) return;
+      G.hooks.autoFire = true; G.spotOnly = 'fire'; // (the −5 stays in; FIRE may still be tapped in the meantime)
+      Spot.hide();
+      wait(Motion.BEAT.TAP_FLY + 0.45).then(() => { if (!G.tutSkip && G.fireResolve) tapFire(); });
     };
   };
 }
@@ -2460,7 +2460,7 @@ async function playRound(sid, i) {
   await fired;
   if (sid !== G.session) return;
   if (after) Taught.save(); // this round's tutorial is done: it never plays again on this device
-  G.spotOnly = null; G.dragOnly = false; Spot.hide();
+  G.spotOnly = null; Spot.hide();
   G.inputOn = false; G.hooks = {}; Cannon.setFireActive(false);
   Rack.balls.forEach((b) => (b.guide = false));
   VO.stop();
@@ -2494,7 +2494,7 @@ async function restartGame() {
   G.session++;
   if (G.tl) { G.tl.kill(); G.tl = null; } // the running round's timeline is torn down with everything else in flight
   Motion.killAll(); Skip.hide();
-  VO.stop(); G.inputOn = false; G.fireResolve = null; G.hooks = {}; G.helping = false; G.spotOnly = null; G.dragOnly = false; Drag.cancel(); Spot.hide();
+  VO.stop(); G.inputOn = false; G.fireResolve = null; G.hooks = {}; G.helping = false; G.spotOnly = null; Drag.cancel(); Spot.hide();
   $('#endUI').classList.remove('on');
   Cannon.setFireActive(false); for (let i = 0; i < 2; i++) Cannon.highlight(i, false);
   $('#fly').innerHTML = '';
