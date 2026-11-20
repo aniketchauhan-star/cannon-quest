@@ -22,9 +22,19 @@
     "voEndMost",
     "voEndSome"
   ],
+  "groups": {
+    "tutorial": [
+      "voWelcome",
+      "tutEquation",
+      "tutCannon",
+      "tutOrbs",
+      "tutTapOrb",
+      "tutTapFire"
+    ]
+  },
   "when": {
     "voWelcome": "the player has just tapped Play",
-    "tutFreeX": "first game: the how-to-play starts",
+    "tutFreeX": "Play again: the first equation comes back (no how-to-play this time)",
     "tutEquation": "first game: the spotlight is on the equation",
     "tutCannon": "first game: the spotlight is on the cannon",
     "tutOrbs": "first game: the spotlight is on the orbs in the tray",
