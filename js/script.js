@@ -338,14 +338,17 @@ const VO_MOOD = {"voWelcome":"hype","tutFreeX":"hype","tutTapOp":"teach","tutTap
 //  AUDIO — real recorded CC0 foley (js/sfx.js), teen-style music tracks,
 //  waterside ambience, voice-over + captions. Synth = fallback only.
 // =====================================================================
+// a test robot (Playwright, headless Chrome: navigator.webdriver) never makes a sound: no music, no effects and no
+// voice, not even the device's voice, which macOS speaks outside the browser, so --mute-audio cannot catch it
+const SILENT = !!navigator.webdriver;
 const Sound = {
-  ctx: null, master: null, sfx: null, verb: null, noiseBuf: null, muted: false, buf: {}, ambientOn: false, ambient: null,
+  ctx: null, master: null, sfx: null, verb: null, noiseBuf: null, muted: SILENT, buf: {}, ambientOn: false, ambient: null,
   init() {
     if (this.ctx) { this.resume(); return; }
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
     const ctx = (this.ctx = new AC());
-    this.master = ctx.createGain(); this.master.gain.value = 0.95; this.master.connect(ctx.destination);
+    this.master = ctx.createGain(); this.master.gain.value = this.muted ? 0 : 0.95; this.master.connect(ctx.destination);
     const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -12; comp.ratio.value = 3.5; comp.attack.value = 0.004; comp.release.value = 0.2;
     comp.connect(this.master);
     this.sfx = ctx.createGain(); this.sfx.gain.value = 0.9; this.sfx.connect(comp);
@@ -375,6 +378,7 @@ const Sound = {
   resume() { if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); },
   suspend() { if (this.ctx && this.ctx.state === 'running') this.ctx.suspend(); },
   setMuted(m) {
+    m = m || SILENT;
     this.muted = m;
     if (this.ctx) this.master.gain.setTargetAtTime(m ? 0 : 0.95, this.ctx.currentTime, 0.05);
     Music.setMuted(m);
@@ -505,9 +509,34 @@ const Music = {
 // line while it is up cross-fades its words while the board (.bg) glides from its old box to the new one (FLIP:
 // position + size, as the board stays centred on its line), so it never snaps. The board hugs its words: fit()
 // makes the text box exactly as wide as its longest line. Under reduced motion or a Skip every step lands at once.
+// The board is the user's question template (assets/img/question_board.webp, cut by tools/cut_question_board.py)
+// as a 9-slice, painted by paint() into the canvas .bg in whole device pixels, so its nine pieces meet exactly
+// (a CSS border-image leaves faint lines across the cream at the stage's fractional scales). SLICE: where the
+// template's rounded corners end, in WebP px (top right bottom left); EDGE: the same in art px, drawn at half the
+// WebP (0.25 of the template), the template's own proportions, so its whole thick wooden frame shows.
+const BOARD = { SLICE: [96, 100, 81, 100], EDGE: [48, 50, 40.5, 50] };
 const Caption = {
-  el: null, bg: null, txt: null,
-  init() { if (!this.el) { this.el = $('#cap'); this.bg = this.el.querySelector('.bg'); this.txt = this.el.querySelector('.txt'); } },
+  el: null, bg: null, txt: null, pic: null,
+  init() {
+    if (this.el) return;
+    this.el = $('#cap'); this.bg = this.el.querySelector('.bg'); this.txt = this.el.querySelector('.txt');
+    this.pic = new Image(); this.pic.onload = () => this.paint(); this.pic.src = IMG + 'question_board.webp';
+    addEventListener('resize', () => requestAnimationFrame(() => this.paint())); // (after Stage.resize has rescaled the stage)
+  },
+  // the 9-slice, at the board's size (its layout box) in device px: the stage's scale × the screen's pixel ratio
+  paint() {
+    const { el, bg: c, pic: im } = this;
+    if (!c || !im || !im.naturalWidth) return;
+    const w = el.offsetWidth, h = el.offsetHeight; if (!w || !h) return;
+    const k = ($('#stageTop').getBoundingClientRect().width / DW || 1) * (window.devicePixelRatio || 1);
+    const W = Math.round(w * k), H = Math.round(h * k), iw = im.naturalWidth, ih = im.naturalHeight;
+    if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
+    const [st, sr, sb, sl] = BOARD.SLICE, [et, er, eb, ek] = BOARD.EDGE.map((v) => Math.round(v * k));
+    const sx = [0, sl, iw - sr, iw], sy = [0, st, ih - sb, ih], dx = [0, ek, W - er, W], dy = [0, et, H - eb, H];
+    const g = c.getContext('2d'); g.clearRect(0, 0, W, H); g.imageSmoothingQuality = 'high';
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++)
+      g.drawImage(im, sx[i], sy[j], sx[i + 1] - sx[i], sy[j + 1] - sy[j], dx[i], dy[j], dx[i + 1] - dx[i], dy[j + 1] - dy[j]);
+  },
   // wrapped text would keep the board at its full max-width (empty wood at the right): measure the lines it really
   // has and make the text box that wide (in layout px: the stage and the board's own entrance are scaled)
   fit() {
@@ -525,7 +554,7 @@ const Caption = {
     el.classList.add('on');
     gsap.killTweensOf(el);
     if (!up) { // enter: the words are set before it shows
-      gsap.killTweensOf([txt, bg]); txt.textContent = text; this.fit();
+      gsap.killTweensOf([txt, bg]); txt.textContent = text; this.fit(); this.paint();
       gsap.set(txt, { opacity: 1, y: 0 }); gsap.set(bg, { x: 0, y: 0, scaleX: 1, scaleY: 1 }); gsap.set(el, { y: 14, scale: 0.97 });
     }
     Motion.to(el, { opacity: 1, y: 0, scale: 1, duration: Motion.DUR.SLOW * 0.75, ease: Motion.EASE.OUT });
@@ -536,7 +565,7 @@ const Caption = {
     gsap.killTweensOf(txt);
     Motion.to(txt, { opacity: 0, y: -5, duration: Motion.DUR.FAST * 0.8, ease: Motion.EASE.IN, onComplete: () => {
       const a = el.getBoundingClientRect();
-      txt.textContent = text; this.fit();
+      txt.textContent = text; this.fit(); this.paint();
       const b = el.getBoundingClientRect(), k = b.width / (el.offsetWidth || 1) || 1;
       gsap.killTweensOf(bg);
       if (b.width && b.height) gsap.set(bg, { x: (a.left - b.left) / k, y: (a.top - b.top) / k, scaleX: a.width / b.width, scaleY: a.height / b.height });
@@ -588,7 +617,7 @@ const VO = {
   // (as in Crown Quest: cancel only what is speaking, never speak() within 120 ms of a cancel, which Chrome can
   // swallow, and keep a reference to the utterance, whose 'end' Chrome drops once it is garbage-collected)
   speakTTS(text, finish, key) {
-    if (!window.speechSynthesis) return;
+    if (!window.speechSynthesis || SILENT) return;
     try {
       const sy = speechSynthesis;
       if (sy.speaking || sy.pending) { sy.cancel(); this.cancelAt = performance.now(); }
@@ -682,7 +711,7 @@ const CANNON = { x: 836, bottom: 762, h: 360, src: { 1: [613, 449], 2: [613, 449
 const BALL_ART = 0.96; // the orb's share of its picture (ball_*.webp: the orb is ~161 of 168 px)
 // tray art (wooden, metal corners; its plain middle stretched to hold 8 balls): ball spots along its floor (holesX,
 // holeY), the bottom edge and the outer edges in source px; a seated ball's centre sits `seat` px below (+) / above (−) its spot
-const RACK = { left: 166, top: 780, w: 1340, srcW: 1618, holesX: [212.3, 382.4, 552.5, 722.7, 892.8, 1063.0, 1233.1, 1403.2], holeY: 59.5, bot: 185.4, edges: [2, 1616], seat: 0 };
+const RACK = { left: 166, top: 780, w: 1340, srcW: 1618, holesX: [212.3, 382.4, 552.5, 722.7, 892.8, 1063.0, 1233.1, 1403.2], holeY: 59.5, bot: 185.4, edges: [2, 1616], seat: 12 }; // (12: each ball rests on the trough's floor, its bottom ~16 px behind the front rail, so it sits in the tray instead of hovering on the rail)
 const BALL_D = 122, MUZZLE = { x: CANNON.x, y: CANNON.bottom - CANNON.h + 14 }; // (BALL_D = the .ball size in the CSS)
 // the equation cloud, far off in the sky and well clear of the cannon: Cloud.apply draws #cloud (card included) at
 // CLOUD_FAR of its size, about its transform-origin (world 828, 163). Where a shot hits (on the card), and its middle
@@ -1159,7 +1188,14 @@ const Rack = {
     groundBlob(rs, 'soft', RACK.left + RACK.w - 6, bot - 22, 190, 90);  // the far (cast) side a little longer
     this.holes = RACK.holesX.map((hx) => ({ x: RACK.left + hx * sc, y: RACK.top + RACK.holeY * sc }));
     const sh = $('#bshadows');
-    this.shadows = this.holes.map((h) => { const d = document.createElement('div'); d.className = 'bshadow'; Object.assign(d.style, { left: h.x + 'px', top: h.y + 6 + 'px' }); sh.appendChild(d); return d; });
+    // each spot's shading, behind its ball: a soft cast shadow on the trough's back wall (light from the upper-left, so it
+    // falls right and down; it rises with the ball when the ball hops) and a dark pool where the ball meets the trough
+    this.shadows = this.holes.map((h) => {
+      const d = document.createElement('div'); d.className = 'bshadow';
+      Object.assign(d.style, { left: h.x + 'px', top: h.y + RACK.seat + 'px' });
+      d.innerHTML = '<i class="cast"></i><i class="pool"></i>';
+      sh.appendChild(d); d.cast = d.firstChild; d.pool = d.lastChild; d.lift = 0; return d;
+    });
     const box = $('#hglows');
     this.glows = this.holes.map((h) => { const g = document.createElement('div'); g.className = 'hglow'; Object.assign(g.style, { left: h.x + 'px', top: h.y + 'px' }); box.appendChild(g); return g; });
   },
@@ -1204,7 +1240,7 @@ function flyBall(b, dur = Motion.BEAT.TAP_FLY, arc = 230) {
   b.flight = { fx: b.x, fy: b.y, fs: b.s, t: 0, dur, arc, r0: b.r, r1: turn };
 }
 function updateBalls(dt, t) {
-  const seated = new Array(8).fill(false), full = [];
+  const seated = new Array(8).fill(false), lift = new Array(8).fill(0), full = [];
   for (const b of Rack.balls) {
     if (b.where === 'gone') { b.el.classList.add('gone'); continue; }
     const h = ballHome(b);
@@ -1226,7 +1262,7 @@ function updateBalls(dt, t) {
         const sx = Cannon.sx ?? 1, sy = Cannon.sy ?? 1;
         b.x = CANNON.x + (b.x - CANNON.x) * sx; b.y = CANNON.bottom + (b.y - CANNON.bottom) * sy + Cannon.kickY; b.s *= (sx + sy) / 2;
       }
-      if (b.where === 'rack') b.y += Rack.enterY;
+      if (b.where === 'rack') { b.y += Rack.enterY; lift[b.holder] = h.y + Rack.enterY - b.y; } // (how far it is raised off the trough's floor)
       b.r *= Math.exp(-10 * dt);
     }
     b.land = Math.max(0, b.land - dt * 3.5);
@@ -1241,7 +1277,11 @@ function updateBalls(dt, t) {
     b.el.classList.toggle('insock', !b.flight && b.where === 'socket'); // (sunk into the barrel: a soft inner shade)
     if (b.where === 'socket' && (!b.flight || b.flight.t > b.flight.dur * 0.7)) full[b.socket] = true; // (lined as it arrives)
   }
-  if (Rack.shadows) Rack.shadows.forEach((d, i) => d.classList.toggle('on', seated[i]));
+  if (Rack.shadows) Rack.shadows.forEach((d, i) => {
+    d.classList.toggle('on', seated[i]);
+    const l = Math.max(0, Math.round(lift[i])); // a raised ball: its wall shadow rises with it, the contact pool fades
+    if (l !== d.lift) { d.lift = l; d.cast.style.transform = l ? `translateY(${-l}px)` : ''; d.pool.style.opacity = Math.max(0, 1 - l / 16).toFixed(2); }
+  });
   if (Cannon.backs) Cannon.backs.forEach((k, i) => k.classList.toggle('on', !!full[i]));
 }
 
@@ -2284,7 +2324,7 @@ function frame(time, deltaMs) {
 // in case Play is tapped first) ----
 const Pics = {
   TITLE: ['bg_sky', 'sun_glow', 'sun_rays', 'bg_mount', 'bg_trees', 'bg_plantL', 'bg_plantR', 'bg_deck', 't_logo', 't_cannon', 'playbtn', 't_cage', 't_x', 't_cage_front'],
-  GAME: ['cloud', 'cannon1', 'cannon2', 'cannon1_front', 'cannon2_front', 'rack', 'rack_front', 'fire', 'cage_x', 'xchar', 'hand', 'pause', 'play', 'sound',
+  GAME: ['cloud', 'cannon1', 'cannon2', 'cannon1_front', 'cannon2_front', 'rack', 'rack_front', 'fire', 'cage_x', 'xchar', 'hand', 'pause', 'play', 'sound', 'question_board',
     ...[0, 1, 2, 3, 4, 5, 6, 7].map((i) => `ball_${i}`)],
   game: null, // (a promise: the play scene's pictures and the font)
   // resolves when every picture has arrived and is decoded (so it shows without a hitch), or after cap seconds,

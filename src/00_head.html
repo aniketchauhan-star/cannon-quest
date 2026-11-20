@@ -237,12 +237,15 @@ img{-webkit-user-drag:none;user-select:none}
 @keyframes guide{from{opacity:.55;transform:scale(.9)}to{opacity:1;transform:scale(1.06)}}
 .ball.hov img{filter:brightness(1.12)}
 .ball.gone{display:none}
-.ball .ao{position:absolute;inset:3%;border-radius:50%;background:radial-gradient(ellipse 72% 46% at 50% 97%,rgba(66,26,4,.6),rgba(66,26,4,.26) 55%,rgba(66,26,4,0) 100%);opacity:0;transition:opacity .25s;pointer-events:none}
+.ball .ao{position:absolute;inset:3%;border-radius:50%;background:radial-gradient(ellipse 70% 32% at 50% 90%,rgba(66,26,4,.5),rgba(66,26,4,.2) 58%,rgba(66,26,4,0) 100%);opacity:0;transition:opacity .25s;pointer-events:none}
 .ball.seated .ao{opacity:1}
 /* in the cannon's socket the orb sits inside the barrel: a soft shade round its edge, deepest under the ring's top lip */
 .ball.insock .ao{opacity:1;inset:2%;background:radial-gradient(circle at 50% 58%,rgba(40,14,0,0) 60%,rgba(40,14,0,.2) 82%,rgba(40,14,0,.46) 100%)}
-.bshadow{position:absolute;width:106px;height:38px;margin:-19px 0 0 -53px;border-radius:50%;background:radial-gradient(ellipse at center,rgba(70,28,4,.5) 0,rgba(70,28,4,.25) 45%,rgba(70,28,4,0) 72%);opacity:0;transition:opacity .25s;pointer-events:none}
+.bshadow{position:absolute;width:0;height:0;opacity:0;transition:opacity .25s;pointer-events:none} /* at the seated ball's centre */
 .bshadow.on{opacity:1}
+.bshadow i{position:absolute;border-radius:50%}
+.bshadow .cast{left:-34px;top:-58px;width:124px;height:124px;background:radial-gradient(closest-side,rgba(52,18,0,.58),rgba(52,18,0,.5) 70%,rgba(52,18,0,0))} /* on the back wall, down-right of the ball */
+.bshadow .pool{left:-72px;top:28px;width:148px;height:32px;background:radial-gradient(closest-side,rgba(36,10,0,.9),rgba(36,10,0,.6) 58%,rgba(36,10,0,0))} /* where the ball meets the trough, just above the rail */
 .xfly{position:absolute;left:0;top:0;width:121px;height:115px;margin:-57.5px 0 0 -60.5px;pointer-events:none}
 .xfly img{width:100%;height:100%;display:block;filter:drop-shadow(0 0 10px rgba(255,255,255,.9)) drop-shadow(0 0 22px rgba(197,139,255,.8))}
 /* ---------- ground contact: shadow groups multiply onto the plaza; light + ring groups paint normally so colour reads on bright sand ---------- */
@@ -259,18 +262,22 @@ img{-webkit-user-drag:none;user-select:none}
 .gsh .gold{border:3px solid rgba(255,248,205,.95);box-shadow:0 0 6px 2px rgba(255,214,70,.95),0 0 18px 7px rgba(255,176,20,.65),inset 0 0 8px 2px rgba(255,214,70,.8)}
 
 /* ---------- caption (what the voice says): the user's question template, on the left, halfway down ----------
-   art/ui/question_template.png (an orange wooden frame, dark-brown outline, cream panel), cropped and stored at 0.34
-   as assets/img/question_board.webp (728×185) and drawn as a 9-slice at 0.17: the corners stay as drawn, the frame
-   and the panel stretch to the words. Dark-brown words on the cream, so they always read. It hugs its words
-   (Caption.fit: as wide as its longest line) and stays centred on y 470 (#capPos). Caption (src/20_audio.js) fades
-   it in / out and glides it between lines (transform + opacity) */
+   art/ui/question_template.png (an orange wooden frame, dark-brown outline, cream panel), cut by
+   tools/cut_question_board.py at 0.5 into assets/img/question_board.webp (1070×272) and painted as a 9-slice at 0.25
+   (half the WebP, so it stays sharp on a 2× screen) into the canvas .bg by Caption.paint (src/20_audio.js), in whole
+   device pixels so the pieces meet without seams. That is the template's own proportions: the whole thick wooden
+   frame and its grain show; the corners stay as drawn and only straight frame and cream stretch to the words. The
+   words (36px) sit in the cream panel, whose inset at 0.25 is 24 / 19 / 19.5 / 18.5 px (top right bottom left), with
+   the speaker icon on the first line. Dark-brown words on the cream, so they always read. It hugs its words
+   (Caption.fit: as wide as its longest line), is at most 560 wide (its right edge stays clear of the cannon at
+   x ~595) and stays centred on y 470 (#capPos, in #stageTop: above the FX canvas, so cannon smoke never hides the
+   words). Caption fades it in / out and glides it between lines (transform + opacity) */
 #overlay{position:absolute;inset:0;pointer-events:none}
 #capPos{position:absolute;left:30px;top:470px;height:0;display:flex;align-items:center;pointer-events:none}
-#cap{position:relative;flex:none;max-width:500px;padding:18px 28px 17px 58px;color:#4a2508;font-size:24px;line-height:1.32;letter-spacing:.005em;opacity:0;transform-origin:0 50%}
-#cap .bg{position:absolute;inset:0;transform-origin:0 0;border:24px solid transparent;
-  border-image:url(assets/img/question_board.webp) 48 fill / 24px / 0 stretch;filter:drop-shadow(0 6px 8px rgba(40,18,4,.28))}
+#cap{position:relative;flex:none;max-width:560px;padding:40px 42px 35px 82px;color:#4a2508;font-size:36px;line-height:1.3;letter-spacing:.005em;opacity:0;transform-origin:0 50%}
+#cap .bg{position:absolute;left:0;top:0;width:100%;height:100%;display:block;transform-origin:0 0;filter:drop-shadow(0 7px 9px rgba(40,18,4,.3))}
 #cap .txt{display:block;position:relative;text-wrap:balance}
-#cap svg{position:absolute;left:22px;top:22px;width:24px;height:24px;color:#c2621a}
+#cap svg{position:absolute;left:34px;top:47px;width:33px;height:33px;color:#c2621a}
 
 /* ---------- HUD (from the art: pause, sound) ---------- */
 #hud{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .3s ease-out}
@@ -378,12 +385,13 @@ html:not(.fit) #stage,html:not(.fit) #stageTop{visibility:hidden} /* (until fitS
     <div id="overlay">
       <div id="spotRing"></div>
       <img id="spotHand" data-src="assets/img/hand.webp" alt="" aria-hidden="true" draggable="false">
-      <div id="capPos"><div id="cap"><i class="bg"></i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h3l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7"/></svg><span class="txt"></span></div></div>
       <div id="endUI"><button id="againBtn" class="rbtn" data-i18n-attr="aria-label:btnPlayAgain"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg></button></div>
     </div>
   </div>
   <canvas id="fx"></canvas>
-  <div id="stageTop"><div id="worldTop"><div id="fly"></div></div></div>
+  <!-- the caption sits above the FX canvas (cannon smoke never covers its words), in stage units but not moved by
+       the camera; what flies (#worldTop) still passes over it -->
+  <div id="stageTop"><div id="capPos"><div id="cap"><canvas class="bg"></canvas><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h3l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7"/></svg><span class="txt"></span></div></div><div id="worldTop"><div id="fly"></div></div></div>
   <div id="flash"></div>
   <div id="hud">
     <button id="pauseBtn" class="hbtn" data-i18n-attr="aria-label:btnPause"><img data-src="assets/img/pause.webp" alt=""></button>
