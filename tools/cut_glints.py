@@ -28,14 +28,15 @@ cn = np.array(Image.open('assets/img/t_cannon.webp').convert('RGBA'))
 hsv = cv2.cvtColor(cn[..., :3], cv2.COLOR_RGB2HSV_FULL).astype(float)
 h, s, v = hsv[..., 0] * 360 / 256, hsv[..., 1] / 255, hsv[..., 2] / 255
 m = ((h >= 30) & (h <= 58) & (s > 0.45) & (v > 0.6) & (cn[..., 3] > 200)).astype(np.uint8) * 255
-m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))  # (specks)
 n, lab, st, cen = cv2.connectedComponentsWithStats(m)
 keep = np.zeros_like(m)
+k = cn.shape[1] / 779  # (the places below were measured on the 779 px wide cannon; t_cannon is HD now: tools/hd_upscale.py)
 for i in range(1, n):
     x, y, w, hh, area = st[i]
-    if area < 400: continue
-    if 360 <= cen[i][0] <= 490 and 160 <= cen[i][1] <= 260: continue  # sunlit wood on top of the barrel
-    if y >= 570 and hh < 40: continue                                    # the lit top edge of the wooden base
+    if area < 400 * k * k: continue
+    if 360 * k <= cen[i][0] <= 490 * k and 160 * k <= cen[i][1] <= 260 * k: continue  # sunlit wood on top of the barrel
+    if y >= 570 * k and hh < 40 * k: continue                                          # the lit top edge of the wooden base
     keep[lab == i] = 255
 keep = cv2.GaussianBlur(keep, (3, 3), 0)
 Image.fromarray(wash(cn, np.minimum(cn[..., 3], keep))).save(f'{OUT}/t_cannon_glint.png')
