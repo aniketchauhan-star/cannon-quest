@@ -184,18 +184,18 @@ const Sound = {
   },
 };
 
-// ---------- background music: "Bravery Run" (OpenGameArt, CC0 public domain, see CREDITS.md) ----------
-// upbeat game music, electric guitar + synth at 170 bpm (the user, 19 Nov: a gamified track for teens). It was made
-// to loop (exactly 316 beats), so it is stored whole, with no fades, and loops without a seam
-// The user, 20 Nov: the music must sit softly UNDER the lesson, never pull the eye/ear from it: so it plays a little
-// slower (rate, pitch kept), a calm bed rather than a race, at 40% volume (level; the user, 20 Nov: "40% only"),
-// and dips to 40% of that while the voice speaks (duck).
-const TRACKS = { game: 'assets/music/braveryrun.webm' };
+// ---------- background music: "New Shoes" (HoliznaCC0, CC0 public domain, see CREDITS.md) ----------
+// The user, 20 Nov: "the BGM is too heavy… I want light music, not high music". So the 170 bpm guitar + synth track
+// (Bravery Run) gave way to a light, happy lo-fi tune: ~81 bpm, very little bass, no drums pounding. It is cut into
+// a seamless loop (its fade-out replaced by a 3 s crossfade into its own start) and stored 3 dB quieter than the
+// old track (−17 LUFS). It plays at its own speed, at 40% volume (level; the user, 20 Nov: "40% only"), and dips to
+// 40% of that while the voice speaks (duck), so it always sits softly UNDER the lesson.
+const TRACKS = { game: 'assets/music/newshoes.webm' };
 // a short buzz on phones that support it (never when muted or with reduced motion)
 const Haptic = { buzz(p) { if (Sound.muted || Motion.still() || !navigator.vibrate) return; try { navigator.vibrate(p); } catch (e) { /* ignore */ } } };
 
 const Music = {
-  el: null, choice: 'game', level: 0.4, rate: 0.82, target: 0, on: false, paused: false, vol: 0, hitT: 0,
+  el: null, choice: 'game', level: 0.4, rate: 1, target: 0, on: false, paused: false, vol: 0, hitT: 0,
   start() { this.on = true; this.setTrack(this.choice); },
   setTrack(name) {
     this.choice = name;

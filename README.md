@@ -102,7 +102,7 @@ cannon quest/
 | `assets/fonts/` | Poppins SemiBold (`poppins-600-latin*.woff2`) and Trig Text (`trigtext-regular.woff2`), both SIL OFL. `build.sh` embeds them into `index.html` (as `src/02_fonts.html`), because Chrome blocks font files on pages opened from disk |
 | `assets/img/` | The sprites, cut from the sheets in `art/` and upscaled (EDSR super-resolution) so they stay sharp on retina screens. Start-screen sprites are named `t_*`; `bg_*.webp` are the background layers. All images are WebP |
 | `assets/sfx/` | Recorded sound effects (CC0 / public domain), Opus `.webm` |
-| `assets/music/` | Background music: "Bravery Run" by MintoDog, upbeat electric guitar + synth game music (170 bpm) that loops without a seam, CC0 public domain (Opus `.webm`) |
+| `assets/music/` | Background music: "New Shoes" by HoliznaCC0, a light, happy lo-fi tune (~81 bpm) cut into a seamless loop, CC0 public domain (Opus `.webm`) |
 | `assets/VO/en/` | Voice clips, one per key (`<key>.webm`), cut from a real person's recording |
 
 **Working files (the game doesn't need these to run)**

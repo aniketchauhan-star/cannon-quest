@@ -4,10 +4,10 @@
 All game art comes from the files you supplied, kept in `art/`: the sprite sheets (`art/sprite_sheets/`), the start-screen sheet and Play button (`art/start_screen/`), and the deck background picture with its parts sheet (`art/background/`).
 
 ## Music
-**"Bravery Run"** by MintoDog, on OpenGameArt: [opengameart.org/content/bravery-run](https://opengameart.org/content/bravery-run).
-Uplifting electric guitar and synth game music at 170 bpm, made to loop. Released as **CC0 (public domain)**. No credit is required; it is given here anyway.
-Stored as `assets/music/braveryrun.webm` (Opus, 80 kbps): the whole 111.5 s loop (316 beats), with no fades, so it loops without a seam. It is turned down 4.7 dB to −14 LUFS, about as loud as the track before it.
-It replaced "Blue Skies" by HoliznaCC0 (CC0 lo-fi) on 19 Nov 2026, when the user asked for gamified music for teens. That had replaced "Chill Wave" by Kevin MacLeod (CC BY 4.0) earlier the same day.
+**"New Shoes"** by HoliznaCC0, from the album "Happy Lo-Fi (Lofi Collection)" on OpenGameArt: [opengameart.org/content/happy-lo-fi-lofi-collection](https://opengameart.org/content/happy-lo-fi-lofi-collection).
+A light, happy lo-fi tune at about 81 bpm, with very little bass. Released as **CC0 (public domain)**. No credit is required; it is given here anyway.
+Stored as `assets/music/newshoes.webm` (Opus, 80 kbps): a 141 s seamless loop. The original's fade-out is replaced by a 3 s crossfade back into its own start, the deep rumble below 80 Hz is cut, and it is set to −17 LUFS, 3 dB quieter than the track before it.
+It replaced "Bravery Run" by MintoDog (CC0, 170 bpm electric guitar and synth) on 20 Nov 2026, when the user found that track too heavy and asked for light music. Before that came "Blue Skies" by HoliznaCC0 and "Chill Wave" by Kevin MacLeod (CC BY 4.0).
 
 ## Voice-over
 Every line is said by a real person: one recording of `docs/VO_RECORD.txt`, cut into clips by `tools/vo_split.py` (`tools/vo_takes.json` records which recording each clip came from). No AI or synthetic voice is used, at the user's request of 20 Nov 2026. That includes the TTS studio, the device's own voice, and the earlier Kokoro clips (removed 18 Nov 2026).
