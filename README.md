@@ -4,7 +4,7 @@ A 2D algebra game built from your art. Load operation balls into the cannon, fir
 It is based on the *Cannon Quest* deck, the POD A stand-up brief (16 Nov 2026), and the mockups and asset sheets you supplied.
 
 ## Play
-- Double-click **`index.html`** in Chrome, Edge or Safari. It works fully offline: the font (Poppins SemiBold) is built into the page.
+- Double-click **`index.html`** in Chrome, Edge or Safari. It works fully offline: the fonts (Poppins SemiBold, and Trig Text for the maths) are built into the page.
 - Keep the `assets/`, `js/`, `libs/` and `locales/` folders next to `index.html`.
 - Works best in landscape. On a phone held upright, a "turn your device" hint appears; tap "Play anyway" to dismiss it.
 
@@ -58,7 +58,7 @@ It is based on the *Cannon Quest* deck, the POD A stand-up brief (16 Nov 2026), 
   - Particles don't create new memory each frame.
   - Slower devices automatically get fewer particles and a simpler tutorial dim, changed only between shots.
 - **Words by key:** every line of text and every voice clip is looked up by a key (`T('key')`), with the English in `locales/locales.json`. `index.html?lan=xx` picks a language once one is added.
-- **Type and UI:** one typeface at one weight, **Poppins SemiBold (600)**, with no outlines on text. Skip and the socket markers (1, 2) share one look: a dark-glass chip with a thin gold edge. Play again sits under the score cloud.
+- **Type and UI:** **Poppins SemiBold (600)** for words, and **Trig Text** (the user's font, 19 Nov) for the equation on the cloud and the numbers on the orbs, including their own ÷. No outlines on text. Skip and the socket markers (1, 2) share one look: a dark-glass chip with a thin gold edge. Play again sits under the score cloud.
   - **Caption (what the voice says):** your question template `art/ui/question_template.png` (an orange wooden frame with a dark-brown outline and a cream panel) on the left, halfway down, with dark-brown words on the cream so they always read. It is a 9-slice (`assets/img/question_board.webp`, `#cap` in `src/00_head.html`): the corners stay as drawn and the frame stretches to the words. It hugs its words (as wide as its longest line, one or two lines) and stays centred on its spot. A one-letter word (x) never ends a line.
   - When a new line comes in, the old words fade out, the board glides to its new size and place, and the new words fade in (`Caption` in `src/20_audio.js`).
 
@@ -85,7 +85,7 @@ cannon quest/
 | `locales/locales.json` | Every word the game shows or says, by key (English). `locales.js` is a generated copy for opening from disk |
 | `js/i18n.js` | Looks words and voice clips up by key (`T('key')`, `I18n.voice('key')`) |
 | `libs/gsap.min.js` | GSAP 3.15.0, the animation library, bundled locally |
-| `assets/fonts/` | Poppins SemiBold (`poppins-600-latin*.woff2`, SIL OFL). `build.sh` embeds it into `index.html` (as `src/02_fonts.html`), because Chrome blocks font files on pages opened from disk |
+| `assets/fonts/` | Poppins SemiBold (`poppins-600-latin*.woff2`) and Trig Text (`trigtext-regular.woff2`), both SIL OFL. `build.sh` embeds them into `index.html` (as `src/02_fonts.html`), because Chrome blocks font files on pages opened from disk |
 | `assets/img/` | The sprites, cut from the sheets in `art/` and upscaled (EDSR super-resolution) so they stay sharp on retina screens. Start-screen sprites are named `t_*`; `bg_*.webp` are the background layers. All images are WebP |
 | `assets/sfx/` | Recorded sound effects (CC0 / public domain), Opus `.webm` |
 | `assets/music/` | Background music: "Bravery Run" by MintoDog, upbeat electric guitar + synth game music (170 bpm) that loops without a seam, CC0 public domain (Opus `.webm`) |

@@ -124,6 +124,9 @@ img{-webkit-user-drag:none;user-select:none}
 #qTab{position:absolute;left:328px;top:80px;translate:-50% -50%;padding:7px 24px;border-radius:99px;background:var(--glass);box-shadow:0 0 0 3px #ffd23d,0 5px 12px rgba(20,10,60,.24);color:#fff;font-size:25px;line-height:1.2;letter-spacing:.01em;white-space:nowrap}
 #qTab:empty{display:none}
 #eqBox{position:absolute;left:328px;top:184px;width:0;height:0} /* (the middle of the cloud's body) */
+/* the equation, the orbs' numbers and the caption's words (on the user's question template): Trig Text (the user's
+   font, 19 Nov), its one weight (400) */
+#eq,.ball b,#cap .txt{font-family:'Trig Text','Poppins',system-ui,sans-serif;font-weight:400}
 #eq{position:absolute;left:0;top:0;transform:translate(-50%,-50%);display:flex;align-items:center;white-space:nowrap;font-size:70px;line-height:1;letter-spacing:-.01em;font-variant-numeric:lining-nums;color:var(--ink);transform-origin:0 0}
 #eq.wob{animation:eqwob .45s ease-in-out 3}
 @keyframes eqwob{25%{rotate:-3deg}75%{rotate:3deg}}
@@ -139,6 +142,10 @@ img{-webkit-user-drag:none;user-select:none}
 .dv{display:inline-block;position:relative;width:.56em;height:.62em;flex:none}
 .dv::before{content:'';position:absolute;left:.02em;right:.02em;top:calc(50% - .045em);height:.09em;background:currentColor;border-radius:1em}
 .dv::after{content:'';position:absolute;left:50%;top:.04em;width:.13em;height:.13em;margin-left:-.065em;border-radius:50%;background:currentColor;box-shadow:0 .41em 0 currentColor}
+/* in Trig Text (the equation, the orbs) the font's own ÷ matches its digits, so the drawn one gives way to it */
+#eq .dv,.ball b .dv{width:auto;height:auto}
+#eq .dv::before,.ball b .dv::before{content:'÷';position:static;background:none;height:auto;border-radius:0}
+#eq .dv::after,.ball b .dv::after{content:none}
 .inc{color:var(--tok)}
 .inc .op{margin:0 .12em 0 .17em}
 .hid{opacity:0;transform:scale(.4)}
