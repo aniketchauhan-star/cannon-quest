@@ -27,7 +27,7 @@ window.GAME_LOCALES = {
     "endFreed": "You freed",
     "endScore": "{freed} out of {total}!",
     "tutFreeX": "Let's free x!",
-    "tutTapOp": "Tap an operation to load the cannon.",
+    "tutDragOp": "Drag −5 into the cannon.",
     "tutTapFireOne": "Tap Fire to launch your operation.",
     "voWelcome": "Welcome to Cannon Quest!",
     "voNext1": "Here comes the next one!",
