@@ -263,6 +263,7 @@ body.dragging,body.dragging *{cursor:grabbing !important}
 .gsh .cast{background:radial-gradient(closest-side,rgba(70,36,10,.45),rgba(70,36,10,.24) 50%,rgba(70,36,10,0));filter:blur(9px)}
 .gsh .pool{background:radial-gradient(closest-side,rgba(66,32,8,.72),rgba(66,32,8,.6) 55%,rgba(66,32,8,.3) 82%,rgba(66,32,8,0));filter:blur(7px)} /* (a wide, even shadow that spreads past a base: start screen) */
 .gsh .contact{background:radial-gradient(closest-side,rgba(40,18,4,.95),rgba(40,18,4,.62) 50%,rgba(40,18,4,0));filter:blur(2px)}
+.gsh .ao{background:radial-gradient(closest-side,rgba(30,12,2,.95),rgba(30,12,2,.75) 60%,rgba(30,12,2,0));filter:blur(1.5px)} /* (where a base meets the boards: start screen) */
 .gsh .glow{background:radial-gradient(closest-side,rgba(90,236,255,.62),rgba(90,236,255,.28) 50%,rgba(90,236,255,0));filter:blur(2px)}
 .gsh .gold{border:3px solid rgba(255,248,205,.95);box-shadow:0 0 6px 2px rgba(255,214,70,.95),0 0 18px 7px rgba(255,176,20,.65),inset 0 0 8px 2px rgba(255,214,70,.8)}
 
@@ -338,8 +339,14 @@ body.lowfx #spot .sl{-webkit-backdrop-filter:none;backdrop-filter:none;backgroun
 .tp{position:absolute;display:block;transform-origin:50% 50%;pointer-events:none}
 #thumb.live .tp,#thumb.live #playBtn,#thumb.live .tx{will-change:transform,opacity}
 .tp.lit{filter:brightness(1.2) drop-shadow(0 0 16px rgba(255,236,150,.9))}
-/* the cage group: its whole picture, x's shadow on the floor, x, its front bars (x is inside, between them) */
-.tcage img{position:absolute;display:block;max-width:none;pointer-events:none}
+/* the cannon group: its picture + a glint; the cage group: its whole picture, x's shadow on the floor, x, its front
+   bars (x is inside, between them), a glint */
+.tgrp img{position:absolute;display:block;max-width:none;pointer-events:none}
+/* a glint (Title.glint): a soft slanted band of light; through it shows the piece's gold, washed bright */
+.gband{position:absolute;left:0;top:0;overflow:hidden;transform-origin:0 0;opacity:0;pointer-events:none;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 30%,#000 70%,transparent);mask-image:linear-gradient(90deg,transparent,#000 30%,#000 70%,transparent)}
+.gband img{left:0;top:0;transform-origin:0 0}
+#thumb.live .gband,#thumb.live .gband img{will-change:transform,opacity}
 .tcage .tx{transform-origin:50% 92%}
 .tcage .xsh{position:absolute;display:block;border-radius:50%;transform-origin:50% 50%;background:radial-gradient(closest-side,rgba(120,56,0,.6),rgba(120,56,0,.28) 55%,rgba(120,56,0,0))}
 #playBtn{position:absolute;pointer-events:auto;cursor:pointer;transform-origin:50% 50%}
