@@ -31,6 +31,7 @@ window.GAME_LOCALES = {
     "tutCannon": "This is the cannon.",
     "tutOrbs": "These are the orbs.",
     "tutTapOrb": "Tap the −5 orb!",
+    "tutTapFire": "Now tap FIRE!",
     "voWelcome": "Welcome to Cannon Quest!",
     "voNext1": "Here comes the next one!",
     "voNext2": "New equation! Can you free x?",

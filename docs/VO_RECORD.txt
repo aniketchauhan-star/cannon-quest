@@ -1,5 +1,5 @@
 CANNON QUEST: THE VOICE SCRIPT
-19 lines, about 1 minute to read
+20 lines, about 1 minute to read
 
 Every line in the game is said in one real person's voice: yours, or a teammate's. No AI voice.
 
@@ -35,45 +35,48 @@ THE LINES
     (first game: the spotlight is on the orbs in the tray; calm and clear, like showing a friend)
 
  6. Tap the −5 orb!
-    (first game: a hand taps the -5 orb; once tapped it flies into the cannon and fires; calm and clear, like showing a friend; say −5 as "minus five")
+    (first game: a hand taps the -5 orb; once tapped it flies into the cannon; calm and clear, like showing a friend; say −5 as "minus five")
 
- 7. Here comes the next one!
+ 7. Now tap FIRE!
+    (first game: the -5 is in the cannon; a hand taps the FIRE button; calm and clear, like showing a friend)
+
+ 8. Here comes the next one!
     (a new equation comes; excited, inviting)
 
- 8. New equation! Can you free x?
+ 9. New equation! Can you free x?
     (a new equation comes; excited, inviting)
 
- 9. Ready? Load up and fire!
+10. Ready? Load up and fire!
     (a new equation comes; excited, inviting)
 
-10. Last one! Make it count!
+11. Last one! Make it count!
     (the last equation comes; excited, inviting)
 
-11. Boom! x is free!
+12. Boom! x is free!
     (the shot worked: x jumps out of the cage; big and happy: celebrate!)
 
-12. Yes! You did it!
+13. Yes! You did it!
     (the shot worked: x jumps out of the cage; big and happy: celebrate!)
 
-13. Brilliant! That's how it's done!
+14. Brilliant! That's how it's done!
     (the shot worked: x jumps out of the cage; big and happy: celebrate!)
 
-14. Awesome shot!
+15. Awesome shot!
     (the shot worked: x jumps out of the cage; big and happy: celebrate!)
 
-15. Oh no! x is still stuck.
+16. Oh no! x is still stuck.
     (the shot missed: x is still in the cage; gentle and kind, never like "wrong")
 
-16. Not this time. x is still locked in!
+17. Not this time. x is still locked in!
     (the shot missed: x is still in the cage; gentle and kind, never like "wrong")
 
-17. Amazing! You freed x every single time!
+18. Amazing! You freed x every single time!
     (the end: the player freed x every time; big and happy: celebrate!)
 
-18. Great job! You freed most of them!
+19. Great job! You freed most of them!
     (the end: the player freed x most times; big and happy: celebrate!)
 
-19. Good try! Play again to free them all!
+20. Good try! Play again to free them all!
     (the end: the player freed x only a few times; warm and encouraging)
 
 (Made by: python3 tools/vo_split.py --script, from tools/vo_lines.json and locales/locales.json.)
