@@ -1,0 +1,281 @@
+{
+ "tutCannon": {
+  "recording": "recordings/1.mp3",
+  "from": 5.415,
+  "to": 6.825,
+  "heard": "this is the cannon",
+  "words": [
+   0.11,
+   0.5,
+   0.68,
+   0.8
+  ],
+  "cut": "2026-11-20"
+ },
+ "tutEquation": {
+  "recording": "recordings/1.mp3",
+  "from": 3.525,
+  "to": 5.415,
+  "heard": "this is the equation",
+  "words": [
+   0.1,
+   0.65,
+   0.92,
+   1.1
+  ],
+  "cut": "2026-11-20"
+ },
+ "tutFreeX": {
+  "recording": "recordings/1.mp3",
+  "from": 1.95,
+  "to": 3.525,
+  "heard": "let's free ex",
+  "words": [
+   0.09,
+   0.54,
+   0.96
+  ],
+  "cut": "2026-11-20"
+ },
+ "tutOrbs": {
+  "recording": "recordings/1.mp3",
+  "from": 6.825,
+  "to": 8.475,
+  "heard": "these are the orbs",
+  "words": [
+   0.08,
+   0.62,
+   0.73,
+   0.88
+  ],
+  "cut": "2026-11-20"
+ },
+ "tutTapFire": {
+  "recording": "recordings/1.mp3",
+  "from": 10.545,
+  "to": 11.94,
+  "heard": "now tap fire",
+  "words": [
+   0.07,
+   0.4,
+   0.73
+  ],
+  "cut": "2026-11-20"
+ },
+ "tutTapOrb": {
+  "recording": "recordings/1.mp3",
+  "from": 8.475,
+  "to": 10.545,
+  "heard": "tap the minus five orb",
+  "words": [
+   0.11,
+   0.46,
+   0.61,
+   1.52
+  ],
+  "cut": "2026-11-20"
+ },
+ "voEndAll": {
+  "recording": "recordings/1.mp3",
+  "from": 32.67,
+  "to": 36.36,
+  "heard": "amazing you freed ex every single time",
+  "words": [
+   0.09,
+   1.23,
+   1.47,
+   1.86,
+   2.19,
+   2.64,
+   3.12
+  ],
+  "cut": "2026-11-20"
+ },
+ "voEndMost": {
+  "recording": "recordings/1.mp3",
+  "from": 36.36,
+  "to": 38.64,
+  "heard": "great job you freed most of them",
+  "words": [
+   0.06,
+   0.45,
+   1.02,
+   1.23,
+   1.56,
+   1.89,
+   1.98
+  ],
+  "cut": "2026-11-20"
+ },
+ "voEndSome": {
+  "recording": "recordings/1.mp3",
+  "from": 38.64,
+  "to": 40.908,
+  "heard": "good try play again to free them all",
+  "words": [
+   0.06,
+   0.33,
+   0.84,
+   1.11,
+   1.44,
+   1.53,
+   1.74,
+   1.92
+  ],
+  "cut": "2026-11-20"
+ },
+ "voFreed1": {
+  "recording": "recordings/1.mp3",
+  "from": 20.235,
+  "to": 22.485,
+  "heard": "boom ex is free",
+  "words": [
+   0.07,
+   0.77,
+   1.25,
+   1.55
+  ],
+  "cut": "2026-11-20"
+ },
+ "voFreed2": {
+  "recording": "recordings/1.mp3",
+  "from": 22.485,
+  "to": 24.345,
+  "heard": "yes you did it",
+  "words": [
+   0.05,
+   0.91,
+   1.25,
+   1.61
+  ],
+  "cut": "2026-11-20"
+ },
+ "voFreed3": {
+  "recording": "recordings/1.mp3",
+  "from": 24.345,
+  "to": 26.415,
+  "heard": "brilliant that's how it's done",
+  "words": [
+   0.05,
+   0.95,
+   1.3,
+   1.48,
+   1.64
+  ],
+  "cut": "2026-11-20"
+ },
+ "voFreed4": {
+  "recording": "recordings/1.mp3",
+  "from": 26.415,
+  "to": 27.675,
+  "heard": "awesome shot",
+  "words": [
+   0.05,
+   0.62
+  ],
+  "cut": "2026-11-20"
+ },
+ "voLast": {
+  "recording": "recordings/1.mp3",
+  "from": 18.27,
+  "to": 20.235,
+  "heard": "last one make it count",
+  "words": [
+   0.09,
+   0.54,
+   0.96,
+   1.32,
+   1.44
+  ],
+  "cut": "2026-11-20"
+ },
+ "voNext1": {
+  "recording": "recordings/1.mp3",
+  "from": 11.94,
+  "to": 13.47,
+  "heard": "here comes the next one",
+  "words": [
+   0.12,
+   0.39,
+   0.69,
+   0.81,
+   1.08
+  ],
+  "cut": "2026-11-20"
+ },
+ "voNext2": {
+  "recording": "recordings/1.mp3",
+  "from": 13.47,
+  "to": 16.05,
+  "heard": "new equation can you free ex",
+  "words": [
+   0.12,
+   0.42,
+   1.23,
+   1.47,
+   1.62,
+   2.04
+  ],
+  "cut": "2026-11-20"
+ },
+ "voNext3": {
+  "recording": "recordings/1.mp3",
+  "from": 16.05,
+  "to": 18.27,
+  "heard": "ready load up and fire",
+  "words": [
+   0.09,
+   0.87,
+   1.32,
+   1.5,
+   1.62
+  ],
+  "cut": "2026-11-20"
+ },
+ "voStuck1": {
+  "recording": "recordings/1.mp3",
+  "from": 27.72,
+  "to": 29.805,
+  "heard": "oh no ex is still stuck",
+  "words": [
+   0.15,
+   0.33,
+   0.84,
+   1.14,
+   1.26,
+   1.53
+  ],
+  "cut": "2026-11-20"
+ },
+ "voStuck2": {
+  "recording": "recordings/1.mp3",
+  "from": 29.805,
+  "to": 32.67,
+  "heard": "not this time ex is still locked in",
+  "words": [
+   0.05,
+   0.43,
+   0.64,
+   1.34,
+   1.66,
+   1.77,
+   2.02,
+   2.38
+  ],
+  "cut": "2026-11-20"
+ },
+ "voWelcome": {
+  "recording": "recordings/1.mp3",
+  "from": 0.0,
+  "to": 1.95,
+  "heard": "welcome to cannon quest",
+  "words": [
+   0.06,
+   0.66,
+   0.87,
+   1.29
+  ],
+  "cut": "2026-11-20"
+ },
+ "_about": "Where each voice clip in assets/VO/en/ came from: written by tools/vo_split.py as it cuts a person's recording. 'words': when each word of the caption starts, in s from the clip's start. build.sh lists only the clips that are here."
+}
