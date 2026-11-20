@@ -3,14 +3,17 @@
 //  AUDIO — real recorded CC0 foley (js/sfx.js), teen-style music tracks,
 //  waterside ambience, voice-over + captions. Synth = fallback only.
 // =====================================================================
+// a test robot (Playwright, headless Chrome: navigator.webdriver) never makes a sound: no music, no effects and no
+// voice, not even the device's voice, which macOS speaks outside the browser, so --mute-audio cannot catch it
+const SILENT = !!navigator.webdriver;
 const Sound = {
-  ctx: null, master: null, sfx: null, verb: null, noiseBuf: null, muted: false, buf: {}, ambientOn: false, ambient: null,
+  ctx: null, master: null, sfx: null, verb: null, noiseBuf: null, muted: SILENT, buf: {}, ambientOn: false, ambient: null,
   init() {
     if (this.ctx) { this.resume(); return; }
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
     const ctx = (this.ctx = new AC());
-    this.master = ctx.createGain(); this.master.gain.value = 0.95; this.master.connect(ctx.destination);
+    this.master = ctx.createGain(); this.master.gain.value = this.muted ? 0 : 0.95; this.master.connect(ctx.destination);
     const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -12; comp.ratio.value = 3.5; comp.attack.value = 0.004; comp.release.value = 0.2;
     comp.connect(this.master);
     this.sfx = ctx.createGain(); this.sfx.gain.value = 0.9; this.sfx.connect(comp);
@@ -40,6 +43,7 @@ const Sound = {
   resume() { if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); },
   suspend() { if (this.ctx && this.ctx.state === 'running') this.ctx.suspend(); },
   setMuted(m) {
+    m = m || SILENT;
     this.muted = m;
     if (this.ctx) this.master.gain.setTargetAtTime(m ? 0 : 0.95, this.ctx.currentTime, 0.05);
     Music.setMuted(m);
@@ -170,9 +174,34 @@ const Music = {
 // line while it is up cross-fades its words while the board (.bg) glides from its old box to the new one (FLIP:
 // position + size, as the board stays centred on its line), so it never snaps. The board hugs its words: fit()
 // makes the text box exactly as wide as its longest line. Under reduced motion or a Skip every step lands at once.
+// The board is the user's question template (assets/img/question_board.webp, cut by tools/cut_question_board.py)
+// as a 9-slice, painted by paint() into the canvas .bg in whole device pixels, so its nine pieces meet exactly
+// (a CSS border-image leaves faint lines across the cream at the stage's fractional scales). SLICE: where the
+// template's rounded corners end, in WebP px (top right bottom left); EDGE: the same in art px, drawn at half the
+// WebP (0.25 of the template), the template's own proportions, so its whole thick wooden frame shows.
+const BOARD = { SLICE: [96, 100, 81, 100], EDGE: [48, 50, 40.5, 50] };
 const Caption = {
-  el: null, bg: null, txt: null,
-  init() { if (!this.el) { this.el = $('#cap'); this.bg = this.el.querySelector('.bg'); this.txt = this.el.querySelector('.txt'); } },
+  el: null, bg: null, txt: null, pic: null,
+  init() {
+    if (this.el) return;
+    this.el = $('#cap'); this.bg = this.el.querySelector('.bg'); this.txt = this.el.querySelector('.txt');
+    this.pic = new Image(); this.pic.onload = () => this.paint(); this.pic.src = IMG + 'question_board.webp';
+    addEventListener('resize', () => requestAnimationFrame(() => this.paint())); // (after Stage.resize has rescaled the stage)
+  },
+  // the 9-slice, at the board's size (its layout box) in device px: the stage's scale × the screen's pixel ratio
+  paint() {
+    const { el, bg: c, pic: im } = this;
+    if (!c || !im || !im.naturalWidth) return;
+    const w = el.offsetWidth, h = el.offsetHeight; if (!w || !h) return;
+    const k = ($('#stageTop').getBoundingClientRect().width / DW || 1) * (window.devicePixelRatio || 1);
+    const W = Math.round(w * k), H = Math.round(h * k), iw = im.naturalWidth, ih = im.naturalHeight;
+    if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
+    const [st, sr, sb, sl] = BOARD.SLICE, [et, er, eb, ek] = BOARD.EDGE.map((v) => Math.round(v * k));
+    const sx = [0, sl, iw - sr, iw], sy = [0, st, ih - sb, ih], dx = [0, ek, W - er, W], dy = [0, et, H - eb, H];
+    const g = c.getContext('2d'); g.clearRect(0, 0, W, H); g.imageSmoothingQuality = 'high';
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++)
+      g.drawImage(im, sx[i], sy[j], sx[i + 1] - sx[i], sy[j + 1] - sy[j], dx[i], dy[j], dx[i + 1] - dx[i], dy[j + 1] - dy[j]);
+  },
   // wrapped text would keep the board at its full max-width (empty wood at the right): measure the lines it really
   // has and make the text box that wide (in layout px: the stage and the board's own entrance are scaled)
   fit() {
@@ -190,7 +219,7 @@ const Caption = {
     el.classList.add('on');
     gsap.killTweensOf(el);
     if (!up) { // enter: the words are set before it shows
-      gsap.killTweensOf([txt, bg]); txt.textContent = text; this.fit();
+      gsap.killTweensOf([txt, bg]); txt.textContent = text; this.fit(); this.paint();
       gsap.set(txt, { opacity: 1, y: 0 }); gsap.set(bg, { x: 0, y: 0, scaleX: 1, scaleY: 1 }); gsap.set(el, { y: 14, scale: 0.97 });
     }
     Motion.to(el, { opacity: 1, y: 0, scale: 1, duration: Motion.DUR.SLOW * 0.75, ease: Motion.EASE.OUT });
@@ -201,7 +230,7 @@ const Caption = {
     gsap.killTweensOf(txt);
     Motion.to(txt, { opacity: 0, y: -5, duration: Motion.DUR.FAST * 0.8, ease: Motion.EASE.IN, onComplete: () => {
       const a = el.getBoundingClientRect();
-      txt.textContent = text; this.fit();
+      txt.textContent = text; this.fit(); this.paint();
       const b = el.getBoundingClientRect(), k = b.width / (el.offsetWidth || 1) || 1;
       gsap.killTweensOf(bg);
       if (b.width && b.height) gsap.set(bg, { x: (a.left - b.left) / k, y: (a.top - b.top) / k, scaleX: a.width / b.width, scaleY: a.height / b.height });
@@ -253,7 +282,7 @@ const VO = {
   // (as in Crown Quest: cancel only what is speaking, never speak() within 120 ms of a cancel, which Chrome can
   // swallow, and keep a reference to the utterance, whose 'end' Chrome drops once it is garbage-collected)
   speakTTS(text, finish, key) {
-    if (!window.speechSynthesis) return;
+    if (!window.speechSynthesis || SILENT) return;
     try {
       const sy = speechSynthesis;
       if (sy.speaking || sy.pending) { sy.cancel(); this.cancelAt = performance.now(); }

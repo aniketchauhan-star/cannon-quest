@@ -23,7 +23,7 @@ const CANNON = { x: 836, bottom: 762, h: 360, src: { 1: [613, 449], 2: [613, 449
 const BALL_ART = 0.96; // the orb's share of its picture (ball_*.webp: the orb is ~161 of 168 px)
 // tray art (wooden, metal corners; its plain middle stretched to hold 8 balls): ball spots along its floor (holesX,
 // holeY), the bottom edge and the outer edges in source px; a seated ball's centre sits `seat` px below (+) / above (−) its spot
-const RACK = { left: 166, top: 780, w: 1340, srcW: 1618, holesX: [212.3, 382.4, 552.5, 722.7, 892.8, 1063.0, 1233.1, 1403.2], holeY: 59.5, bot: 185.4, edges: [2, 1616], seat: 0 };
+const RACK = { left: 166, top: 780, w: 1340, srcW: 1618, holesX: [212.3, 382.4, 552.5, 722.7, 892.8, 1063.0, 1233.1, 1403.2], holeY: 59.5, bot: 185.4, edges: [2, 1616], seat: 12 }; // (12: each ball rests on the trough's floor, its bottom ~16 px behind the front rail, so it sits in the tray instead of hovering on the rail)
 const BALL_D = 122, MUZZLE = { x: CANNON.x, y: CANNON.bottom - CANNON.h + 14 }; // (BALL_D = the .ball size in the CSS)
 // the equation cloud, far off in the sky and well clear of the cannon: Cloud.apply draws #cloud (card included) at
 // CLOUD_FAR of its size, about its transform-origin (world 828, 163). Where a shot hits (on the card), and its middle
@@ -500,7 +500,14 @@ const Rack = {
     groundBlob(rs, 'soft', RACK.left + RACK.w - 6, bot - 22, 190, 90);  // the far (cast) side a little longer
     this.holes = RACK.holesX.map((hx) => ({ x: RACK.left + hx * sc, y: RACK.top + RACK.holeY * sc }));
     const sh = $('#bshadows');
-    this.shadows = this.holes.map((h) => { const d = document.createElement('div'); d.className = 'bshadow'; Object.assign(d.style, { left: h.x + 'px', top: h.y + 6 + 'px' }); sh.appendChild(d); return d; });
+    // each spot's shading, behind its ball: a soft cast shadow on the trough's back wall (light from the upper-left, so it
+    // falls right and down; it rises with the ball when the ball hops) and a dark pool where the ball meets the trough
+    this.shadows = this.holes.map((h) => {
+      const d = document.createElement('div'); d.className = 'bshadow';
+      Object.assign(d.style, { left: h.x + 'px', top: h.y + RACK.seat + 'px' });
+      d.innerHTML = '<i class="cast"></i><i class="pool"></i>';
+      sh.appendChild(d); d.cast = d.firstChild; d.pool = d.lastChild; d.lift = 0; return d;
+    });
     const box = $('#hglows');
     this.glows = this.holes.map((h) => { const g = document.createElement('div'); g.className = 'hglow'; Object.assign(g.style, { left: h.x + 'px', top: h.y + 'px' }); box.appendChild(g); return g; });
   },
@@ -545,7 +552,7 @@ function flyBall(b, dur = Motion.BEAT.TAP_FLY, arc = 230) {
   b.flight = { fx: b.x, fy: b.y, fs: b.s, t: 0, dur, arc, r0: b.r, r1: turn };
 }
 function updateBalls(dt, t) {
-  const seated = new Array(8).fill(false), full = [];
+  const seated = new Array(8).fill(false), lift = new Array(8).fill(0), full = [];
   for (const b of Rack.balls) {
     if (b.where === 'gone') { b.el.classList.add('gone'); continue; }
     const h = ballHome(b);
@@ -567,7 +574,7 @@ function updateBalls(dt, t) {
         const sx = Cannon.sx ?? 1, sy = Cannon.sy ?? 1;
         b.x = CANNON.x + (b.x - CANNON.x) * sx; b.y = CANNON.bottom + (b.y - CANNON.bottom) * sy + Cannon.kickY; b.s *= (sx + sy) / 2;
       }
-      if (b.where === 'rack') b.y += Rack.enterY;
+      if (b.where === 'rack') { b.y += Rack.enterY; lift[b.holder] = h.y + Rack.enterY - b.y; } // (how far it is raised off the trough's floor)
       b.r *= Math.exp(-10 * dt);
     }
     b.land = Math.max(0, b.land - dt * 3.5);
@@ -582,7 +589,11 @@ function updateBalls(dt, t) {
     b.el.classList.toggle('insock', !b.flight && b.where === 'socket'); // (sunk into the barrel: a soft inner shade)
     if (b.where === 'socket' && (!b.flight || b.flight.t > b.flight.dur * 0.7)) full[b.socket] = true; // (lined as it arrives)
   }
-  if (Rack.shadows) Rack.shadows.forEach((d, i) => d.classList.toggle('on', seated[i]));
+  if (Rack.shadows) Rack.shadows.forEach((d, i) => {
+    d.classList.toggle('on', seated[i]);
+    const l = Math.max(0, Math.round(lift[i])); // a raised ball: its wall shadow rises with it, the contact pool fades
+    if (l !== d.lift) { d.lift = l; d.cast.style.transform = l ? `translateY(${-l}px)` : ''; d.pool.style.opacity = Math.max(0, 1 - l / 16).toFixed(2); }
+  });
   if (Cannon.backs) Cannon.backs.forEach((k, i) => k.classList.toggle('on', !!full[i]));
 }
 
