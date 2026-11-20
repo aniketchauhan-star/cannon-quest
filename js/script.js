@@ -2448,21 +2448,10 @@ function playShots() {
 // (user, 20 Nov). The spotlight shows the three parts in turn: the equation, then the cannon, then the orbs; then
 // the hand taps the glowing −5 and the player taps it (or drags it, or presses its key): it flies into the cannon,
 // and the cannon fires it at the cloud by itself. Every line by key; Skip ends it.
-// It is saved in this browser once the shot goes (or Skip is tapped), so a reload or a new visit goes straight into
-// play, like Play again does. A reload mid-tutorial, before that, shows it again.
-// (A test hook: ?tutorial in the address forgets it, so the tutorial plays again.)
-const Taught = {
-  KEY: 'cannonQuest.taught',
-  load() {
-    try {
-      if (new URLSearchParams(location.search).has('tutorial')) { localStorage.removeItem(this.KEY); return; }
-      G.taught1 = !!JSON.parse(localStorage.getItem(this.KEY) || '{}').load;
-    } catch (e) { /* storage blocked (private window, file:// in some browsers): the tutorial simply plays */ }
-  },
-  save() { try { localStorage.setItem(this.KEY, JSON.stringify({ load: G.taught1 })); } catch (e) {} },
-};
+// It plays every time the game is opened (user, 20 Nov: "in this screen, add a tutorial part": it had been saved in
+// the browser after one showing, so it never came again). Only Play again, in the same visit, goes straight into play.
 function skipTutorial() {
-  G.tutSkip = true; Taught.save();
+  G.tutSkip = true;
   VO.stop(); Spot.hide(); G.spotOnly = null;
   Rack.balls.forEach((b) => (b.guide = false));
   if (G.hooks) { G.hooks.onFill = null; G.hooks.softSpot = false; }
@@ -2538,7 +2527,6 @@ async function playRound(sid, i) {
   if (after) after();
   await fired;
   if (sid !== G.session) return;
-  if (after) Taught.save(); // this round's tutorial is done: it never plays again on this device
   G.spotOnly = null; Spot.hide();
   G.inputOn = false; G.hooks = {}; Cannon.setFireActive(false);
   Rack.balls.forEach((b) => (b.guide = false));
@@ -2699,7 +2687,6 @@ async function boot() {
   wireInput();
   gsap.ticker.add(frame);
   window.__cqBooted = true; window.__cq = { G, Clock, Rack, Drag, Sound, Music, Stage, EqUI, VO, Motion, Skip, Spot, Title, Cloud, Cannon, TimeFx, Perf, FX, Pics };
-  Taught.load(); // the tutorials already seen on this device are not played again
   // the start screen: the scene fades in while the title plays its intro, and the Play button pops in
   G.state = 'title';
   Title.start();
