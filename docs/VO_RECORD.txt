@@ -23,7 +23,7 @@ THE LINES
     (the player has just tapped Play; excited, inviting)
 
  2. Let's free x!
-    (first game: the how-to-play starts; excited, inviting)
+    (Play again: the first equation comes back (no how-to-play this time); excited, inviting)
 
  3. This is the equation.
     (first game: the spotlight is on the equation; calm and clear, like showing a friend)

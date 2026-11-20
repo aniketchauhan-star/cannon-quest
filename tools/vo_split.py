@@ -8,6 +8,8 @@ No voice in this game is made by a machine: no TTS studio, no AI voice, no devic
     PY tools/vo_split.py recordings/take1.m4a --check     find every line in the recording (nothing is cut)
     PY tools/vo_split.py recordings/take1.m4a             cut it: assets/VO/en/<key>.webm, one clip per line
     PY tools/vo_split.py recordings/fix.m4a voFreed2 voStuck1      a recording of only these lines, in this order
+    python3 tools/vo_split.py --script tutorial           only a group's lines (vo_lines.json "groups"), in
+    PY tools/vo_split.py recordings/tut.m4a tutorial        docs/VO_RECORD_TUTORIAL.txt; a group cuts by its name
     ./build.sh                                            the game then plays them
 
 PY is a Python with Vosk, the offline speech recogniser: ~/.cache/crown-quest/venv/bin/python, with its models in
@@ -71,10 +73,16 @@ MOOD_SAY = {  # tools/vo_lines.json "mood", as a note to the reader
 
 
 # ----------------------------------------------------------------------------------------------- the lines
+def expand(keys):
+    """Keys as given, with a group's name (vo_lines.json "groups", e.g. tutorial) standing for its keys."""
+    groups = json.load(open(LINES, encoding="utf-8")).get("groups", {})
+    return [k for g in keys for k in groups.get(g, [g])]
+
+
 def load_lines(keys=None):
     cfg = json.load(open(LINES, encoding="utf-8"))
     en = json.load(open(LOCALES, encoding="utf-8"))["en"]
-    keys = keys or cfg["keys"]
+    keys = expand(keys) if keys else cfg["keys"]
     bad = [k for k in keys if k not in en]
     if bad:
         sys.exit("No such key in locales/locales.json: " + " ".join(bad))
@@ -243,14 +251,24 @@ def best_hearing(raw, lines, models):
 
 
 # ----------------------------------------------------------------------------------------------- the script
-def write_script():
-    lines = load_lines()
+def write_script(group=None):
+    lines = load_lines([group] if group else None)
     secs = sum(0.9 + len(L["text"]) * 0.058 + 2 for L in lines)
+    path = SCRIPT_TXT if not group else SCRIPT_TXT.replace(".txt", "_%s.txt" % group.upper())
+    took = ("%d seconds" % (round(secs / 10) * 10)) if secs < 60 else \
+        ("%d minute%s" % (round(secs / 60), "" if round(secs / 60) <= 1 else "s"))
     out = [
-        "CANNON QUEST: THE VOICE SCRIPT",
-        "%d lines, about %d minute%s to read" % (len(lines), max(1, round(secs / 60)), "" if round(secs / 60) <= 1 else "s"),
+        "CANNON QUEST: THE VOICE SCRIPT" + (": %s ONLY" % group.upper() if group else ""),
+        "%d lines, about %s to read" % (len(lines), took),
         "",
         "Every line in the game is said in one real person's voice: yours, or a teammate's. No AI voice.",
+    ]
+    if group:
+        out += [
+            "These are only the %s's lines: record them now, and the rest of the game later (docs/VO_RECORD.txt)." % group,
+            "The same person reads both, so the game keeps one voice.",
+        ]
+    out += [
         "",
         "HOW TO RECORD",
         "- One person reads all the lines, in their own natural voice.",
@@ -276,11 +294,14 @@ def write_script():
         if note:
             out.append("    (%s)" % note)
         out.append("")
-    out.append("(Made by: python3 tools/vo_split.py --script, from tools/vo_lines.json and locales/locales.json.)")
-    os.makedirs(os.path.dirname(SCRIPT_TXT), exist_ok=True)
-    with open(SCRIPT_TXT, "w", encoding="utf-8") as f:
+    if group:
+        out += ["(Then: ~/.cache/crown-quest/venv/bin/python tools/vo_split.py recordings/<file> %s, and ./build.sh.)" % group, ""]
+    out.append("(Made by: python3 tools/vo_split.py --script%s, from tools/vo_lines.json and locales/locales.json.)"
+               % (" " + group if group else ""))
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
         f.write("\n".join(out) + "\n")
-    print("Wrote docs/VO_RECORD.txt (%d lines)" % len(lines))
+    print("Wrote %s (%d lines)" % (rel(path), len(lines)))
 
 
 # ----------------------------------------------------------------------------------------------- cutting
@@ -323,7 +344,8 @@ def rel(path):
 
 def main(args):
     if "--script" in args:
-        write_script()
+        rest = [a for a in args if a != "--script"]
+        write_script(rest[0] if rest else None)
         return
     check, denoise = "--check" in args, "--denoise" in args
     out_dir = VO_DIR
