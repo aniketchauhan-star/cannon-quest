@@ -1,0 +1,73 @@
+CANNON QUEST: THE VOICE SCRIPT
+17 lines, about 1 minute to read
+
+Every line in the game is said in one real person's voice: yours, or a teammate's. No AI voice.
+
+HOW TO RECORD
+- One person reads all the lines, in their own natural voice.
+- A quiet room with soft things in it (curtains, a bed, a sofa). Not a bathroom or an empty room:
+  they echo. Fan and AC off, door shut, phone on silent.
+- Use the phone's voice recorder (Voice Memos on iPhone, Recorder on Android).
+  Hold it about a hand-span (15-20 cm) from your mouth, a little below it, and keep it still.
+- Read the lines below in this order, in one go. Wait about 2 seconds after each line.
+- Stumbled? Pause, then say the WHOLE line again. The last take of a line is the one used.
+- Say x as the letter: "ex".
+- Talk to the player like a friend, not like reading. Smile on the happy lines: it can be heard.
+- Send the file as it is (AirDrop, Google Drive, or WhatsApp as a DOCUMENT).
+  Not as a WhatsApp voice note: that squeezes the sound.
+- Then put it in the game folder, in recordings/, and say which file it is.
+
+THE LINES
+
+ 1. Welcome to Cannon Quest!
+    (the player has just tapped Play; excited, inviting)
+
+ 2. Let's free x!
+    (first game: the how-to-play starts; excited, inviting)
+
+ 3. Drag −5 into the cannon.
+    (first game: a hand shows the -5 ball going into the cannon; calm and clear, like showing a friend; say −5 as "minus five")
+
+ 4. Tap Fire to launch your operation.
+    (first game: the ball is in, now the Fire button; calm and clear, like showing a friend)
+
+ 5. Here comes the next one!
+    (a new equation comes; excited, inviting)
+
+ 6. New equation! Can you free x?
+    (a new equation comes; excited, inviting)
+
+ 7. Ready? Load up and fire!
+    (a new equation comes; excited, inviting)
+
+ 8. Last one! Make it count!
+    (the last equation comes; excited, inviting)
+
+ 9. Boom! x is free!
+    (the shot worked: x jumps out of the cage; big and happy: celebrate!)
+
+10. Yes! You did it!
+    (the shot worked: x jumps out of the cage; big and happy: celebrate!)
+
+11. Brilliant! That's how it's done!
+    (the shot worked: x jumps out of the cage; big and happy: celebrate!)
+
+12. Awesome shot!
+    (the shot worked: x jumps out of the cage; big and happy: celebrate!)
+
+13. Oh no! x is still stuck.
+    (the shot missed: x is still in the cage; gentle and kind, never like "wrong")
+
+14. Not this time. x is still locked in!
+    (the shot missed: x is still in the cage; gentle and kind, never like "wrong")
+
+15. Amazing! You freed x every single time!
+    (the end: the player freed x every time; big and happy: celebrate!)
+
+16. Great job! You freed most of them!
+    (the end: the player freed x most times; big and happy: celebrate!)
+
+17. Good try! Play again to free them all!
+    (the end: the player freed x only a few times; warm and encouraging)
+
+(Made by: python3 tools/vo_split.py --script, from tools/vo_lines.json and locales/locales.json.)

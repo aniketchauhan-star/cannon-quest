@@ -1,10 +1,10 @@
 
 // =====================================================================
 //  AUDIO — real recorded CC0 foley (js/sfx.js), teen-style music tracks,
-//  waterside ambience, voice-over + captions. Synth = fallback only.
+//  waterside ambience, voice-over (a real person's recordings) + captions.
+//  Synth = fallback only, for an effect not decoded yet.
 // =====================================================================
-// a test robot (Playwright, headless Chrome: navigator.webdriver) never makes a sound: no music, no effects and no
-// voice, not even the device's voice, which macOS speaks outside the browser, so --mute-audio cannot catch it
+// a test robot (Playwright, headless Chrome: navigator.webdriver) never makes a sound: no music, no effects, no voice
 const SILENT = !!navigator.webdriver;
 const Sound = {
   ctx: null, master: null, sfx: null, verb: null, noiseBuf: null, muted: SILENT, buf: {}, ambientOn: false, ambient: null,
@@ -170,10 +170,15 @@ const Music = {
 };
 
 // ---------- the caption board (what the voice is saying): the wooden board on the left (CSS #cap) ----------
-// GSAP, transform + opacity only (animation skill): it rises in (ease-out), sinks away (ease-in), and a new
-// line while it is up cross-fades its words while the board (.bg) glides from its old box to the new one (FLIP:
-// position + size, as the board stays centred on its line), so it never snaps. The board hugs its words: fit()
-// makes the text box exactly as wide as its longest line. Under reduced motion or a Skip every step lands at once.
+// It comes WITH the voice, and only with it (the user, 20 Nov: "the question template comes word by word, with the
+// voiceover… otherwise this will not come"). Nothing shows until a line's voice really starts (its recorded clip
+// playing): then the board rises in (ease-out) with the first word, and each word pops in as it is said (upTo,
+// driven by the word clock Said, below). A line whose voice never starts (sound off, no clip recorded yet, a clip
+// that fails) shows no board at all. The board is sized for the whole line before its first word
+// (fit makes the text box exactly as wide as the line's longest row), so it never grows while the words come. A new
+// line while the board is up: the old words fade out and the board (.bg) glides from its old box to the new one
+// (FLIP: position + size, as it stays centred on its line), then the new words come. After the line it sinks away
+// (ease-in). GSAP, transform + opacity only (animation skill); under reduced motion or a Skip each step lands at once.
 // The board is the user's question template (assets/img/question_board.webp, cut by tools/cut_question_board.py)
 // as a 9-slice, painted by paint() into the canvas .bg in whole device pixels, so its nine pieces meet exactly
 // (a CSS border-image leaves faint lines across the cream at the stage's fractional scales). SLICE: where the
@@ -181,7 +186,7 @@ const Music = {
 // WebP (0.25 of the template), the template's own proportions, so its whole thick wooden frame shows.
 const BOARD = { SLICE: [96, 100, 81, 100], EDGE: [48, 50, 40.5, 50] };
 const Caption = {
-  el: null, bg: null, txt: null, pic: null,
+  el: null, bg: null, txt: null, pic: null, words: [], want: 0, shown: 0, ready: false, id: 0,
   init() {
     if (this.el) return;
     this.el = $('#cap'); this.bg = this.el.querySelector('.bg'); this.txt = this.el.querySelector('.txt');
@@ -212,35 +217,65 @@ const Caption = {
     const w = Math.max(...rs.map((q) => q.right)) - Math.min(...rs.map((q) => q.left));
     t.style.width = Math.ceil(w / k + 0.5) + 'px';
   },
-  show(text) {
+  // the line laid out with every word hidden: each word is its own span (.w), so it can pop in on its own, and a
+  // one-letter word (x) never ends a row: it shares an unbreakable group (.nw) with the word after it. The board is
+  // fitted and painted for the whole line first, and only then are the words shrunk for their pop (a shrunk word
+  // would measure narrower and the line could wrap once they grow)
+  lay(text) {
+    const t = this.txt, m = String(text).match(/\S+/g) || [], n = m.length;
+    gsap.killTweensOf(this.words);
+    t.textContent = '';
+    const ws = (this.words = m.map((s) => { const w = document.createElement('span'); w.className = 'w'; w.textContent = s; return w; }));
+    for (let i = 0; i < n;) {
+      if (i) t.append(' ');
+      let j = i; while (j < n - 1 && [...m[j]].length === 1) j++;
+      if (j === i) t.append(ws[i]);
+      else { const g = document.createElement('span'); g.className = 'nw'; for (let k = i; k <= j; k++) { if (k > i) g.append(' '); g.append(ws[k]); } t.append(g); }
+      i = j + 1;
+    }
+    this.fit(); this.paint();
+    gsap.set(ws, { opacity: 0, y: 12, scale: 0.92 });
+  },
+  up() { return !!this.el && this.el.classList.contains('on'); },
+  // the line's voice has started: the board comes in (or glides over from the line before), its words still hidden
+  start(text) {
     this.init();
-    text = String(text).replace(/(^|\s)(\S)\s+/g, '$1$2 '); // a one-letter word (x) never ends a line: it stays with the next word
-    const { el, bg, txt } = this, up = +gsap.getProperty(el, 'opacity') > 0.05;
+    const { el, bg, txt } = this, id = ++this.id, up = this.up() && +gsap.getProperty(el, 'opacity') > 0.05;
+    this.want = 0; this.shown = 0; this.ready = false;
     el.classList.add('on');
     gsap.killTweensOf(el);
-    if (!up) { // enter: the words are set before it shows
-      gsap.killTweensOf([txt, bg]); txt.textContent = text; this.fit(); this.paint();
+    if (!up) { // enter: the board is laid out before it shows
+      gsap.killTweensOf([txt, bg]); this.lay(text);
       gsap.set(txt, { opacity: 1, y: 0 }); gsap.set(bg, { x: 0, y: 0, scaleX: 1, scaleY: 1 }); gsap.set(el, { y: 14, scale: 0.97 });
+      this.ready = true;
+    } else { // the old words fade out, the board glides from the old box to the new one, the new words come as said
+      gsap.killTweensOf(txt);
+      Motion.to(txt, { opacity: 0, y: -5, duration: Motion.DUR.FAST * 0.8, ease: Motion.EASE.IN, onComplete: () => {
+        if (id !== this.id) return;
+        const a = el.getBoundingClientRect();
+        this.lay(text);
+        const b = el.getBoundingClientRect(), k = b.width / (el.offsetWidth || 1) || 1;
+        gsap.killTweensOf(bg);
+        if (b.width && b.height) gsap.set(bg, { x: (a.left - b.left) / k, y: (a.top - b.top) / k, scaleX: a.width / b.width, scaleY: a.height / b.height });
+        Motion.to(bg, { x: 0, y: 0, scaleX: 1, scaleY: 1, duration: Motion.DUR.NORMAL + 0.05, ease: Motion.EASE.OUT });
+        gsap.set(txt, { opacity: 1, y: 0 });
+        this.ready = true; this.upTo(0); // the words already said while it glided
+      } });
     }
     Motion.to(el, { opacity: 1, y: 0, scale: 1, duration: Motion.DUR.SLOW * 0.75, ease: Motion.EASE.OUT });
-    if (up && txt.textContent !== text) this.swap(text);
   },
-  swap(text) { // the old words fade out, the board glides from the old box to the new one, the new words fade in
-    const { el, bg, txt } = this;
-    gsap.killTweensOf(txt);
-    Motion.to(txt, { opacity: 0, y: -5, duration: Motion.DUR.FAST * 0.8, ease: Motion.EASE.IN, onComplete: () => {
-      const a = el.getBoundingClientRect();
-      txt.textContent = text; this.fit(); this.paint();
-      const b = el.getBoundingClientRect(), k = b.width / (el.offsetWidth || 1) || 1;
-      gsap.killTweensOf(bg);
-      if (b.width && b.height) gsap.set(bg, { x: (a.left - b.left) / k, y: (a.top - b.top) / k, scaleX: a.width / b.width, scaleY: a.height / b.height });
-      Motion.to(bg, { x: 0, y: 0, scaleX: 1, scaleY: 1, duration: Motion.DUR.NORMAL + 0.05, ease: Motion.EASE.OUT });
-      gsap.set(txt, { y: 6 });
-      Motion.to(txt, { opacity: 1, y: 0, duration: Motion.DUR.NORMAL, ease: Motion.EASE.OUT, delay: Motion.d(0.04) });
-    } });
+  // the first n words are up: the ones not yet shown pop in (a playful back.out; a few at once ripple 0.06 s apart)
+  upTo(n) {
+    n = Math.min(n, this.words.length);
+    if (n > this.want) this.want = n;
+    if (!this.ready || this.want <= this.shown) return;
+    this.words.slice(this.shown, this.want).forEach((w, k) =>
+      Motion.to(w, { opacity: 1, y: 0, scale: 1, duration: Motion.DUR.NORMAL * 0.8, ease: Motion.EASE.POP, delay: Motion.d(k * 0.06) }));
+    this.shown = this.want;
   },
   hide() {
     this.init();
+    this.id++;
     if (!this.el.classList.contains('on')) return;
     this.el.classList.remove('on');
     gsap.killTweensOf(this.el);
@@ -248,80 +283,93 @@ const Caption = {
   },
 };
 
-// ---------- voice-over + captions, by key (localization skill) ----------
-// Each line's text is T(key); its clip is I18n.voice(key) = assets/VO/en/<key>.webm, made in Aamir's TTS
-// studio in ONE man's voice (the user's choice of 2026-11-18: see tools/vo_studio.mjs and the "voice" in
-// tools/vo_lines.json). VO_FILES (build.sh) lists the keys that have a clip. A line with no clip, or a
-// browser that can't play it, is read by the device's own voice: a man's, the most natural one the device
-// has (Edge's "Natural" voices, then Google's, then the system's; Indian English first among equals),
-// coloured by the line's mood (VO_MOOD, from tools/vo_lines.json "mood", via build.sh).
-const MAN = /\b(male|man|prabhat|madhur|kunal|aarav|ravi|aman|rishi|daniel|alex|aaron|arthur|gordon|oliver|thomas|guy|ryan|andrew|brian|christopher|eric|roger|steffan|davis|jason|tony|william|liam|connor|george|david|mark|james|nathan|evan|tom)\b/i;
-const NOVELTY = /albert|bad news|bahh|bells|boing|bubbles|cellos|good news|jester|organ|superstar|trinoids|whisper|wobble|zarvox|deranged|hysterical|\b(fred|ralph|junior|grandpa|grandma|eddy|reed|rocko|sandy|shelley|flo)\b/i;
-// how each mood colours the device's voice (the studio's clips carry their own emotion)
-const MOODS = {
-  hype: { rate: 1.04, pitch: 1.06 },  // welcome, round intros: upbeat
-  cheer: { rate: 1.06, pitch: 1.1 },  // x is free, a high score: excited
-  teach: { rate: 0.96, pitch: 1 },    // tutorial steps: calm and clear
-  soft: { rate: 0.92, pitch: 0.95 },  // x stays caged: gentle, never "wrong"
-  warm: { rate: 0.98, pitch: 1.03 },  // a low score: kind, encouraging
+// ---------- voice-over + its board, by key (localization skill) ----------
+// Every line is said in a real person's voice, never a made-up one (the user, 20 Nov 2026: "natural voiceovers,
+// not AI generated"): no TTS studio, no AI voice, and not the device's own voice either. The clips are cut from
+// a recording of the lines read aloud (docs/VO_RECORD.txt) by tools/vo_split.py: I18n.voice(key) =
+// assets/VO/en/<key>.webm. VO_FILES (build.sh, from tools/vo_takes.json, the record of each cut) lists the keys
+// that have a clip; VO_WORDS, when each word of a clip starts. A line with no clip yet, or a clip the browser
+// can't play, is not voiced: no voice, so no board, and its pause stays.
+// ---------- the word clock: which word of the line the voice is saying (it drives the board's words) ----------
+// A clip: the recording's own word starts (VO_WORDS, heard by tools/vo_split.py), or, without them, its play time
+// spread over the words by their weight: its letters (at least 3: "x" is said "ex"), a gap, and a breath after
+// , ; : . ! ? inside the line. A test robot (SILENT, no clip playing) runs on a clock at a speaking pace (cps:
+// weight a second). Pausing the game pauses the clock (and the clip).
+const Said = {
+  my: 0, text: '', at: [], from: [], total: 1, cps: 17, t: 0, heard: false, on: false, done: true, clip: null, words: null,
+  begin(my, text, key) {
+    this.stop();
+    const w = typeof VO_WORDS !== 'undefined' && VO_WORDS[key];
+    Object.assign(this, { my, text, t: 0, heard: false, done: false, clip: null, at: [], from: [], words: w || null });
+    const ms = [...String(text).matchAll(/\S+/g)];
+    let c = 0;
+    ms.forEach((m, i) => {
+      this.at.push(m.index); this.from.push(c);
+      c += Math.max(3, (m[0].match(/[\p{L}\p{N}]/gu) || []).length) + 1;
+      if (i < ms.length - 1) c += /[.!?]$/.test(m[0]) ? 5 : /[,;:]$/.test(m[0]) ? 3 : 0;
+    });
+    this.total = Math.max(1, c);
+  },
+  // the voice has started: the board comes in with the first word
+  go(clip) {
+    if (this.done || this.on || this.my !== VO.token) return;
+    this.on = this.heard = true; this.clip = clip || null; this.t = 0;
+    Caption.start(this.text);
+    gsap.ticker.add(this.tick);
+    this.step();
+  },
+  tick: (time, dms) => Said.step(dms),
+  step(dms = 0) {
+    if (!this.on) return;
+    if (!Clock.paused) this.t += (Math.min(dms, 250) / 1000) * (SILENT ? window.__cqSpeed || 1 : 1);
+    const a = this.clip, ws = this.words;
+    let n = 0;
+    if (a && ws && ws.length === this.from.length) { // the recording's own word starts (a word pops a beat early: its pop takes a moment)
+      while (n < ws.length && ws[n] <= a.currentTime + 0.05) n++;
+    } else {
+      const k = a && isFinite(a.duration) && a.duration > 0
+        ? ((a.currentTime - 0.08) / Math.max(0.3, a.duration - 0.3)) * this.total // (a clip's lead-in and tail are quiet)
+        : this.t * this.cps;
+      while (n < this.from.length && this.from[n] <= k) n++;
+    }
+    Caption.upTo(Math.max(1, n));
+  },
+  // the line has been said: every word is up
+  end() {
+    if (this.on) Caption.upTo(Infinity);
+    this.stop();
+  },
+  stop() { gsap.ticker.remove(this.tick); this.on = false; this.done = true; this.clip = null; },
 };
 const VO = {
-  voice: null, local: null, token: 0, missing: new Set(), cur: null, finish: null, utter: null, cancelAt: -1e9, busy: null,
-  pickVoice() {
-    if (!window.speechSynthesis) return;
-    const vs = speechSynthesis.getVoices(); if (!vs.length) return;
-    const lang = (v) => String(v.lang || '').replace(/_/g, '-').toLowerCase();
-    const quality = (v) => (/natural|neural|enhanced|premium/i.test(v.name) ? 3 : /google/i.test(v.name) ? 2 : /\baman\b/i.test(v.name) ? 1.5 : 0);
-    const accent = (v) => ({ 'en-in': 1.2, 'en-gb': 0.6, 'en-us': 0.5 }[lang(v)] ?? (lang(v).startsWith('en') ? 0.2 : -99));
-    const score = (v) => quality(v) * 2 + accent(v) - (NOVELTY.test(v.name) ? 20 : 0);
-    const best = (list) => list.filter((v) => accent(v) > -99).sort((a, b) => score(b) - score(a))[0] || null;
-    const men = vs.filter((v) => MAN.test(v.name));
-    this.voice = best(men) || best(vs);
-    this.local = best(men.filter((v) => v.localService)) || best(vs.filter((v) => v.localService)); // when offline
-  },
-  // (as in Crown Quest: cancel only what is speaking, never speak() within 120 ms of a cancel, which Chrome can
-  // swallow, and keep a reference to the utterance, whose 'end' Chrome drops once it is garbage-collected)
-  speakTTS(text, finish, key) {
-    if (!window.speechSynthesis || SILENT) return;
-    try {
-      const sy = speechSynthesis;
-      if (sy.speaking || sy.pending) { sy.cancel(); this.cancelAt = performance.now(); }
-      const u = new SpeechSynthesisUtterance(text);
-      if (!this.voice) this.pickVoice();
-      if (this.voice) { u.voice = this.voice; u.lang = this.voice.lang; } else u.lang = 'en-IN';
-      const m = MOODS[(typeof VO_MOOD !== 'undefined' && VO_MOOD[key]) || 'teach'];
-      u.rate = m.rate; u.pitch = m.pitch; u.onend = finish;
-      // a network voice (Google's, Edge's) that fails, e.g. offline, gives way to the device's own for good
-      u.onerror = (e) => {
-        const net = this.voice && !this.voice.localService && this.local && this.local !== this.voice;
-        if (net && this.utter === u && !/interrupted|canceled/.test(e && e.error)) { this.voice = this.local; this.speakTTS(text, finish, key); } else finish();
-      };
-      this.utter = u;
-      const go = () => { if (this.utter !== u) return; try { if (sy.paused) sy.resume(); sy.speak(u); } catch (e) { finish(); } };
-      const since = performance.now() - this.cancelAt;
-      if (since < 120) gsap.delayedCall((120 - since) / 1000, go); else go();
-    } catch (e) { /* captions still show */ }
-  },
-  // say a line by key: caption + clip (or the device voice); resolves when it has been said, or at once when stopped
+  token: 0, missing: new Set(), cur: null, finish: null, busy: null,
+  // say a line by key: its recorded clip, and the board, whose words come as they are said; resolves when it has
+  // been said, or at once when stopped. No voice (sound off, no clip yet, a clip that fails): no board, the pause stays
   async say(key, hold = 0.5) {
     const text = T(key), my = ++this.token;
     if (this.cur) { try { this.cur.pause(); } catch (e) { /* ignore */ } this.cur = null; } // never let two lines overlap
     if (this.finish) this.finish();
-    Caption.show(text);
-    Music.duck(true);
-    const est = 0.9 + text.length * 0.058;
+    Said.begin(my, text, key);
+    // the line before's board stays until this line's voice starts (then glides over to it); if none starts soon, it goes
+    if (Caption.up()) wait(1.2).then(() => { if (my === this.token && !Said.heard) Caption.hide(); });
+    const clip = typeof VO_FILES !== 'undefined' && VO_FILES.includes(key) && !this.missing.has(key);
+    if (clip) Music.duck(true);
+    const est = 0.9 + text.length * 0.058, t0 = performance.now();
     const spoken = new Promise((resolve) => {
       let done = false;
-      const finish = () => { if (!done) { done = true; if (this.finish === finish) this.finish = null; resolve(); } };
+      const finish = () => { if (!done) { done = true; if (this.finish === finish) this.finish = null; if (my === this.token) Said.end(); resolve(); } };
       this.finish = finish;
-      if (Sound.muted) { wait(est).then(finish); return; }
-      wait(est + 2.5).then(finish);
-      if (typeof VO_FILES !== 'undefined' && VO_FILES.includes(key) && !this.missing.has(key)) {
-        let a = null;
-        const fail = () => { this.missing.add(key); if (a && this.cur === a && !done) this.speakTTS(text, finish, key); };
-        a = I18n.say(key, { onended: finish, onerror: fail });
-        this.cur = a;
-      } else this.speakTTS(text, finish, key);
+      if (SILENT) { Said.go(); wait(est).then(finish); return; } // a test robot: no sound, but the board runs as if spoken
+      if (Sound.muted || !clip) { wait(est).then(finish); return; }
+      wait(est + 2.5).then(finish); // (in case a clip's 'ended' never comes)
+      let a = null;
+      const fail = () => { // a clip that can't play: the line's pause still runs its course, unvoiced
+        this.missing.add(key); if (Said.clip === a) Said.clip = null;
+        if (a && this.cur === a && !done) wait(Math.max(0, est - (performance.now() - t0) / 1000)).then(finish);
+      };
+      a = I18n.say(key, { onended: finish, onerror: fail });
+      a.addEventListener('playing', () => { if (this.cur === a && !done) Said.go(a); });
+      this.cur = a;
     });
     this.busy = spoken;
     await spoken;
@@ -340,14 +388,12 @@ const VO = {
   },
   stop() {
     this.token++;
-    Caption.hide();
+    Said.stop(); Caption.hide();
     if (this.cur) { try { this.cur.pause(); } catch (e) { /* ignore */ } this.cur = null; }
-    this.utter = null;
-    if (window.speechSynthesis && (speechSynthesis.speaking || speechSynthesis.pending)) { speechSynthesis.cancel(); this.cancelAt = performance.now(); }
     const f = this.finish; this.finish = null; if (f) f();
     Music.duck(false);
   },
-  pause() { if (window.speechSynthesis) speechSynthesis.pause(); if (this.cur) this.cur.pause(); },
-  resume() { if (window.speechSynthesis) speechSynthesis.resume(); if (this.cur) this.cur.play().catch(() => {}); },
+  // (a clip that has already ended stays ended: resuming the game never says its line again)
+  pause() { if (this.cur && !this.cur.ended) this.cur.pause(); },
+  resume() { if (this.cur && this.cur.paused && !this.cur.ended) this.cur.play().catch(() => {}); },
 };
-if (window.speechSynthesis) { speechSynthesis.onvoiceschanged = () => VO.pickVoice(); VO.pickVoice(); }

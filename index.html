@@ -230,7 +230,10 @@ img{-webkit-user-drag:none;user-select:none}
 .hglow{position:absolute;width:126px;height:58px;margin:-29px 0 0 -63px;border-radius:50%;pointer-events:none;opacity:0;box-shadow:0 0 0 5px #ffe46b,0 0 28px 12px rgba(255,205,50,.85)}
 .hglow.on{animation:hg 1s ease-out 1}
 @keyframes hg{25%{opacity:1}100%{opacity:0}}
-.ball{position:absolute;left:0;top:0;width:122px;height:122px;margin:-61px 0 0 -61px;cursor:pointer;touch-action:none} /* = BALL_D */
+.ball{position:absolute;left:0;top:0;width:122px;height:122px;margin:-61px 0 0 -61px;cursor:grab;touch-action:none} /* = BALL_D */
+/* a ball in the player's hand (Drag): it rides in #fly, above everything, with a soft shadow dropped below it */
+.ball.drag img{filter:drop-shadow(0 16px 10px rgba(40,18,4,.34))}
+body.dragging,body.dragging *{cursor:grabbing !important}
 .ball.mv{will-change:transform}
 .ball img{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .ball b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:52px;line-height:1;letter-spacing:-.02em;color:var(--ink);padding-top:2px;pointer-events:none;text-shadow:0 2px 0 rgba(255,255,255,.28)}
@@ -243,8 +246,9 @@ img{-webkit-user-drag:none;user-select:none}
 .ball.gone{display:none}
 .ball .ao{position:absolute;inset:3%;border-radius:50%;background:radial-gradient(ellipse 70% 32% at 50% 90%,rgba(66,26,4,.5),rgba(66,26,4,.2) 58%,rgba(66,26,4,0) 100%);opacity:0;transition:opacity .25s;pointer-events:none}
 .ball.seated .ao{opacity:1}
-/* in the cannon's socket the orb sits inside the barrel: a soft shade round its edge, deepest under the ring's top lip */
-.ball.insock .ao{opacity:1;inset:2%;background:radial-gradient(circle at 50% 58%,rgba(40,14,0,0) 60%,rgba(40,14,0,.2) 82%,rgba(40,14,0,.46) 100%)}
+/* in the cannon's socket the orb fills the hole edge to edge: only a soft shade where the ring's top lip overhangs
+   it (none round the sides or the bottom, so no dark band reads as a gap between the orb and the ring) */
+.ball.insock .ao{opacity:1;inset:2%;background:radial-gradient(circle at 50% 64%,rgba(40,14,0,0) 60%,rgba(40,14,0,.22) 80%,rgba(40,14,0,.34) 100%)}
 .bshadow{position:absolute;width:0;height:0;opacity:0;transition:opacity .25s;pointer-events:none} /* at the seated ball's centre */
 .bshadow.on{opacity:1}
 .bshadow i{position:absolute;border-radius:50%}
@@ -275,23 +279,34 @@ img{-webkit-user-drag:none;user-select:none}
    the speaker icon on the first line. Dark-brown words on the cream, so they always read. It hugs its words
    (Caption.fit: as wide as its longest line), is at most 560 wide (its right edge stays clear of the cannon at
    x ~595) and stays centred on y 470 (#capPos, in #stageTop: above the FX canvas, so cannon smoke never hides the
-   words). Caption fades it in / out and glides it between lines (transform + opacity) */
+   words). It shows only while a voice line is being said: it rises in as the voice starts, each word pops in as it
+   is said, it glides between lines and sinks away after the line (transform + opacity) */
 #overlay{position:absolute;inset:0;pointer-events:none}
 #capPos{position:absolute;left:30px;top:470px;height:0;display:flex;align-items:center;pointer-events:none}
 #cap{position:relative;flex:none;max-width:560px;padding:40px 42px 35px 82px;color:#4a2508;font-size:36px;line-height:1.3;letter-spacing:.005em;opacity:0;transform-origin:0 50%}
 #cap .bg{position:absolute;left:0;top:0;width:100%;height:100%;display:block;transform-origin:0 0;filter:drop-shadow(0 7px 9px rgba(40,18,4,.3))}
 #cap .txt{display:block;position:relative;text-wrap:balance}
+/* its words come one by one with the voice (Caption.upTo): each is its own box so it can pop in (transform +
+   opacity); a one-letter word (x) and the word after it share a .nw group, so x never ends a row */
+#cap .w{display:inline-block;opacity:0}
+#cap .nw{white-space:nowrap}
 #cap svg{position:absolute;left:34px;top:47px;width:33px;height:33px;color:#c2621a}
 
 /* ---------- HUD (from the art: pause, sound) ---------- */
 #hud{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .3s ease-out}
-/* ---------- spotlight tutorial: blur + dim everything except the focus ---------- */
+/* ---------- spotlight tutorial: blur + dim everything except the focus ----------
+   up to two clear holes (--x/--y/--rx/--ry, and --x2/… for a second one, parked off screen when unused): each mask
+   layer is clear inside its hole, and the two are intersected, so both holes stay clear */
 #spot{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none}
-#spot .sl{position:absolute;inset:0;opacity:0;--x:0px;--y:0px;--rx:100px;--ry:100px;
+#spot .sl{position:absolute;inset:0;opacity:0;--x:0px;--y:0px;--rx:100px;--ry:100px;--x2:-9999px;--y2:-9999px;--rx2:1px;--ry2:1px;
   background:rgba(14,10,42,.36);-webkit-backdrop-filter:blur(7px) saturate(.8);backdrop-filter:blur(7px) saturate(.8);
-  -webkit-mask-image:radial-gradient(ellipse var(--rx) var(--ry) at var(--x) var(--y),transparent 0,transparent 78%,#000 100%);
-  mask-image:radial-gradient(ellipse var(--rx) var(--ry) at var(--x) var(--y),transparent 0,transparent 78%,#000 100%)}
-#spotRing{position:absolute;left:0;top:0;width:200px;height:200px;border-radius:50%;pointer-events:none;opacity:0;
+  -webkit-mask-image:radial-gradient(ellipse var(--rx) var(--ry) at var(--x) var(--y),transparent 0,transparent 78%,#000 100%),radial-gradient(ellipse var(--rx2) var(--ry2) at var(--x2) var(--y2),transparent 0,transparent 78%,#000 100%);
+  mask-image:radial-gradient(ellipse var(--rx) var(--ry) at var(--x) var(--y),transparent 0,transparent 78%,#000 100%),radial-gradient(ellipse var(--rx2) var(--ry2) at var(--x2) var(--y2),transparent 0,transparent 78%,#000 100%);
+  -webkit-mask-composite:source-in;mask-composite:intersect}
+/* the drag lesson's see-through ball (Spot.demo): a copy of the −5 with a soft light round it */
+#spotGhost{pointer-events:none;cursor:default;opacity:0}
+#spotGhost img{filter:drop-shadow(0 0 8px rgba(255,248,200,.95)) drop-shadow(0 0 18px rgba(255,214,70,.6))}
+#spotRing,#spotRing2{position:absolute;left:0;top:0;width:200px;height:200px;border-radius:50%;pointer-events:none;opacity:0;
   border:5px solid rgba(255,228,120,.95);box-shadow:0 0 16px 5px rgba(255,196,50,.55),inset 0 0 12px 3px rgba(255,220,100,.35)}
 #spotHand{position:absolute;left:0;top:0;width:90px;height:126.9px;margin:-32.6px 0 0 -34.4px;display:block;max-width:none;pointer-events:none;opacity:0;transform-origin:34.4px 32.6px;filter:drop-shadow(0 6px 7px rgba(20,10,60,.35))} /* your hand (art/ui/hand.webp); its fingertip is the point that taps */
 body.spot #hud.on{opacity:.5}
@@ -388,6 +403,8 @@ html:not(.fit) #stage,html:not(.fit) #stageTop{visibility:hidden} /* (until fitS
     <div id="spot"><div class="sl"></div><div class="sl"></div></div>
     <div id="overlay">
       <div id="spotRing"></div>
+      <div id="spotRing2"></div>
+      <div id="spotGhost" class="ball" aria-hidden="true"></div>
       <img id="spotHand" data-src="assets/img/hand.webp" alt="" aria-hidden="true" draggable="false">
       <div id="endUI"><button id="againBtn" class="rbtn" data-i18n-attr="aria-label:btnPlayAgain"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg></button></div>
     </div>

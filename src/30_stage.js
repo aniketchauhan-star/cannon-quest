@@ -16,10 +16,12 @@ const CANNON = { x: 836, bottom: 762, h: 360, src: { 1: [613, 449], 2: [613, 449
   // cannon is not centred on its sprite, so the button is placed by this, never by the sprite's middle. FIRE's
   // picture (fire.webp, 244×101) has its pill in the middle 240×97: it is sized so the pill fills the recess exactly
   fire: { cx: 314.0, cy: 357.5, w: 240, h: 97, art: [244, 101, 240, 97] },
-  // a loaded ball sits wholly inside its socket: its painted orb is this much of the hole's width, so an even dark
-  // rim shows all round and the gold ring never covers the ball. (The hole's art is dark at the top and lit brown
-  // at the bottom, which made a centred ball look pushed up: a loaded socket gets a dark lining, .sbk, behind it)
-  seat: 0.88 };
+  // a loaded ball fills its socket edge to edge (user, 20 Nov: "fully absorb in circle, no negative space"): its
+  // painted orb is this much of the hole's width. The gold ring (cannonN_front, drawn above the balls) is solid from
+  // 1.003 × the hole's radius (cannon 1; 1.005 on cannon 2's smaller sockets) out to ~1.44, so at 1.015 the orb's
+  // edge tucks under the ring's inner lip by about a pixel: no dark gap shows anywhere round it, and nothing of the
+  // orb shows outside the ring. (The dark lining .sbk under a loaded socket now only shows while a ball drops in)
+  seat: 1.015 };
 const BALL_ART = 0.96; // the orb's share of its picture (ball_*.webp: the orb is ~161 of 168 px)
 // tray art (wooden, metal corners; its plain middle stretched to hold 8 balls): ball spots along its floor (holesX,
 // holeY), the bottom edge and the outer edges in source px; a seated ball's centre sits `seat` px below (+) / above (−) its spot
@@ -378,7 +380,7 @@ const Cannon = {
     const [sw, sh] = CANNON.src[n], sc = CANNON.h / sh, w = sw * sc, left = CANNON.x - w / 2, top = CANNON.bottom - CANNON.h;
     return CANNON.holes[n].map(([fx, fy, fr]) => ({ x: left + fx * w, y: top + fy * CANNON.h, r: fr * w }));
   },
-  // a loaded ball sits wholly inside its socket, centred, with a thin dark rim all round (CANNON.seat)
+  // a loaded ball fills its socket, centred, its edge just under the gold ring (CANNON.seat)
   socketPos(i, n = this.n) { const h = this.holes(n)[i] || this.holes(n)[0]; return { x: h.x, y: h.y, s: (h.r * 2 * CANNON.seat) / (BALL_D * BALL_ART) }; },
   // the word on FIRE (T('btnFire')) at its size, shrunk if a longer word would run past the pill's straight middle
   fitFire() {
@@ -534,7 +536,7 @@ function createBall(opStr, i) {
   const r = Rack.restPos(i);
   el.style.transform = `translate(${r.x.toFixed(1)}px,${r.y.toFixed(1)}px) scale(0.001)`; // in its cup, too small to see or tap, until the next frame places it
   const b = { op, i, hex: BALL_HEX[i], ink: BALL_INK[i], el, holder: i, where: 'rack', socket: -1, x: r.x, y: r.y, s: 1, r: 0, flight: null, hop: 0, guide: false, drop: 0, land: 0, hover: 0, hoverT: 0, scale: 1 };
-  el.addEventListener('pointerdown', (e) => { e.preventDefault(); tapBall(b); });
+  el.addEventListener('pointerdown', (e) => { e.preventDefault(); Drag.down(b, e); }); // a press that moves is a drag, one that doesn't is a tap (Drag, src/40_game.js)
   el.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') b.hoverT = 1; });
   el.addEventListener('pointerleave', () => (b.hoverT = 0));
   return b;
@@ -556,8 +558,17 @@ function updateBalls(dt, t) {
   for (const b of Rack.balls) {
     if (b.where === 'gone') { b.el.classList.add('gone'); continue; }
     const h = ballHome(b);
-    b.hover = lerp(b.hover, G.inputOn ? b.hoverT : 0, 1 - Math.exp(-14 * dt));
-    if (b.flight) {
+    b.hover = lerp(b.hover, G.inputOn && !b.drag ? b.hoverT : 0, 1 - Math.exp(-14 * dt));
+    if (b.drag) {
+      // in the player's hand: it follows the finger closely and leans a little into the move; near an empty socket
+      // the socket draws it in and it shrinks toward the socket's size (k, mx, my and s come from Drag.aimAt)
+      const d = b.drag, f = 1 - Math.exp(-32 * dt), m = 0.45 * d.k * d.k;
+      const tx = lerp(d.px, d.mx, m), ty = lerp(d.py, d.my, m), vx = tx - b.x;
+      b.x = lerp(b.x, tx, f); b.y = lerp(b.y, ty, f);
+      b.s = lerp(b.s, d.s, 1 - Math.exp(-16 * dt));
+      b.r = lerp(b.r, Motion.reduced ? 0 : clamp(vx * 0.35, -7, 7), 1 - Math.exp(-12 * dt));
+      b.isSeated = false;
+    } else if (b.flight) {
       const f = b.flight; f.t += dt;
       const k = clamp(f.t / f.dur, 0, 1), e = Ease.inOutCubic(k);
       const my = Math.min(f.fy, h.y) - f.arc;
@@ -577,13 +588,19 @@ function updateBalls(dt, t) {
       if (b.where === 'rack') { b.y += Rack.enterY; lift[b.holder] = h.y + Rack.enterY - b.y; } // (how far it is raised off the trough's floor)
       b.r *= Math.exp(-10 * dt);
     }
+    // a dragged ball rode above everything (#fly); back in the tray's layer once it has landed (under the ring and
+    // the tray's lip again), or at once when a shot starts drawing it into the barrel
+    if (b.lifted && !b.drag && (!b.flight || b.where === 'loading')) { $('#balls').appendChild(b.el); b.lifted = false; }
     b.land = Math.max(0, b.land - dt * 3.5);
-    const sq = Math.sin(b.land * Math.PI) * 0.14, s = b.s * b.scale * (1 + b.hover * 0.06);
+    // landing: a squash in a cup; in a socket a small swell instead, so the orb settles in without ever pulling away
+    // from the ring (a squash would open a gap above and below it)
+    const inSock = b.where === 'socket' && !b.flight, bump = Math.sin(b.land * Math.PI);
+    const sq = inSock ? 0 : bump * 0.14, s = b.s * b.scale * (1 + b.hover * 0.06) * (inSock ? 1 + bump * 0.05 : 1);
     const tr = `translate(${b.x.toFixed(1)}px,${b.y.toFixed(1)}px) rotate(${b.r.toFixed(1)}deg) scale(${(s * (1 + sq)).toFixed(4)},${(s * (1 - sq)).toFixed(4)})`;
     const moving = tr !== b.lastTr;
     if (moving) { b.el.style.transform = tr; b.lastTr = tr; }
     b.el.classList.toggle('mv', moving);
-    b.el.classList.toggle('guide', b.guide && b.where === 'rack');
+    b.el.classList.toggle('guide', b.guide && b.where === 'rack' && !b.drag);
     b.el.classList.toggle('hov', b.hover > 0.5);
     b.el.classList.toggle('seated', !b.flight && !!b.isSeated);
     b.el.classList.toggle('insock', !b.flight && b.where === 'socket'); // (sunk into the barrel: a soft inner shade)
@@ -707,16 +724,28 @@ const QCard = {
 
 // =====================================================================
 //  SPOTLIGHT: first-time tutorial focus. Everything is blurred + dimmed
-//  except one target (a soft elliptical hole), with a gold ring and a
-//  little hand that taps the thing to press. Only opacity and transform
-//  move: each of the two dim layers gets its hole once, and they
-//  cross-fade; the ring is sized once per target and glides there by
-//  transform (FLIP), with the hand following it.
+//  except one target (a soft elliptical hole), or two (the −5 and the
+//  socket it goes into; FIRE and the loaded socket), each with a gold
+//  ring, and a little hand that shows what to do: it taps a button, or
+//  carries a see-through copy of the ball into the cannon (the drag
+//  lesson). Only opacity and transform move: each of the two dim layers
+//  gets its holes once, and they cross-fade; a ring is sized once per
+//  target and glides there by transform (FLIP), the hand following it.
 // =====================================================================
+// the drag lesson, one loop of P seconds (the marks are fractions of it): the hand comes to the ball (GRAB), presses
+// and a see-through copy lifts out (LIFT), carries it up and over into the socket (CARRY), lets go: the copy sinks in
+// and fills the hole, with a ripple (DROP), lifts away as the copy fades (AWAY), and rests until the next loop
+const DEMO = { P: 3.4, GRAB: 0.12, LIFT: 0.22, CARRY: 0.6, DROP: 0.7, AWAY: 0.84 };
+const GHOST_A = 0.68; // the copy's opacity: clearly a see-through hint, never a second −5
 const Spot = {
-  el: null, layers: [], front: 0, ring: null, hand: null, target: null, opts: {}, active: false, ringOn: false, rs: null,
-  box: { l: 0, t: 0 }, nudgeT: 0, tapped: false, lastRing: '', lastHand: '',
-  init() { this.el = $('#spot'); this.layers = [...this.el.querySelectorAll('.sl')]; this.ring = $('#spotRing'); this.hand = $('#spotHand'); this.layout(); },
+  el: null, layers: [], front: 0, ring: null, ring2: null, hand: null, ghost: null, target: null, opts: {}, active: false,
+  ringOn: false, ring2On: false, rs: null, rs2: null, box: { l: 0, t: 0 }, nudgeT: 0, tapped: false, dropped: false,
+  lastRing: '', lastRing2: '', lastHand: '', lastHandA: '', lastGhost: '', lastGhostA: '', demoT0: 0, held: false, ghostOf: null,
+  init() {
+    this.el = $('#spot'); this.layers = [...this.el.querySelectorAll('.sl')];
+    this.ring = $('#spotRing'); this.ring2 = $('#spotRing2'); this.hand = $('#spotHand'); this.ghost = $('#spotGhost');
+    this.layout();
+  },
   layout() { // cover exactly the screen, in stage units (set on resize, not animated)
     if (!this.el) return;
     const S = Stage.S, l = -Stage.ox / S, t = -Stage.oy / S;
@@ -736,50 +765,87 @@ const Spot = {
   // …or from art-space coordinates (centre, size), through the camera
   worldBox(x, y, w, h) { const p = Stage.w2st(x, y), z = Stage.z; return { x: p.x, y: p.y, w: w * z, h: h * z }; },
   fade(el, to, enter, dur) { gsap.killTweensOf(el); return Motion.to(el, { opacity: to, duration: dur, ease: enter ? Motion.EASE.OUT : Motion.EASE.IN }); },
-  // target: () => box (stage units)
+  // target: () => box (stage units), with opts sx / sy / pad for the hole round it and hand (a hand taps it).
+  // opts.also: () => box, a second clear hole (sx2 / sy2 / pad2), with its own gold ring when opts.ring2.
+  // opts.drag: { ball, from, to }: the drag lesson, the hand carrying a see-through copy of ball from from() to to()
+  // (stage points { x, y, s }, s = the ball's scale on screen)
   show(target, opts = {}) {
     this.target = target; this.opts = opts; this.active = true;
     document.body.classList.add('spot');
+    if (opts.drag) this.dress(opts.drag.ball);
+    this.demoT0 = Clock.t + 0.5; this.held = false; this.dropped = false; // (the lesson starts once the spotlight has settled)
     this.place(true);
   },
+  // the see-through copy wears the ball's own picture and label
+  dress(b) {
+    if (this.ghostOf === b) return;
+    this.ghostOf = b;
+    this.ghost.innerHTML = `<img src="${IMG}ball_${b.i}.webp" alt="" draggable="false"><b>${labelHTML(b.op)}</b>`;
+  },
+  hole(q, sx, sy, pad) { return { rx: (q.w / 2) * sx + pad, ry: (q.h / 2) * sy + pad }; },
   place(animate) {
     const b = this.target && this.target(); if (!b) return;
-    const o = this.opts, rx = (b.w / 2) * (o.sx ?? 1.3) + (o.pad ?? 24), ry = (b.h / 2) * (o.sy ?? 1.3) + (o.pad ?? 24);
-    const D = animate ? Motion.DUR.SLOW : 0;
-    // the dim + blur: the other layer takes the new hole, then the two cross-fade
+    const o = this.opts, b2 = o.also ? o.also() : null;
+    const h1 = this.hole(b, o.sx ?? 1.3, o.sy ?? 1.3, o.pad ?? 24), h2 = b2 ? this.hole(b2, o.sx2 ?? 1.3, o.sy2 ?? 1.3, o.pad2 ?? 24) : null;
+    const D = animate ? Motion.DUR.SLOW : 0, px = (v) => v.toFixed(1) + 'px';
+    // the dim + blur: the other layer takes the new holes, then the two cross-fade (no second hole: it is off screen)
     const prev = this.layers[this.front];
     this.front ^= 1;
     const next = this.layers[this.front], st = next.style;
-    st.setProperty('--x', (b.x - this.box.l).toFixed(1) + 'px'); st.setProperty('--y', (b.y - this.box.t).toFixed(1) + 'px');
-    st.setProperty('--rx', rx.toFixed(1) + 'px'); st.setProperty('--ry', ry.toFixed(1) + 'px');
+    st.setProperty('--x', px(b.x - this.box.l)); st.setProperty('--y', px(b.y - this.box.t));
+    st.setProperty('--rx', px(h1.rx)); st.setProperty('--ry', px(h1.ry));
+    st.setProperty('--x2', b2 ? px(b2.x - this.box.l) : '-9999px'); st.setProperty('--y2', b2 ? px(b2.y - this.box.t) : '-9999px');
+    st.setProperty('--rx2', h2 ? px(h2.rx) : '1px'); st.setProperty('--ry2', h2 ? px(h2.ry) : '1px');
     this.fade(next, 1, true, D); this.fade(prev, 0, false, D);
-    // the ring sits where the clear area starts to fade: sized once, then it glides from where it was
-    const gx = rx * 0.8, gy = ry * 0.8, old = this.rs;
-    Object.assign(this.ring.style, { width: 2 * gx + 'px', height: 2 * gy + 'px' });
-    const from = old && this.ringOn ? { x: old.x, y: old.y, sx: (old.gx * old.sx) / gx, sy: (old.gy * old.sy) / gy } : { x: b.x, y: b.y, sx: 1.3, sy: 1.3 };
-    if (old) gsap.killTweensOf(old);
-    this.rs = { ...from, gx, gy };
-    gsap.to(this.rs, { x: b.x, y: b.y, sx: 1, sy: 1, duration: Motion.d(D), ease: Motion.EASE.OUT });
+    // the rings sit where the clear area starts to fade: each sized once, then it glides from where it was
+    this.rs = this.aim(this.ring, this.rs, this.ringOn, b, h1, D);
     if (!this.ringOn) { this.ringOn = true; this.fade(this.ring, 1, true, Motion.DUR.NORMAL); }
-    this.fade(this.hand, o.hand ? 1 : 0, !!o.hand, Motion.DUR.FAST);
+    const r2 = !!(b2 && o.ring2);
+    if (r2) this.rs2 = this.aim(this.ring2, this.rs2, this.ring2On, b2, h2, D);
+    if (r2 !== this.ring2On) { this.ring2On = r2; this.fade(this.ring2, r2 ? 1 : 0, r2, Motion.DUR.NORMAL); }
+    // the hand fades in to tap; in the drag lesson, update() brings it (and the copy) in and out with each loop
+    if (o.drag) { gsap.killTweensOf(this.hand); gsap.killTweensOf(this.ghost); this.lastHandA = this.lastGhostA = ''; }
+    else { this.fade(this.hand, o.hand ? 1 : 0, !!o.hand, Motion.DUR.FAST); this.fade(this.ghost, 0, false, Motion.DUR.FAST); }
+  },
+  aim(ring, old, on, b, h, D) {
+    const gx = h.rx * 0.8, gy = h.ry * 0.8;
+    Object.assign(ring.style, { width: 2 * gx + 'px', height: 2 * gy + 'px' });
+    const from = old && on ? { x: old.x, y: old.y, sx: (old.gx * old.sx) / gx, sy: (old.gy * old.sy) / gy } : { x: b.x, y: b.y, sx: 1.3, sy: 1.3 };
+    if (old) gsap.killTweensOf(old);
+    const rs = { ...from, gx, gy };
+    gsap.to(rs, { x: b.x, y: b.y, sx: 1, sy: 1, duration: Motion.d(D), ease: Motion.EASE.OUT });
+    return rs;
   },
   hide() {
     if (!this.active && !this.ringOn) return;
-    this.active = false; this.target = null;
+    this.active = false; this.target = null; this.held = false;
     document.body.classList.remove('spot');
     for (const l of this.layers) this.fade(l, 0, false, Motion.DUR.SLOW);
-    this.ringOn = false;
-    this.fade(this.ring, 0, false, Motion.DUR.NORMAL);
-    this.fade(this.hand, 0, false, Motion.DUR.FAST);
+    this.ringOn = this.ring2On = false;
+    this.fade(this.ring, 0, false, Motion.DUR.NORMAL); this.fade(this.ring2, 0, false, Motion.DUR.NORMAL);
+    this.fade(this.hand, 0, false, Motion.DUR.FAST); this.fade(this.ghost, 0, false, Motion.DUR.FAST);
   },
-  nudge() { if (!Motion.reduced) this.nudgeT = 1; },
+  // a hint: the ring swells; in the drag lesson the hand also starts its carry again (if it is between loops)
+  nudge() {
+    if (!Motion.reduced) this.nudgeT = 1;
+    if (this.active && this.opts.drag && !this.held) { const u = (Clock.t - this.demoT0) / DEMO.P; if (u < 0 || u % 1 > DEMO.AWAY) this.demoT0 = Clock.t; }
+  },
+  // the player has the ball in hand: the lesson steps aside, and comes back a moment after the ball is let go
+  hold(on) { this.held = on; if (!on) { this.demoT0 = Clock.t + 0.9; this.dropped = false; } },
+  ringAt(el, r, p, last) {
+    const tr = `translate(${(r.x - r.gx).toFixed(1)}px,${(r.y - r.gy).toFixed(1)}px) scale(${(r.sx * p).toFixed(4)},${(r.sy * p).toFixed(4)})`;
+    if (tr !== last) el.style.transform = tr;
+    return tr;
+  },
   update(dt, t) {
     const r = this.rs; if (!r) return;
     this.nudgeT = Math.max(0, this.nudgeT - dt * 2.2);
-    const pulse = (Motion.reduced ? 1 : 1 + 0.03 * Math.sin(t * 4)) + 0.1 * Math.sin(this.nudgeT * Math.PI);
-    const rt = `translate(${(r.x - r.gx).toFixed(1)}px,${(r.y - r.gy).toFixed(1)}px) scale(${(r.sx * pulse).toFixed(4)},${(r.sy * pulse).toFixed(4)})`;
-    if (rt !== this.lastRing) { this.ring.style.transform = rt; this.lastRing = rt; }
-    if (this.opts.hand && this.active) { // taps the target every 1.4 s, with a ripple on each tap
+    const pulse = (k) => (Motion.reduced ? 1 : 1 + 0.03 * Math.sin(t * 4 + k)) + 0.1 * Math.sin(this.nudgeT * Math.PI);
+    this.lastRing = this.ringAt(this.ring, r, pulse(0), this.lastRing);
+    if (this.rs2 && this.ring2On) this.lastRing2 = this.ringAt(this.ring2, this.rs2, pulse(Math.PI), this.lastRing2); // (the two breathe in turn)
+    if (!this.active) return;
+    if (this.opts.drag) { this.demo(t); return; }
+    if (this.opts.hand) { // taps the target every 1.4 s, with a ripple on each tap
       const ph = (t % 1.4) / 1.4, press = !Motion.reduced && ph > 0.4 && ph < 0.62 ? Math.sin(((ph - 0.4) / 0.22) * Math.PI) : 0;
       const hx = (r.gx / 0.8) * r.sx, hy = (r.gy / 0.8) * r.sy;
       if (press > 0.9 && !this.tapped) { this.tapped = true; FX.uiMode = true; FX.ring(r.x, r.y, '#fff6c8', Math.min(hx, hy) * 0.9); FX.uiMode = false; }
@@ -790,5 +856,41 @@ const Spot = {
       const ht = `translate(${(r.x + ax + 14 * (1 - press)).toFixed(1)}px,${fy.toFixed(1)}px) rotate(-28deg) scale(${(1 - 0.1 * press).toFixed(3)})`;
       if (ht !== this.lastHand) { this.hand.style.transform = ht; this.lastHand = ht; }
     }
+  },
+  // the drag lesson (DEMO). Its two ends are read every frame, in stage units, so they stay on the ball and the
+  // socket wherever the camera is. Under reduced motion nothing travels: the hand rests on the ball, and the copy
+  // waits in the socket, showing where it goes.
+  demo(t) {
+    const d = this.opts.drag, A = d.from(), B = d.to(), z = Stage.z;
+    let hx = A.x, hy = A.y, ha = 0, hp = 0, gx = A.x, gy = A.y, gs = A.s, ga = 0;
+    if (this.held) { /* the player is dragging the ball: nothing to show */ }
+    else if (Motion.reduced) { ha = 1; ga = 0.6; gx = B.x; gy = B.y; gs = B.s; }
+    else if (t >= this.demoT0) {
+      const u = ((t - this.demoT0) / DEMO.P) % 1, seg = (a, b) => clamp((u - a) / (b - a), 0, 1);
+      const cx = (A.x + B.x) / 2, cy = Math.min(A.y, B.y) - 90 * z, lift = A.s * 1.1; // (up and over: it drops into the hole from above)
+      if (u < DEMO.GRAB) { const e = Ease.outCubic(seg(0, DEMO.GRAB)); ha = e; hx = A.x + 50 * z * (1 - e); hy = A.y + 60 * z * (1 - e); }
+      else if (u < DEMO.LIFT) { const e = Ease.outCubic(seg(DEMO.GRAB, DEMO.LIFT)); ha = 1; hp = e; ga = GHOST_A * e; gs = lerp(A.s, lift, e); }
+      else if (u < DEMO.CARRY) {
+        const e = Ease.inOutCubic(seg(DEMO.LIFT, DEMO.CARRY));
+        ha = 1; hp = 1; ga = GHOST_A; gs = lift; gx = hx = bez(A.x, cx, B.x, e); gy = hy = bez(A.y, cy, B.y, e);
+      } else if (u < DEMO.DROP) {
+        const e = Ease.outCubic(seg(DEMO.CARRY, DEMO.DROP));
+        ha = 1; hp = 1 - e; ga = GHOST_A; gx = hx = B.x; gy = hy = B.y; gs = lerp(lift, B.s, e); // it sinks in and fills the hole
+        if (!this.dropped) { this.dropped = true; FX.uiMode = true; FX.ring(B.x, B.y, '#fff6c8', 61 * B.s * 1.15); FX.uiMode = false; }
+      } else if (u < DEMO.AWAY) {
+        const e = seg(DEMO.DROP, DEMO.AWAY);
+        ha = 1 - Ease.inCubic(e); hx = B.x + 50 * z * Ease.outCubic(e); hy = B.y + 60 * z * Ease.outCubic(e);
+        ga = GHOST_A * (1 - e); gx = B.x; gy = B.y; gs = B.s;
+      }
+      if (u < DEMO.CARRY) this.dropped = false;
+    }
+    // the fingertip sits a little below-right of the ball's middle (its label stays in view), and the whole hand on screen
+    const lowest = (Stage.H - Stage.oy) / Stage.S - 100;
+    const ht = `translate(${(hx + 28 * z).toFixed(1)}px,${Math.min(hy + 34 * z, lowest).toFixed(1)}px) rotate(-28deg) scale(${(1 - 0.1 * hp).toFixed(3)})`;
+    if (ht !== this.lastHand) { this.hand.style.transform = ht; this.lastHand = ht; }
+    const hA = ha.toFixed(3); if (hA !== this.lastHandA) { this.hand.style.opacity = hA; this.lastHandA = hA; }
+    const gt = `translate(${gx.toFixed(1)}px,${gy.toFixed(1)}px) scale(${gs.toFixed(4)})`;
+    if (gt !== this.lastGhost) { this.ghost.style.transform = gt; this.lastGhost = gt; }
+    const gA = ga.toFixed(3); if (gA !== this.lastGhostA) { this.ghost.style.opacity = gA; this.lastGhostA = gA; }
   },
 };
