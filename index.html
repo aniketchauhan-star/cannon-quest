@@ -13,6 +13,7 @@
 <link rel="preload" href="libs/gsap.min.js" as="script">
 <link rel="preload" href="js/i18n.js" as="script">
 <link rel="preload" href="js/script.js" as="script">
+<link rel="preload" href="js/sfx_title.js" as="script">
 <script>/* the words (js/i18n.js reads the .json, or the .js from disk, where a fetch is blocked) */
 (function () { var l = document.createElement('link'), disk = location.protocol === 'file:'; l.rel = 'preload';
   if (disk) { l.as = 'script'; l.href = 'locales/locales.js'; } else { l.as = 'fetch'; l.crossOrigin = 'anonymous'; l.href = 'locales/locales.json'; }
@@ -436,9 +437,10 @@ fitStage(); addEventListener('resize', fitStage);
      locales/locales.json, or locales/locales.js when opened from disk), then the game (js/script.js, built from src/
      by ./build.sh; it has been downloading since the <head>). The game shows the start screen as soon as its pictures
      are in, then fetches the rest while the player looks at it: the play scene's pictures and the sound effects
-     (js/sfx.js). -->
+     (js/sfx.js). The start screen's own few sounds (js/sfx_title.js, ~35 KB) come with the page, ready for its entrance. -->
 <script src="libs/gsap.min.js"></script>
 <script src="js/i18n.js"></script>
+<script src="js/sfx_title.js"></script>
 <script>
 I18n.load(function () {
   I18n.applyStatic();

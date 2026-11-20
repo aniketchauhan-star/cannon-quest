@@ -612,11 +612,15 @@ const Pics = {
 };
 async function boot() {
   Motion.init();
+  // the sound, now, so the start screen can be heard (its own few effects came with the page: js/sfx_title.js).
+  // Where the browser still holds the page silent, it wakes on the first tap or key (Sound.listen)
+  Sound.init(); Sound.listen();
   // lay the scene out at once (it stays hidden, over the plain sky, until its pictures are in)
   Scenery.build(); FX.init(); Stage.init(); Perf.init();
   removeEventListener('resize', fitStage); // (index.html's first fit; the game's Stage keeps the screen fitted from here)
   Object.assign(Stage.cam, { fx: CX, fy: CY, z: 1.05 }); Stage.snap(); Stage.update(0);
   await Pics.load(Pics.TITLE, 8); // usually in already: they have been downloading since the page's <head>
+  if (Sound.live()) await Promise.race([Sound.ready(), later(1000)]); // (sound allowed at once: the entrance's sounds are decoded first)
   Cloud.init(); Cannon.init(); Rack.init(); EqUI.init(); Title.init(); Spot.init(); Skip.init();
   wireInput();
   gsap.ticker.add(frame);

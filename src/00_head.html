@@ -13,6 +13,7 @@
 <link rel="preload" href="libs/gsap.min.js" as="script">
 <link rel="preload" href="js/i18n.js" as="script">
 <link rel="preload" href="js/script.js" as="script">
+<link rel="preload" href="js/sfx_title.js" as="script">
 <script>/* the words (js/i18n.js reads the .json, or the .js from disk, where a fetch is blocked) */
 (function () { var l = document.createElement('link'), disk = location.protocol === 'file:'; l.rel = 'preload';
   if (disk) { l.as = 'script'; l.href = 'locales/locales.js'; } else { l.as = 'fetch'; l.crossOrigin = 'anonymous'; l.href = 'locales/locales.json'; }

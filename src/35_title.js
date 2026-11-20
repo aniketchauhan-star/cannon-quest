@@ -4,10 +4,15 @@
 //  (art/start_screen/start_sheet.png, cut by tools/cut_start_screen.py). The CANNON QUEST plaque on top, the
 //  wooden cannon on the left, a small Play button in the middle, and the golden cage on the right with x INSIDE
 //  it (drawn between the cage's back and its front bars).
+//  It comes in one piece after another (Title.IN), each on its own beat and with its own real recorded sound
+//  (Title.cues → Sound.signLand / rollIn / cannonLand / cageLand / cork): the CANNON QUEST sign drops from the sky
+//  and bounces into place, the cannon slides in from the left and plants itself, the cage drops onto the deck and
+//  bounces, then Play pops up. (A browser lets a page sound only after its first tap, so on a first visit the entrance
+//  may play silent; x's struggle is heard from the first tap anywhere: Sound.listen.)
 //  x wants out. In a loop it peeks through the bars, shoves the left bars, shoves the right bars, jumps at the
 //  roof and rattles the bars, and the cage rocks on its edge, hops and wiggles each time (one GSAP timeline;
 //  the cage's rock, jolt and squash are springs, so every wiggle settles by itself).
-//  Time-based (Clock / GSAP), transform + opacity only. Reduced motion: it is simply there, x sits still.
+//  Time-based (Clock / GSAP), transform + opacity only. Reduced motion: it is simply there, x sits still, no sounds.
 // =====================================================================
 const TL = (() => { // art space (1672×941). Boxes = where the mockup draws each piece (tools/cut_start_screen.py prints them)
   const cannon = { x: 122.3, y: 401.3, w: 525.7, h: 485.2 }, cage = { x: 1092.1, y: 348.9, w: 382.1, h: 505.3 };
@@ -31,6 +36,26 @@ const Title = {
   // shake (0..1: x rattling the bars). x: its pose from the timeline, plus a squash spring for landings
   rock: new Spring(2.3, 0.2), jolt: new Spring(6, 0.3), squash: new Spring(4.2, 0.32), xsq: new Spring(5, 0.3),
   cg: { hop: 0, shake: 0 }, xs: { x: 0, y: 0, r: 0, sx: 1, sy: 1 },
+  // the entrance: [start, length] in s after the start screen shows. One after another (the user, 20 Nov: "the text
+  // come and cannon and the cage come"), so each lands on its own beat and its sound is heard on its own
+  IN: { logo: [0.2, 0.85], cannon: [0.7, 0.8], cage: [1.15, 0.9], play: [1.8, 0.6], escape: 3 },
+  BOUNCE: [1 / 2.75, 2 / 2.75, 2.5 / 2.75], // where Ease.outBounce touches down (its first fall, then two bounces)
+  CANNON_STOP: 0.58,                         // where Ease.outBack slides furthest (it stops, then settles back)
+  Q: [], q: 0,
+  // when each arrival is heard, in s after the start: a swish as the sign / the cage falls (its loudest part just
+  // before the touch-down), a knock / clang on each touch-down, the cannon's roll and its thud where it stops, a pop for Play
+  cues() {
+    const I = this.IN, B = this.BOUNCE, at = (k, f) => I[k][0] + I[k][1] * f;
+    return [
+      [at('logo', B[0]) - 0.2, () => Sound.swish(0.42, 0.9)],
+      ...B.map((f, i) => [at('logo', f), () => Sound.signLand(i)]),
+      [I.cannon[0], () => Sound.rollIn()],
+      [at('cannon', this.CANNON_STOP), () => Sound.cannonLand()],
+      [at('cage', B[0]) - 0.2, () => Sound.swish(0.36, 1.1, 0.3)],
+      ...B.map((f, i) => [at('cage', f), () => Sound.cageLand(i)]),
+      [I.play[0] + 0.06, () => Sound.cork()],
+    ].sort((a, b) => a[0] - b[0]);
+  },
   init() {
     const box = $('#thumb'); this.box = box; this.play = $('#playBtn'); this.pg = this.play.querySelector('.pg');
     const img = (src, cls, parent, before = null) => {
@@ -75,12 +100,13 @@ const Title = {
   hideAll() { for (const el of this.box.querySelectorAll('.tp, .gsh, #playBtn')) el.style.opacity = 0; }, // (each piece enters in update)
   start() {
     this.active = true; this.t0 = Clock.t; this.box.classList.add('live');
+    this.Q = this.cues(); this.q = 0;
     if (!Motion.reduced) this.tl = this.escape();
   },
   // x tries to get out: one looping timeline (~10 s). The cage answers (rocks, hops, rattles) from the callbacks
   escape() {
     const X = this.xs, C = this.cg, S = TL.room.side, U = TL.room.up;
-    const tl = gsap.timeline({ repeat: -1, delay: 1.9 });
+    const tl = gsap.timeline({ repeat: -1, delay: this.IN.escape }); // (once everything has come in)
     // 1. it peeks out through the bars: left, then right
     tl.to(X, { x: -12, r: -7, duration: 0.5, ease: 'sine.inOut' })
       .to(X, { x: 12, r: 7, duration: 0.7, ease: 'sine.inOut' }, '+=0.25')
@@ -120,17 +146,17 @@ const Title = {
     this.rock.kick(side * 4.2); this.jolt.kick(side * 5);
     const p = this.at(side < 0 ? TL.bars.l : TL.bars.r, TL.x.y + TL.x.h * 0.45);
     FX.uiMode = true; FX.burst(p.x, p.y, '#ffd34d', 9, 260, { g: 300, dir: side < 0 ? Math.PI : 0, spread: 1.1, size: 0.6 }); FX.uiMode = false;
-    if (Sound.ctx) Sound.rattle();
+    if (Sound.live()) Sound.rattle();
   },
   bonk() { // x's head hits the top ring
     const p = this.at(TL.cage.w / 2, TL.bars.top);
     FX.uiMode = true; FX.burst(p.x, p.y, '#ffd34d', 8, 220, { g: 300, dir: -Math.PI / 2, spread: 1.2, size: 0.6 }); FX.uiMode = false;
-    if (Sound.ctx) Sound.clunk();
+    if (Sound.live()) Sound.clunk();
   },
   thud() { // the cage lands back on the deck: it squashes, x squashes, a puff of dust each side
     this.squash.kick(0.05); this.xsq.kick(0.08); this.rock.kick((Math.random() < 0.5 ? -1 : 1) * 1.2);
     this.cageDust(false);
-    if (Sound.ctx) Sound.land();
+    if (Sound.live()) Sound.land();
   },
   cageDust(big) {
     const cg = TL.cage, r = cg.w * 0.46, x = cg.x + cg.w / 2;
@@ -158,18 +184,21 @@ const Title = {
     if (!this.active) return;
     const R = Motion.reduced, tt = R ? 0 : t;               // reduced motion: everything in place at once, nothing idles
     const T = R ? 99 : t - this.t0, X = this.exiting ? (R ? 99 : t - this.exitT) : -1;
-    const pr = (s, d) => clamp((T - s) / d, 0, 1);
+    const pr = (s, d) => clamp((T - s) / d, 0, 1), I = this.IN, prIn = (k) => pr(I[k][0], I[k][1]);
     const ex = (s, d) => (X < 0 ? 0 : clamp((X - s) / d, 0, 1));
+    // the entrance's sounds, each on its moment (none under reduced motion, nothing heard while the page is held
+    // silent, and none once Play is tapped: the start screen is leaving)
+    while (this.q < this.Q.length && T >= this.Q[this.q][0]) { const c = this.Q[this.q++]; if (!R && !this.exiting && Sound.live()) c[1](); }
     // cannon: slides in from the left, breathes, recoils when Play fires it, slides out
     this.kick = Math.max(0, this.kick - dt * 3.2);
-    const ck = Math.sin(this.kick * Math.PI), cIn = Ease.outBack(pr(0.3, 0.75)), cOut = Ease.inBack(ex(0.08, 0.5));
-    const cdx = -640 * (1 - cIn) - 760 * cOut - 18 * ck, cdy = 8 * ck, breathe = 1 + Math.sin(tt * 2.4) * 0.006, cOp = pr(0.3, 0.2);
+    const cP = prIn('cannon'), ck = Math.sin(this.kick * Math.PI), cIn = Ease.outBack(cP), cOut = Ease.inBack(ex(0.08, 0.5));
+    const cdx = -640 * (1 - cIn) - 760 * cOut - 18 * ck, cdy = 8 * ck, breathe = 1 + Math.sin(tt * 2.4) * 0.006, cOp = pr(I.cannon[0], 0.2);
     this.set(this.cannon, cdx, cdy, -2 * ck, breathe, cOp);
     this.set(this.cSh, cdx, 0, 0, 1, cOp);
-    if (!this.cLanded && pr(0.3, 0.75) >= 1) { this.cLanded = true; if (!R) this.titleDust(true); }
+    if (!this.cLanded && cP >= this.CANNON_STOP) { this.cLanded = true; if (!R) this.titleDust(true); } // (where it stops sliding)
     // the cage: drops onto the deck (with bounces), then x's struggle rocks, hops, rattles and squashes it
-    const gIn = pr(0.45, 0.9), drop = 1 - Ease.outBounce(gIn), gOut = Ease.inBack(ex(0.05, 0.55));
-    if (!this.landed && gIn >= 0.364) { this.landed = true; if (!R) { this.cageDust(true); this.squash.kick(0.06); this.xsq.kick(0.1); } } // (the bounce's first touch-down)
+    const gIn = prIn('cage'), drop = 1 - Ease.outBounce(gIn), gOut = Ease.inBack(ex(0.05, 0.55));
+    if (!this.landed && gIn >= this.BOUNCE[0]) { this.landed = true; if (!R) { this.cageDust(true); this.squash.kick(0.06); this.xsq.kick(0.1); } } // (the bounce's first touch-down)
     const rock = this.rock.update(dt), jolt = this.jolt.update(dt), sq = this.squash.update(dt), xsq = this.xsq.update(dt);
     const sh = this.cg.shake, w7 = R ? 0 : Math.sin(tt * Math.PI * 2 * 7), w7b = R ? 0 : Math.sin(tt * Math.PI * 2 * 7 + 1.3);
     const rot = rock + sh * 0.9 * w7b + 6 * gOut;
@@ -185,14 +214,14 @@ const Title = {
     const xUp = clamp(-xs.y / 30, 0, 1); // its shadow on the cage floor
     this.set(this.xShadow, xs.x, 0, 0, 1 - 0.35 * xUp, 0.9 - 0.5 * xUp);
     // logo: bounces down from the sky, floats, flashes now and then (a brighter copy fades in and out)
-    const lIn = Ease.outBounce(pr(0.12, 0.8)), lOut = Ease.inBack(ex(0.04, 0.55));
+    const lIn = Ease.outBounce(prIn('logo')), lOut = Ease.inBack(ex(0.04, 0.55));
     const flash = R ? 0 : Math.max(0, Math.sin(clamp(((T - 3) % 5) / 0.55, 0, 1) * Math.PI));
-    const ly = -560 * (1 - lIn) - 760 * lOut + Math.sin(tt * 1.6) * 6, lr = Math.sin(tt * 1.1) * 1 - 8 * lOut, ls = 1 + Math.sin(tt * 2.2) * 0.01, lo = pr(0.12, 0.15);
+    const ly = -560 * (1 - lIn) - 760 * lOut + Math.sin(tt * 1.6) * 6, lr = Math.sin(tt * 1.1) * 1 - 8 * lOut, ls = 1 + Math.sin(tt * 2.2) * 0.01, lo = pr(I.logo[0], 0.15);
     this.set(this.logo, 0, ly, lr, ls, lo);
     this.set(this.logoLit, 0, ly, lr, ls, lo * flash * 0.85);
     // Play: pops in, floats a little over the deck (its shadow answers), reacts to hover / press, bursts on exit
     this.press = Math.max(0, this.press - dt * 4);
-    const pIn = pr(0.2, 0.7), pk = Ease.outBack(pIn);
+    const pIn = prIn('play'), pk = Ease.outBack(pIn);
     const pX = ex(0, 0.12), pBoom = ex(0.12, 0.25), bob = R ? 0 : Math.sin(tt * 2.1) * 5;
     const psc = pk * (1 + 0.02 * Math.sin(tt * 3.4) + (this.hover ? 0.08 : 0) - this.press * 0.12) * (1 - 0.15 * pX + 0.5 * pBoom);
     this.set(this.play, 0, bob, 0, Math.max(0.001, psc), Math.min(1, pIn * 3) * (1 - pBoom));
