@@ -10,7 +10,8 @@ Stored as `assets/music/braveryrun.webm` (Opus, 80 kbps): the whole 111.5 s loop
 It replaced "Blue Skies" by HoliznaCC0 (CC0 lo-fi) on 19 Nov 2026, when the user asked for gamified music for teens. That had replaced "Chill Wave" by Kevin MacLeod (CC BY 4.0) earlier the same day.
 
 ## Voice-over
-Every line is made in Aamir's TTS studio **Ai Wala Human By Aamir**, in one man's voice (since 18 Nov 2026, at the user's request; by default **Male Child (Energetic)**, which is Gemini voice Puck, an adult man's upbeat voice), with `tools/vo_studio.mjs`. Until the studio's clips are in `assets/VO/en/`, the lines are read by the device's own voice (a man's where the device has one). The earlier Kokoro clips were removed on 18 Nov 2026: the project's rules allow only the studio's voice.
+Every line is said by a real person: one recording of `docs/VO_RECORD.txt`, cut into clips by `tools/vo_split.py` (`tools/vo_takes.json` records which recording each clip came from). No AI or synthetic voice is used, at the user's request of 20 Nov 2026. That includes the TTS studio, the device's own voice, and the earlier Kokoro clips (removed 18 Nov 2026).
+Voice: *(the reader's name goes here once the lines are recorded)*.
 
 ## Sound effects
 All sound effects are real recordings (no synthesized or AI-made sound), released as **CC0 or public domain**. No credit is required, but here are the sources:
