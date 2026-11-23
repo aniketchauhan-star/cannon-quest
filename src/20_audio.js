@@ -137,12 +137,43 @@ const Sound = {
     this.play('clang', { vol: 0.62, rate: 1.3, t: 0.01, verb: 0.3, pan: 0 });
     [0.14, 0.26, 0.4, 0.55, 0.72].forEach((t, i) => this.play(i % 2 ? 'metal2' : 'metal3', { vol: 0.34 - i * 0.05, rate: rr(1.05, 1.35), t, pan: i % 2 ? 0.35 : -0.35, verb: 0.2, vary: 0.06 }));
   },
-  // the cloud bursting: a soft, airy puff (recorded air whooshes and a cloth flap) with a faint twinkle
-  poof() {
-    if (!this.play('airmid', { vol: 0.4, rate: 0.82, verb: 0.25, pan: 0 })) this.noise({ dur: 0.7, vol: 0.08, type: 'bandpass', f: 900, f2: 300, q: 0.7, attack: 0.03 });
-    this.play('cloth', { vol: 0.32, rate: 0.72, verb: 0.2, pan: 0 });
-    this.play('air', { vol: 0.25, rate: 0.62, t: 0.03, pan: 0 });
-    [2, 2.52, 3].forEach((r, i) => this.play('glass2', { vol: 0.08, rate: r, t: 0.08 + i * 0.07, verb: 0.5, vary: 0.01 }));
+  // the cloudburst (p = how big: 1, or 0.6 for the gentle "not yet" one): an airy whoomp (recorded air whooshes, a
+  // cloth flap, a deep thud for its body) and the glittering shower after it (glass, pitched high)
+  poof(p = 1) {
+    if (!this.play('airmid', { vol: 0.42 * p, rate: 0.8, verb: 0.25, pan: 0 })) this.noise({ dur: 0.7, vol: 0.08, type: 'bandpass', f: 900, f2: 300, q: 0.7, attack: 0.03 });
+    this.play('cloth', { vol: 0.34 * p, rate: 0.7, verb: 0.2, pan: 0 });
+    this.play('air', { vol: 0.25 * p, rate: 0.62, t: 0.03, pan: 0 });
+    this.play('thud', { vol: 0.32 * p, rate: 0.7, verb: 0.3, pan: 0 });
+    const n = p < 1 ? 3 : 7;
+    for (let i = 0; i < n; i++) this.play('glass2', { vol: 0.07, rate: rr(2, 3.2), t: 0.08 + i * 0.07, verb: 0.5, vary: 0.01 });
+  },
+  // ---- the cage cracking open (recorded clips only, see CREDITS.md) ----
+  // a low rumble as the camera closes in: a distant boom's echo and a rolling hand truck, both slowed right down
+  rumble() {
+    this.play('echo', { vol: 0.32, rate: 0.55, verb: 0.35, pan: 0, vary: 0.02 });
+    this.play('roll', { vol: 0.16, rate: 0.55, t: 0.05, pan: 0, vary: 0.02 });
+  },
+  // a push cracks the cage (i = 0, 1, 2: harder each time): the snap of the crack (a lock's spring, a gavel's knock
+  // pitched up) and the metal groaning
+  crack(i = 0) {
+    this.play('key', { vol: 0.42 + 0.1 * i, rate: 1.3 - 0.1 * i, verb: 0.15, pan: 0 });
+    this.play('knock', { vol: 0.28 + 0.08 * i, rate: 1.7 - 0.15 * i, t: 0.006, verb: 0.12, pan: 0 });
+    this.strain(Math.min(1, i));
+  },
+  // the cage bursts: its break (lock snap, clang, bars clattering) on a deep thud, with a twinkle of light
+  shatter() { this.cageBreak(); this.play('thud', { vol: 0.55, rate: 0.78, verb: 0.25, pan: 0 }); this.cheer(); },
+  // x rises out of the light: a soft rising swish with a sparkle
+  rise() { this.play('swish', { vol: 0.32, rate: 0.85, verb: 0.2, pan: 0 }); this.play('glass2', { vol: 0.12, rate: 2.5, t: 0.18, verb: 0.5 }); },
+  // the cloud draws in its breath before it bursts
+  inhale(p = 1) { this.play('airlong', { vol: 0.24 * p, rate: 1.4, verb: 0.2, pan: 0 }); },
+  // a new cloud has formed: a soft two-note twinkle
+  chime() { this.play('glass2', { vol: 0.14, rate: 2, verb: 0.45, pan: 0 }); this.play('glass1', { vol: 0.1, rate: 2.52, t: 0.09, verb: 0.45, pan: 0 }); },
+  // fireworks at the end: a rocket's whoosh; its burst (a distant boom's echo, a cork's pop, a crackle of glass)
+  fwLaunch() { this.play('whoosh', { vol: 0.2, rate: 1.9, verb: 0.15, vary: 0.06 }); },
+  fwBurst() {
+    this.play('echo', { vol: 0.38, rate: rr(0.95, 1.15), verb: 0.4, vary: 0.04 });
+    this.play('cork', { vol: 0.2, rate: 0.75, verb: 0.25 });
+    [2.2, 2.6, 3].forEach((r, i) => this.play('glass2', { vol: 0.06, rate: r, t: 0.12 + i * 0.07, verb: 0.5, vary: 0.02 }));
   },
   spring() { this.play('spring', { vol: 0.5, rate: 1.1, verb: 0.15 }); },
   fanfare() {

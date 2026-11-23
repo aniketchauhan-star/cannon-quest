@@ -178,16 +178,22 @@ img{-webkit-user-drag:none;user-select:none}
 .cage.glowx img{filter:drop-shadow(0 0 10px #fff) drop-shadow(0 0 24px #c58bff)}
 .cage.open img{animation:copen .5s ease-out}
 @keyframes copen{40%{transform:scale(1.15) rotate(-6deg)}}
-/* freed: the cage breaks and x jumps out (CageBreak in src/30_stage.js moves them all by transform + opacity). The
-   cage's own picture stays in the equation unseen, so nothing in the line moves; a glow behind the cage builds with
-   x's pushes and flares out at the break; the pieces are the empty cage (cage_empty.webp) cut by clip-paths; the
-   free x stands where the cage was, 78 % of its height, and breathes about its feet (the scale property, so it adds to
-   its own transform) */
+/* freed: the cage cracks open and x comes out (CageBreak in src/30_stage.js moves them all by transform + opacity).
+   The cage's own picture stays in the equation unseen, so nothing in the line moves; a glow behind the cage builds
+   with x's pushes and flares out at the break; its cracks are drawn on a canvas over it (.ccrk, masked by its
+   picture); behind it a fan of golden light rays (.crays: one conic gradient, turned by transform) wakes with the
+   pushes, flares at the break and stays as a soft halo behind x; its shards fly on the FX canvas. The free x stands
+   where the cage was, 78 % of its height, and breathes about its feet (the scale property, so it adds to its own
+   transform); its white twin (.xwhite) lies over it and fades as x rises out of the light */
 .cage .caura{position:absolute;left:-40%;top:-22%;width:180%;height:144%;z-index:-1;border-radius:50%;opacity:0;pointer-events:none;
   background:radial-gradient(closest-side,rgba(255,255,255,.95),rgba(255,240,170,.62) 38%,rgba(197,139,255,.34) 66%,rgba(197,139,255,0))}
-.cage .cbit{position:absolute;left:0;top:0;width:100%;height:100%;visibility:hidden;pointer-events:none;background:url(assets/img/cage_empty.webp) 0 0/100% 100% no-repeat}
+.cage .ccrk{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;transform-origin:50% 90%}
+.cage .crays{position:absolute;left:50%;top:50%;width:6.8em;height:6.8em;z-index:-2;border-radius:50%;opacity:0;pointer-events:none;will-change:transform,opacity;transform:translate(-50%,-50%);
+  background:repeating-conic-gradient(from 0deg,rgba(255,190,40,0) 0deg,rgba(255,200,60,.7) 5deg,rgba(255,226,130,0) 11deg,rgba(255,226,130,0) 22.5deg);
+  -webkit-mask-image:radial-gradient(closest-side,#000 10%,rgba(0,0,0,.55) 42%,transparent 76%);mask-image:radial-gradient(closest-side,#000 10%,rgba(0,0,0,.55) 42%,transparent 76%)}
 .cage .xfree{position:absolute;left:50%;top:50%;height:78%;width:auto;visibility:hidden;pointer-events:none;transform-origin:50% 100%;transform:translate(-50%,-50%);
   filter:drop-shadow(0 0 8px #fff) drop-shadow(0 0 18px rgba(197,139,255,.85))}
+.cage .xfree.xwhite{filter:brightness(0) invert(1) drop-shadow(0 0 10px #fff) drop-shadow(0 0 22px #ffe9a0)}
 .cage .xfree.live{animation:xbreathe 1.4s ease-in-out infinite}
 @keyframes xbreathe{0%,100%{scale:1}50%{scale:1.06}} /* the freed x rests on the cloud and breathes, in step with “= 2” */
 /* "= 2" lights up as x lands, growing 18 %; it steps aside to keep "x = 2" apart (translate, not margins: the
@@ -201,6 +207,12 @@ img{-webkit-user-drag:none;user-select:none}
 .cbits{position:absolute;pointer-events:none}
 .cbits .cb{position:absolute;visibility:hidden}
 .cbits canvas{position:absolute;display:block}
+/* the light in the cloud's heart (Cloud.core): it builds as the cloud draws in its breath before the cloudburst, and
+   flashes out at the pop. Warm, so it shows on the white cloud */
+#cloud .ccore{position:absolute;left:340px;top:200px;width:600px;height:320px;margin:-160px 0 0 -300px;border-radius:50%;opacity:0;pointer-events:none;
+  background:radial-gradient(closest-side,rgba(255,255,255,1),rgba(255,246,206,.92) 26%,rgba(255,214,110,.55) 55%,rgba(255,200,90,0))}
+/* the vignette (Vignette): the screen's edges darken while the cage cracks, so the eye goes to it */
+#vig{position:fixed;inset:0;pointer-events:none;opacity:0;background:radial-gradient(ellipse 72% 68% at 50% 36%,rgba(16,8,46,0) 42%,rgba(16,8,46,.42) 78%,rgba(16,8,46,.7) 100%)}
 
 /* ---------- cannon, sockets, FIRE ---------- */
 #cannon{position:absolute;left:0;top:0}
@@ -426,6 +438,7 @@ html:not(.fit) #stage,html:not(.fit) #stageTop{visibility:hidden} /* (until fitS
       <div id="endUI"><button id="againBtn" class="rbtn" data-i18n-attr="aria-label:btnPlayAgain"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg></button></div>
     </div>
   </div>
+  <div id="vig"></div>
   <canvas id="fx"></canvas>
   <!-- the caption sits above the FX canvas (cannon smoke never covers its words), in stage units but not moved by
        the camera; what flies (#worldTop) still passes over it -->

@@ -52,7 +52,7 @@ function seat(b, i, dur = Motion.BEAT.TAP_FLY, arc = 230) {
   G.sockets[i] = b; b.where = 'socket'; b.socket = i;
   Rack.balls.forEach((x) => (x.guide = false));
   flyBall(b, dur, arc); Sound.pop(1); Sound.whoosh(0.35);
-  b.onLand = () => { Sound.clunk(); const p = Cannon.socketPos(b.socket); FX.burst(p.x, p.y, b.hex, 16, 300); FX.ring(p.x, p.y, '#fff1a8', 70); Stage.hit({ trauma: 0.08, ky: 3 }); };
+  b.onLand = () => { Sound.clunk(); const p = Cannon.socketPos(b.socket); FX.burst(p.x, p.y, b.hex, 16, 300); FX.ring(p.x, p.y, '#fff1a8', 70); FX.star(p.x, p.y, '#fff1a8', 110, 0.24, { n: 6 }); Stage.hit({ trauma: 0.08, ky: 3 }); };
 }
 function tapBall(b, tap = false) { // (tap: a press on the screen; false: a key)
   if (G.paused) return;
@@ -229,112 +229,149 @@ function roundTimeline() {
 const SHOT_CAM = { WIND: { fx: CX, fy: 540, z: 1.06 }, FOLLOW: { fx: CX, fy: 260, z: 1.1 }, READ: { fx: CX, fy: 260, z: 1.12 } };
 function addShot(tl, t0, i, b, eq0, eq1, first = true) {
   const B = Motion.BEAT, to = { ...CLOUD_HIT };
-  let p = null, inL = null, inR = null, ms = null, tg = null;
+  let p = null, inL = null, inR = null, ms = null, tg = null, tail = null, tails = null;
   // 1) aim: the loaded socket glows while the camera leans in on the cannon (for a second ball, from the equation it was reading)
   tl.call(() => { Cannon.highlight(i, true); Sound.tick(); b.land = 1; }, null, t0);
   if (first) camDrive(tl, t0 + 0.1, SHOT_CAM.WIND, B.AIM + B.LOAD * 0.5, Ease.inOutQuad);
   else camDrive(tl, t0, SHOT_CAM.WIND, B.AIM + 0.3, Ease.inOutCubic);
-  // 2) load: the ball sinks into the barrel and the cannon squats (anticipation)
+  // 2) load: the ball sinks into the barrel and the cannon squats (anticipation), while sparks of the ball's colour
+  // are drawn into the barrel's mouth and a glow swells there: the shot gathering its power
   const tlo = t0 + B.AIM;
-  tl.call(() => { b.where = 'loading'; flyBall(b, B.LOAD, 24); Sound.charge(); }, null, tlo);
+  tl.call(() => { b.where = 'loading'; flyBall(b, B.LOAD, 24); Sound.charge(); FX.charge(MUZZLE.x, MUZZLE.y + 8, b.hex, B.LOAD); }, null, tlo);
   drive(B.LOAD, (e) => (Cannon.antic = e), Ease.inOutQuad, tl, tlo);
   const tf = tlo + B.LOAD; // 3) FIRE
   tl.call(() => {
     b.where = 'gone'; Cannon.highlight(i, false);
     Cannon.shoot(); Sound.boom(); Music.punch(); Haptic.buzz(25); Cannon.groundDust(true);
     Stage.hit({ trauma: 0.42, ky: 14, zoom: 0.03 }); // the screen wiggle: a rounded shake + recoil kick + zoom punch
-    // the blast: white-hot flash, fireball, shock ring, embers, and thick smoke that lingers and drifts
-    // (the ball flies above all of it)
+    // the blast: white-hot flash, fireball, shock ring, embers, and thick smoke that lingers and drifts (the ball flies
+    // above all of it); a starburst at the mouth, and a shock ring that runs out over the deck from the cannon's base
     FX.blast(MUZZLE.x, MUZZLE.y, -Math.PI / 2, 1);
+    FX.star(MUZZLE.x, MUZZLE.y - 14, '#fff3c4', 250, 0.16, { n: 7 });
+    FX.gring(CANNON.x, CANNON.bottom - 4, 430, 0.6);
     p = makeFlyBall(b, 0.66); Sound.whistle();
+    tail = FX.ribbon(b.hex, 34); // a comet's tail of the ball's colour, white-hot in the middle
   }, null, tf);
   camDrive(tl, tf + 0.05, SHOT_CAM.FOLLOW, B.FLIGHT + 0.1, Ease.inOutQuad); // the camera follows the ball up to the cloud
   // the ball leaves the barrel fast and slows as it climbs (like a real throw), turning once, so its label lands upright
   drive(B.FLIGHT, (e) => {
     if (!p) return;
     p.x = bez(MUZZLE.x, MUZZLE.x - 30, to.x, e); p.y = bez(MUZZLE.y, MUZZLE.y - 120, to.y, e); p.r = 360 * e; p.s = 0.66 - 0.14 * e; p.apply();
-    FX.trail(p.x, p.y + 30, b.hex); if (Math.random() < 0.6) FX.trail(p.x, p.y + 30, '#ffffff');
+    if (tail) tail.push(p.x, p.y);
+    FX.trail(p.x, p.y + 30, b.hex); if (Math.random() < 0.4) FX.trail(p.x, p.y + 30, '#ffffff');
   }, Ease.outQuad, tl, tf);
   const th = tf + B.FLIGHT; // 4) the hit: the term splits in two, and one copy flies to EACH side ("x + 5 − 5 = 7 − 5")
   camDrive(tl, th + 0.1, SHOT_CAM.READ, B.SPLIT + B.READ, Ease.inOutQuad); // a slow push-in through the reading beat
   tl.call(() => {
     if (p) p.el.remove(); p = null;
-    FX.burst(to.x, to.y, b.hex, 40, 460); FX.burst(to.x, to.y, '#ffffff', 16, 320); FX.ring(to.x, to.y, '#ffffff', 170);
+    if (tail) tail.end(); tail = null;
+    // the impact: a starburst and a ring of gold (laid on, so they show on the white cloud), sparks of the ball's colour
+    FX.star(to.x, to.y, '#ffd84a', 190, 0.32, { n: 8, paint: true }); FX.ring(to.x, to.y, '#ffc21a', 190, { lw: 10, paint: true });
+    FX.burst(to.x, to.y, b.hex, 40, 480, { paint: true, white: 0.2 }); FX.burst(to.x, to.y, '#ffffff', 16, 320); FX.ring(to.x, to.y, '#ffffff', 170);
     Sound.pop(1.5);
     Stage.hit({ trauma: 0.16, ky: -6, zoom: 0.015 }); Cloud.squash(); // impact: a soft jolt and the cloud squashes (no freeze-frame: it reads as lag)
     [inL, inR] = EqUI.showImpact(eq0, b.op, b.ink);
     tg = [inL, inR].map((el) => (el ? EqUI.worldAt(el) : { ...to }));
     ms = [makeFlyBall(b, 0.5), makeFlyBall(b, 0.5)];
     ms.forEach((m) => { m.x = to.x; m.y = to.y; m.apply(); });
+    tails = [FX.ribbon(b.hex, 20), FX.ribbon(b.hex, 20)];
   }, null, th);
   drive(B.SPLIT, (e) => {
     if (!ms) return;
     ms.forEach((m, j) => { // the copies stay upright (only a slight lean), so "−5" can be read on its way to each side
       m.x = bez(to.x, (to.x + tg[j].x) / 2, tg[j].x, e); m.y = bez(to.y, Math.min(to.y, tg[j].y) - 100, tg[j].y, e);
       m.s = 0.5 - 0.22 * e; m.r = (j ? 10 : -10) * Math.sin(e * Math.PI); m.apply();
+      if (tails) tails[j].push(m.x, m.y);
       if (Math.random() < 0.5) FX.trail(m.x, m.y, b.hex);
     });
   }, Ease.inOutCubic, tl, th);
   const tl2 = th + B.SPLIT; // the copies land and become terms
   tl.call(() => {
     if (ms) ms.forEach((m) => m.el.remove()); ms = null;
-    [inL, inR].forEach((el, j) => { if (el) { el.classList.remove('hid'); el.classList.add('pop'); } FX.burst(tg[j].x, tg[j].y, b.hex, 18, 260); });
+    if (tails) tails.forEach((r) => r.end()); tails = null;
+    [inL, inR].forEach((el, j) => {
+      if (el) { el.classList.remove('hid'); el.classList.add('pop'); }
+      FX.burst(tg[j].x, tg[j].y, b.hex, 18, 260, { paint: true, white: 0.25 }); FX.star(tg[j].x, tg[j].y, b.hex, 95, 0.3, { n: 6, paint: true });
+    });
     Sound.ding(0); Sound.ding(2); Stage.hit({ ky: 2 });
   }, null, tl2);
   const tp = tl2 + B.READ; // 5) after a reading beat, the terms that combine light up together…
   tl.call(() => { EqUI.pair(eq1); Sound.tick(); }, null, tp);
-  const tv = tp + B.PAIR; // …the ones that cancel fade away…
+  const tv = tp + B.PAIR; // …the ones that cancel fade away, and burst into golden sparkles as they go…
   tl.call(() => { EqUI.vanish(eq1); Sound.sparkle(); }, null, tv);
-  const ts = tv + B.CANCEL; // …and the simplified equation glides together
+  tl.call(() => {
+    for (const e of EqUI.leaving(EqUI.nextTerms(eq1))) {
+      const w = EqUI.worldAt(e);
+      FX.burst(w.x, w.y, '#ffc21a', 10, 230, { paint: true, size: 0.55, g: 120, white: 0.3 }); FX.star(w.x, w.y, '#ffd84a', 70, 0.35, { n: 4, paint: true });
+    }
+  }, null, tv + B.CANCEL * 0.5);
+  const ts = tv + B.CANCEL; // …and the simplified equation glides together; a twinkle on each number that changed
   tl.call(() => { EqUI.settle(eq1); G.eq = eq1; }, null, ts);
+  tl.call(() => {
+    EqUI.el.querySelectorAll('.tk.pop').forEach((e) => { const w = EqUI.worldAt(e); FX.star(w.x, w.y, '#ffd84a', 80, 0.45, { n: 4, paint: true }); });
+  }, null, ts + B.SETTLE * 0.7);
   return ts + B.SETTLE + B.READ2; // reading beat: the simplified equation (the camera holds on it; the next beat moves it)
 }
 // ---- outcomes: no "wrong" label, no hints, no retry; both outcomes advance ----
 // x freed (the user, 23 Nov: "the cage is burst, like cage broken, and then x comes out… x = something, and after 5
-// seconds the cloud fades and bursts"): the cage glows and x pushes on its bars twice; the third push breaks the
-// cage apart (CageBreak), x springs out and lands where the cage stood, "= 2" lights up, and 5 s later the cloud
-// bursts in place (Cloud.burstTL). The camera leans in centred on the cloud and only eases back once the cloud has
-// burst, so the cloud never slides sideways on screen.
+// seconds the cloud fades and bursts"; later that day: "extreme… cage crack, and x come out from that… slow
+// animation of cage crack and x come out… cloudburst after x compose"). One cinematic beat after another:
+// 1) the screen's edges darken and the camera closes in on the cage (centred on the cloud, so the cloud never slides
+//    sideways), with a low rumble; 2) x pushes on its bars three times and each push cracks the cage further: glowing
+//    cracks run over its gold, light leaks through them and rays wake behind it (CageBreak); it trembles; 3) it bursts
+//    along its cracks in a flash: shards tumble away, rings of light, sparks; 4) x rises out of the light, hovers with
+//    sparkles circling it and lands where the cage stood; "= 2" lights up, with the fanfare and confetti from both
+//    sides; 5) "x = 2" rests on the cloud for 5 s (twinkles, a halo of rays behind x); 6) the cloudburst
+//    (Cloud.burstTL). The camera eases back to the base framing only once the cloud has burst.
 function addFreed(tl, t0) {
-  const B = Motion.BEAT;
+  const B = Motion.BEAT, tc = t0 + B.FOCUS * 0.45, tb = tc + B.CRACK;
   let p = null;
-  // 1) the cage glows (its pieces and the free x are laid in, hidden); the camera leans in on the equation
-  tl.call(() => { const c = EqUI.cage(); CageBreak.prep(c); if (c) c.classList.add('glowx'); Sound.ding(1); }, null, t0);
-  camDrive(tl, t0, () => { const c = EqUI.cage(), w = c ? EqUI.worldAt(c) : { y: 200 }; return { fx: CLOUD_MID.x, fy: w.y + 60, z: 1.18 }; }, 0.9, Ease.inOutCubic);
-  // 2) x pushes on the bars, twice: the cage bulges and creaks, and a glow builds behind it…
-  const ts = t0 + 0.1;
-  drive(B.UNLOCK - 0.1, (e, k) => CageBreak.strain(k), Ease.linear, tl, ts);
-  tl.call(() => Sound.strain(0), null, ts + 0.1);
-  tl.call(() => Sound.strain(1), null, ts + 0.55);
-  // 3) …and the third push breaks it: the pieces fly off, x springs out. Only a glow where the cage was, a ring and
-  // a few sparks, so the pieces can be seen flying (the confetti waits for x to land)
-  const tb = t0 + B.UNLOCK;
+  // 1) focus: the cage starts to glow (its rays, cracks and the free x are laid in, hidden), the edges darken, a rumble
+  tl.call(() => { const c = EqUI.cage(); CageBreak.prep(c); if (c) c.classList.add('glowx'); Vignette.to(0.65, B.FOCUS); Sound.rumble(); }, null, t0);
+  // (under reduced motion the camera cuts instead of moving, so it only goes as close as before: 1.18)
+  camDrive(tl, t0, () => { const c = EqUI.cage(), w = c ? EqUI.worldAt(c) : { y: 200 }; return { fx: CLOUD_MID.x, fy: w.y + 30, z: Motion.reduced ? 1.18 : 1.68 }; }, B.FOCUS + 0.3, Ease.inOutCubic);
+  camDrive(tl, t0 + B.FOCUS + 0.3, () => ({ z: Motion.reduced ? 1.18 : 1.78 }), tb - (t0 + B.FOCUS + 0.3), Ease.inOutQuad); // a slow creep in while it cracks (the tension)
+  // 2) three pushes, each cracking it further (CageBreak.strain draws it all from the time: bulges, cracks, light)
+  drive(B.CRACK, (e, k) => CageBreak.strain(k * B.CRACK), Ease.linear, tl, tc);
+  CAGE.push.forEach((s, i) => tl.call(() => CageBreak.push(i), null, tc + s));
+  // 3) it bursts along its cracks: the shards fly (on the FX canvas, by themselves), a flash (the edges light up
+  // again), a starburst, rings of gold and light, sparks of gold, purple and white, glitter. The big moment: a shake
+  // and a zoom punch (no freeze-frame or slow-mo: on screen they read as lag)
   tl.call(() => {
     const c = EqUI.cage(); p = c ? EqUI.worldAt(c) : { x: CLOUD_MID.x, y: 170 };
     CageBreak.burst();
-    Sound.cageBreak(); Sound.spring();
-    FX.flash(p.x, p.y, 160, 0.25);
-    FX.burst(p.x, p.y, '#ffd34d', 26, 520); FX.burst(p.x, p.y, '#c58bff', 20, 440); FX.ring(p.x, p.y, '#ffffff', 200);
-    // the big moment: a shake and a zoom punch (no freeze-frame or slow-mo: on screen they read as lag)
-    Stage.hit({ trauma: 0.28, zoom: 0.025 }); Haptic.buzz([15, 30, 15]);
+    Vignette.to(0, 0.7); flashScreen();
+    Sound.shatter(); Sound.spring();
+    FX.flash(p.x, p.y, 240, 0.22, '#fffaf0'); FX.star(p.x, p.y, '#fff3c0', 300, 0.3, { n: 9 });
+    FX.ring(p.x, p.y, '#ffd84a', 260, { lw: 16, life: 0.55, paint: true }); FX.ring(p.x, p.y, '#ffffff', 430, { lw: 6, life: 0.8, delay: 0.05 });
+    FX.burst(p.x, p.y, '#ffc21a', 34, 640, { paint: true, size: 0.8, white: 0.15 }); FX.burst(p.x, p.y, '#b36bff', 22, 520, { paint: true, size: 0.7, white: 0.1 });
+    FX.burst(p.x, p.y, '#ffffff', 16, 460); FX.glitter(p.x, p.y, 26);
+    Stage.hit({ trauma: 0.42, zoom: 0.04 }); Haptic.buzz([20, 40, 20]);
   }, null, tb);
-  drive(B.SHATTER, (e, k) => CageBreak.fly(k), Ease.linear, tl, tb);
-  drive(B.JUMP, (e, k) => CageBreak.jump(k), Ease.linear, tl, tb);
-  tl.call(() => react('freed'), null, tb + 0.3); // just after the break's first hit, over the "x = 2" reading beat
-  camDrive(tl, tb + 0.3, { z: 1.15 }, 1.4, Ease.inOutQuad); // eases back a touch while "x = 2" is read
-  // 4) x lands where the cage stood: "= 2" lights up beside it, with the fanfare and the confetti
-  const tw = tb + B.JUMP;
+  // 4) x rises out of the light, hovers (sparkles circle it), comes down and lands
+  drive(B.RISE, (e, k) => CageBreak.rise(k), Ease.linear, tl, tb);
+  tl.call(() => Sound.rise(), null, tb + 0.12);
+  tl.call(() => CageBreak.orbit(), null, tb + B.RISE * CAGE.rise.up * 0.55);
+  tl.call(() => CageBreak.landFx(), null, tb + B.RISE * CAGE.rise.drop);
+  tl.call(() => react('freed'), null, tb + 0.3); // just after the burst, over the "x = 2" reading beat
+  camDrive(tl, tb + 0.5, { z: 1.2 }, 1.6, Ease.inOutQuad); // eases back while x lands, so "x = 2" reads with its cloud
+  // …"= 2" lights up beside it, with the fanfare, a starburst on the 2, and confetti from both sides of the cloud
+  const tw = tb + B.RISE;
   tl.call(() => {
     EqUI.el.querySelectorAll('[data-key="eq"],[data-key="rhs"]').forEach((e) => e.classList.add('win'));
     Sound.pop(1.25); Sound.fanfare();
-    if (p) { FX.burst(p.x - 10, p.y + 40, '#ffffff', 12, 220, { g: 0, size: 0.6 }); FX.confetti(p.x + 40, p.y, 130, 1000); }
+    const r = EqUI.el.querySelector('[data-key="rhs"]'), q = r ? EqUI.worldAt(r) : p;
+    if (q) { FX.star(q.x, q.y, '#ffc21a', 160, 0.45, { n: 8, paint: true }); FX.burst(q.x, q.y, '#ffd84a', 16, 320, { paint: true, size: 0.6, white: 0.3 }); }
+    FX.confetti(CLOUD_MID.x - 300, CLOUD_MID.y + 110, 70, 1000, 0.45); FX.confetti(CLOUD_MID.x + 300, CLOUD_MID.y + 110, 70, 1000, -0.45);
   }, null, tw);
-  // 5) "x = 2" rests on the cloud for 5 s, 6) then the cloud bursts in place; once it has popped, the camera eases
-  // back to the base framing
+  // 5) "x = 2" rests on the cloud for 5 s; 6) then the cloudburst; once it has popped, the camera eases back
+  drive(B.HOLD, (e, k) => CageBreak.hold(k), Ease.linear, tl, tw);
   const tp = Cloud.burstTL(tl, tw + B.HOLD);
   camDrive(tl, tp + 0.25, { fx: CX, fy: CY, z: 1 }, B.BURST, Ease.inOutCubic);
   tl.to({}, { duration: B.BREATH }, tp + B.BURST); // a breath before the next round
 }
+// x still caged ("not yet", never "wrong"): the cage rattles, sparks flying off its bars at each knock, the cloud rocks,
+// then a gentler cloudburst (no shower)
 function addStuck(tl, t0) {
   const B = Motion.BEAT, tr = t0 + 0.6;
   camDrive(tl, t0, { fx: CX, fy: 330, z: 1.08 }, 0.8, Ease.inOutCubic); // the camera holds on the cloud
@@ -344,11 +381,16 @@ function addStuck(tl, t0) {
     Sound.rattle(); Sound.wobble(); Stage.hit({ trauma: 0.3, xOnly: true }); // a sideways "not yet" shake
     EqUI.el.classList.add('wob');
   }, null, tr);
+  for (let i = 0; i < 6; i++) tl.call(() => { // (the rattle's knocks: CSS .rattle, 0.16 s each)
+    const c = EqUI.cage(); if (!c) return;
+    const r = c.getBoundingClientRect(), w = Stage.s2w(i % 2 ? r.right - r.width * 0.12 : r.left + r.width * 0.12, r.top + r.height * rr(0.35, 0.7));
+    FX.burst(w.x, w.y, '#ffc21a', 5, 200, { paint: true, size: 0.45, g: 700, dir: i % 2 ? -0.5 : -Math.PI + 0.5, spread: 0.8, white: 0.2 });
+  }, null, tr + 0.08 + i * 0.16);
   tl.call(() => react('stuck'), null, tr + 0.15); // gentle, never "wrong"
   Cloud.wobbleTL(tl, tr);
   tl.call(() => EqUI.el.classList.remove('wob'), null, tr + B.RATTLE);
-  // a beat to see it is still caged, then the cloud bursts in place (it no longer sails off to the left)
-  const tp = Cloud.burstTL(tl, tr + B.RATTLE + 0.3);
+  // a beat to see it is still caged, then the cloud bursts in place, gently (it no longer sails off to the left)
+  const tp = Cloud.burstTL(tl, tr + B.RATTLE + 0.3, true);
   camDrive(tl, tp + 0.25, { fx: CX, fy: CY, z: 1 }, B.BURST, Ease.inOutCubic); // back to the base framing once it has popped
   tl.to({}, { duration: B.BREATH }, tp + B.BURST);
 }
@@ -468,6 +510,39 @@ async function runSession() {
   if (sid !== G.session) return;
   await showEnd();
 }
+// ---- fireworks over the end card: rockets climb from behind the deck with a trail of sparks and burst in the open
+// sky either side of the score cloud (never over the white cloud, where light doesn't show), one after another ----
+const Fireworks = {
+  calls: [],
+  SPOTS: [[330, 200], [1340, 185], [500, 110], [1180, 105], [240, 320], [1450, 300], [660, 70], [1010, 65]],
+  COLS: [['#ffd84a', '#ff9f1c', '#ffffff'], ['#b36bff', '#ff8ad8', '#ffffff'], ['#22d3ee', '#7cf4ff', '#ffffff'], ['#36d97a', '#c3ff6b', '#ffffff'], ['#ff4f8b', '#ffd23f', '#ffffff']],
+  show(n) {
+    if (Motion.still()) return;
+    for (let i = 0; i < n; i++) {
+      const [x, y] = this.SPOTS[i % this.SPOTS.length];
+      this.calls.push(gsap.delayedCall(0.2 + i * 0.45 + rr(0, 0.12), () => this.launch(x + rr(-40, 40), y + rr(-24, 24), this.COLS[i % this.COLS.length])));
+    }
+  },
+  // one rocket (an FX layer): it climbs fast and slows (ease-out) on a slight curve, shedding sparks, then bursts
+  launch(x, y, cols) {
+    if (Motion.still()) return;
+    const x0 = x + rr(-70, 70), y0 = 640, T = rr(0.62, 0.78);
+    let t = 0, burst = false;
+    Sound.fwLaunch();
+    FX.layers.push({
+      update(dt) {
+        t += dt;
+        const e = Ease.outCubic(Math.min(1, t / T)), px = lerp(x0, x, e) + Math.sin(e * Math.PI) * 18, py = lerp(y0, y, e);
+        if (t < T) { if (Math.random() < 0.7) FX.trail(px, py, cols[0]); if (Math.random() < 0.3) FX.trail(px, py + 6, '#fff3c4'); }
+        else if (!burst) { burst = true; FX.firework(x, y, cols); FX.glitter(x, y, 10, 1.2); Sound.fwBurst(); }
+        return t < T;
+      },
+      kill() { t = T; burst = true; },
+      draw() {},
+    });
+  },
+  stop() { for (const c of this.calls) c.kill(); this.calls = []; },
+};
 async function showEnd() {
   G.state = 'end';
   EqUI.render(msgHTML(T('endFreed'), T('endScore', { freed: G.freed, total: ROUNDS.length })), false);
@@ -476,7 +551,7 @@ async function showEnd() {
   Stage.camTo({ fx: CX, fy: 300, z: 1.05 }, Motion.BEAT.CLOUD_IN, Ease.inOutCubic); // the end card is framed a little closer
   await Cloud.enter();
   Sound.fanfare();
-  if (G.freed) FX.confetti(CLOUD_MID.x, CLOUD_MID.y + 40, 100 + G.freed * 30, 1100);
+  if (G.freed) { FX.confetti(CLOUD_MID.x, CLOUD_MID.y + 40, 100 + G.freed * 30, 1100); Fireworks.show(2 + G.freed); } // (the more x freed, the more fireworks)
   $('#endUI').classList.add('on');
   VO.sayAfter(endLine(), 0.8);
 }
@@ -488,7 +563,7 @@ async function restartGame() {
   $('#endUI').classList.remove('on');
   Cannon.setFireActive(false); for (let i = 0; i < 2; i++) Cannon.highlight(i, false);
   $('#fly').innerHTML = '';
-  Object.assign(Stage.cam, { fx: CX, fy: CY, z: 1 }); Stage.snap(); TimeFx.reset(); Cannon.settle(); FX.parts = [];
+  Object.assign(Stage.cam, { fx: CX, fy: CY, z: 1 }); Stage.snap(); TimeFx.reset(); Cannon.settle(); FX.clear(); CageBreak.kill(); Fireworks.stop(); Vignette.to(0, 0);
   Cloud.a = 1; Cloud.s = 1; Cloud.blur = 0; Cloud.rot = 0; Cloud.sq.reset(); CloudBurst.reset();
   QCard.label(null); // back to no label during play
   G.rackFor = null;
@@ -609,7 +684,7 @@ async function boot() {
   Cloud.init(); Cannon.init(); Rack.init(); EqUI.init(); Title.init(); Spot.init(); Skip.init();
   wireInput();
   gsap.ticker.add(frame);
-  window.__cqBooted = true; window.__cq = { G, Clock, Rack, Drag, Sound, Music, Stage, EqUI, VO, Motion, Skip, Spot, Title, Cloud, Cannon, TimeFx, Perf, FX, Pics };
+  window.__cqBooted = true; window.__cq = { G, Clock, Rack, Drag, Sound, Music, Stage, EqUI, VO, Motion, Skip, Spot, Title, Cloud, Cannon, TimeFx, Perf, FX, Pics, CageBreak, CloudBurst, Fracture, Vignette, Fireworks };
   // the start screen: the scene fades in while the title plays its intro, and the Play button pops in
   G.state = 'title';
   Title.start();
@@ -620,7 +695,7 @@ async function boot() {
   Rack.balls = ROUNDS[0].balls.map((s, i) => createBall(s, i)); G.rackFor = ROUNDS[0];
   const font = document.fonts && document.fonts.load ? Promise.all([document.fonts.load('600 64px Poppins', '0123456789+−×='), document.fonts.load("400 64px 'Trig Text'", '0123456789+−×÷=()')]).catch(() => {}) : null;
   Pics.game = Pics.load(Pics.GAME, 15, font ? [font] : []);
-  Pics.game.then(() => CloudBurst.prepare()); // (the cloud's burst pieces are cut while the browser is idle)
+  Pics.game.then(() => { CloudBurst.prepare(); CageBreak.load(); }); // (the cloud's burst pieces are cut while the browser is idle; the cage's fracture is worked out)
   const sfx = document.createElement('script'); sfx.src = 'js/sfx.js'; document.body.appendChild(sfx); // (it hands itself to Sound.loadSfx)
 }
 boot();

@@ -29,15 +29,18 @@ const Motion = {
     CANCEL: 0.7,     //   …and fade away
     SETTLE: 0.8,     //   the simplified equation glides together
     READ2: 1.4,      //   time to read the simplified equation
-    UNLOCK: 1.3,     // freed: the cage glows and x pushes on the bars twice (the cage bulges and creaks)…
-    SHATTER: 1.1,    //   …the third push breaks it: its pieces fly off and fade
-    JUMP: 0.98,      //   x springs out of it and lands where the cage stood (rise, fall, squash)
+    // freed (the user, 23 Nov: "extreme… slow animation of cage crack and x come out from them… cloudburst after x
+    // compose"): a slow, cinematic beat for each stage, so every one of them can be seen
+    FOCUS: 0.9,      // the screen's edges darken and the camera closes in on the cage, which starts to glow…
+    CRACK: 2.6,      //   …x pushes three times (CAGE.push): each push cracks it further, light leaks out; it trembles…
+    SHATTER: 1.8,    //   …and bursts along its cracks: the shards tumble away, hang in the air and fade
+    RISE: 1.6,       //   x rises out of the light, hovers (sparkles circle it), comes down and lands where the cage stood
     HOLD: 5.0,       //   "x = 2" rests on the cloud (the user, 23 Nov: "after 5 seconds the cloud is fade and burst")
-    SWELL: 0.45,     // the cloud takes a breath (the equation fades)…
-    BURST: 1.2,      //   …and bursts in place: its puffs drift apart, swell and fade (it never sails off sideways)
+    INHALE: 0.7,     // the cloudburst: the cloud draws in its breath (it squeezes, trembles, glows; "x = 2" is drawn in)…
+    BURST: 1.6,      //   …and bursts in place: its puffs blast apart, a flash, rings, a shower (it never sails off sideways)
     BREATH: 0.5,     //   a breath before the next question
-    RATTLE: 1.3,     // stuck: the cage rattles, the cloud wobbles (then the cloud bursts too)
-    CLOUD_IN: 1.0,   // a new question's cloud gathers in the same place
+    RATTLE: 1.3,     // stuck: the cage rattles, the cloud wobbles (then the cloud bursts too, gently)
+    CLOUD_IN: 1.3,   // a new question's cloud forms in the same place, out of puffs that drift together
     BALLS_OUT: 0.45, // the tray's balls shrink away…
     BALL_DROP: 0.8,  //   …and the new ones drop in, one after another
     BALL_GAP: 0.1,
@@ -63,7 +66,7 @@ const Motion = {
       for (const tw of [...this.live]) tw.progress(1);
       if (tl) tl.progress(1);
     } finally { this.skipping = false; }
-    FX.parts = [];
+    FX.clear(); // (the particles, the comet tails and the cage's shards)
   },
   killAll() { for (const tw of this.live) tw.kill(); this.live.clear(); },
   // ---- UI helpers (GSAP; will-change only while moving) ----
