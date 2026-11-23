@@ -18,7 +18,7 @@ const Motion = {
   // THE LESSON'S PACE (seconds). On 19 Nov 2026 the user asked for slower, smoother motion "so that I can
   // understand easily": each idea in a shot is its own beat, played at the slow end of the concept-reveal
   // range (0.6–0.8 s), with a pause to read between beats. No freeze-frames (they read as lag), gentle eases,
-  // no fast spins. Scene moves (a cloud sailing in or away) may take up to 1 s. Tune the whole game here.
+  // no fast spins. Scene moves (a cloud gathering or bursting) may take up to 1.2 s. Tune the whole game here.
   BEAT: {
     AIM: 0.5,        // a shot: the socket glows and the camera leans in on the cannon
     LOAD: 0.5,       //   the ball drops into the barrel while the cannon squats (anticipation)
@@ -29,15 +29,15 @@ const Motion = {
     CANCEL: 0.7,     //   …and fade away
     SETTLE: 0.8,     //   the simplified equation glides together
     READ2: 1.4,      //   time to read the simplified equation
-    UNLOCK: 1.2,     // freed: the cage glows, then the lock clicks
-    HOLD: 4.5,       //   "x = 2" rests on the card
-    HOP: 0.7,        //   x hops up…
-    POOF: 0.55,      //   …and vanishes in sparkles
-    CLEAR: 0.9,      //   the cloud clears away
-    BREATH: 0.6,     //   a breath before the next question
-    RATTLE: 1.3,     // stuck: the cage rattles, the cloud wobbles
-    LEAVE: 1.0,      //   the cloud sails away
-    CLOUD_IN: 1.0,   // a new question's cloud sails in
+    UNLOCK: 1.3,     // freed: the cage glows and x pushes on the bars twice (the cage bulges and creaks)…
+    SHATTER: 1.1,    //   …the third push breaks it: its pieces fly off and fade
+    JUMP: 0.98,      //   x springs out of it and lands where the cage stood (rise, fall, squash)
+    HOLD: 5.0,       //   "x = 2" rests on the cloud (the user, 23 Nov: "after 5 seconds the cloud is fade and burst")
+    SWELL: 0.45,     // the cloud takes a breath (the equation fades)…
+    BURST: 1.2,      //   …and bursts in place: its puffs drift apart, swell and fade (it never sails off sideways)
+    BREATH: 0.5,     //   a breath before the next question
+    RATTLE: 1.3,     // stuck: the cage rattles, the cloud wobbles (then the cloud bursts too)
+    CLOUD_IN: 1.0,   // a new question's cloud gathers in the same place
     BALLS_OUT: 0.45, // the tray's balls shrink away…
     BALL_DROP: 0.8,  //   …and the new ones drop in, one after another
     BALL_GAP: 0.1,

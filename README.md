@@ -42,8 +42,13 @@ It is based on the *Cannon Quest* deck, the POD A stand-up brief (16 Nov 2026), 
 - **Cannon blast:** a white-hot flash, then an orange fireball that cools to red, a shock ring, falling embers, and thick grey smoke. The smoke billows out, rolls sideways, then rises and drifts off on the breeze. The sound is real recordings only: a close gun crack, a recorded boom with its rumble, and a distant echo (see `CREDITS.md`). The ball's whoosh is a real swung metal tube.
   - Pressing Play bursts the start screen away. The cloud then floats down, the cannon pops up and the tray slides in.
 - **Six rounds from the deck.** Every operation is applied to both whole sides, with exact fractions and negatives. Any route that isolates x is accepted.
-- **Freeing x:** the cage bursts open and the cloud shows the value of x (for example **x = 2**) for a moment. Then x hops, disappears in a puff of sparkles, the cloud clears, and the next cloud arrives.
-- **Not freeing x:** the cage rattles and the cloud floats away. There is no "wrong" label and no retry, and the game moves to the next round.
+- **Freeing x** (you asked on 23 Nov: "the cage is burst, like cage broken, and then x comes out… after 5 seconds the cloud is fade and burst"):
+  - The cage glows and x pushes on its bars twice. Each time the cage bulges and creaks, and the glow behind it grows.
+  - On the third push the cage **breaks apart**. The knob pops off like a cork, the dome flies up, the ring cracks in two, the bars burst out sideways and the floor splits and drops. Every piece is the cage's own picture (`assets/img/cage_empty.webp`, cut by `tools/cut_cage_break.py`), and each one spins, falls and fades.
+  - x springs out of the broken cage, lands where the cage stood, and **"= 2"** lights up beside it with the fanfare and the confetti.
+  - **x = 2** stays on the cloud for 5 seconds (`Motion.BEAT.HOLD`).
+  - Then the cloud takes a breath while the equation fades, and **bursts in place**. It comes apart into its own puffs, which drift apart, swell and melt into white mist. The next cloud gathers in the same spot, so a cloud never sails in or out sideways.
+- **Not freeing x:** the cage rattles, then the cloud bursts in place in the same way (it no longer floats off to the left). There is no "wrong" label and no retry, and the game moves to the next round.
 - **Grounded scene:** the cannon and the ball tray cast soft shadows on the deck, balls sit down into their cups, and a loaded ball fills its cannon socket edge to edge, centred, with no dark gap round it (you asked on 20 Nov: "fully absorb in circle, no negative space"). Its orb is 1.015 × the opening (`CANNON.seat`), so its edge tucks about a pixel under the gold ring's inner lip and nothing shows outside the ring. As it lands it swells a touch and settles (no squash, which would open a gap). The FIRE button fills the recess in the cannon's gold bezel exactly, centred on it (`CANNON.fire`, measured in the cannon art).
 - **First-time spotlight tutorial:** only ONE, on the first screen (x + 5 = 7) and on no other screen. Everything is blurred and dimmed except what is being shown, with a gold ring:
   1. the equation on the cloud ("This is the equation.");
@@ -65,7 +70,7 @@ It is based on the *Cannon Quest* deck, the POD A stand-up brief (16 Nov 2026), 
 - **Camera and screen shake** (spec: `docs/GAME_PROMPT.md`):
   - **Each shot:** the camera leans in on the cannon as it squats, then the cannon fires. The screen shakes, kicks back and punches in, the cannon stretches and jiggles, and the tray balls hop.
   - **After the shot:** the camera follows the ball up to the cloud. The game freezes for 60 ms on impact and the cloud squashes, then the camera holds on the equation, zoomed in, while it's read.
-  - **When x is freed:** the camera pushes in on the cage. When it bursts, the game freezes for a moment, then plays in slow motion.
+  - **When x is freed:** the camera leans in on the equation, centred on the cloud. The screen shakes as the cage breaks, and the camera eases back only after the cloud has burst, so the cloud never slides sideways on screen.
   - **While you choose balls,** the camera stays still. The background edge never shows on any screen shape.
 - **Smoothness:**
   - Flying balls are drawn above the particles, so a ball's label stays readable through the blast.

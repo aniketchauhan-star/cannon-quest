@@ -181,17 +181,30 @@ img{-webkit-user-drag:none;user-select:none}
 @keyframes rattle{25%{transform:translateX(-6%) rotate(-6deg)}75%{transform:translateX(6%) rotate(6deg)}}
 .cage.glowx img{filter:drop-shadow(0 0 10px #fff) drop-shadow(0 0 24px #c58bff)}
 .cage.open img{animation:copen .5s ease-out}
-/* freed: the happy x replaces the cage so the cloud reads “x = 2” */
-.cage.free img{height:78%;animation:xfree .8s cubic-bezier(.25,1.45,.45,1) both,xpulse 1.4s .85s ease-in-out infinite;filter:drop-shadow(0 0 8px #fff) drop-shadow(0 0 18px rgba(197,139,255,.85))}
-@keyframes xfree{0%{transform:scale(.2) rotate(-25deg)}100%{transform:none}}
-@keyframes xpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}} /* the freed x rests on the cloud and pulses, in step with “= 2” */
-.tk.eqs.win{margin-left:.42em}
-.tk.num.win{margin-left:.16em} /* (both grow 18 %: keeps “= 2” apart) */
-.tk.win{color:#7a22d6;text-shadow:0 0 16px rgba(255,214,70,.85),0 0 32px rgba(255,180,30,.5);animation:winpop .8s cubic-bezier(.22,1,.36,1) both,winglow 1.4s .85s ease-in-out infinite}
+@keyframes copen{40%{transform:scale(1.15) rotate(-6deg)}}
+/* freed: the cage breaks and x jumps out (CageBreak in src/30_stage.js moves them all by transform + opacity). The
+   cage's own picture stays in the equation unseen, so nothing in the line moves; a glow behind the cage builds with
+   x's pushes and flares out at the break; the pieces are the empty cage (cage_empty.webp) cut by clip-paths; the
+   free x stands where the cage was, 78 % of its height, and breathes about its feet (the scale property, so it adds to
+   its own transform) */
+.cage .caura{position:absolute;left:-40%;top:-22%;width:180%;height:144%;z-index:-1;border-radius:50%;opacity:0;pointer-events:none;
+  background:radial-gradient(closest-side,rgba(255,255,255,.95),rgba(255,240,170,.62) 38%,rgba(197,139,255,.34) 66%,rgba(197,139,255,0))}
+.cage .cbit{position:absolute;left:0;top:0;width:100%;height:100%;visibility:hidden;pointer-events:none;background:url(assets/img/cage_empty.webp) 0 0/100% 100% no-repeat}
+.cage .xfree{position:absolute;left:50%;top:50%;height:78%;width:auto;visibility:hidden;pointer-events:none;transform-origin:50% 100%;transform:translate(-50%,-50%);
+  filter:drop-shadow(0 0 8px #fff) drop-shadow(0 0 18px rgba(197,139,255,.85))}
+.cage .xfree.live{animation:xbreathe 1.4s ease-in-out infinite}
+@keyframes xbreathe{0%,100%{scale:1}50%{scale:1.06}} /* the freed x rests on the cloud and breathes, in step with “= 2” */
+/* "= 2" lights up as x lands, growing 18 %; it steps aside to keep "x = 2" apart (translate, not margins: the
+   equation's layout never changes, so nothing jumps) */
+.tk.eqs.win{translate:.06em 0}
+.tk.num.win{translate:.22em 0}
+.tk.win{color:#7a22d6;text-shadow:0 0 16px rgba(255,214,70,.85),0 0 32px rgba(255,180,30,.5);transition:translate .6s cubic-bezier(.22,1,.36,1);animation:winpop .8s cubic-bezier(.22,1,.36,1) both,winglow 1.4s .85s ease-in-out infinite}
 @keyframes winpop{0%{transform:scale(1)}45%{transform:scale(1.3)}100%{transform:scale(1.18)}}
 @keyframes winglow{0%,100%{transform:scale(1.18)}50%{transform:scale(1.26)}}
-#eq.fadeout{opacity:0 !important;transition:opacity .6s ease-in !important}
-@keyframes copen{40%{transform:scale(1.15) rotate(-6deg)}}
+/* the cloud bursting (CloudBurst): the pieces of its own picture, laid exactly over it, each with its blurred twin */
+.cbits{position:absolute;pointer-events:none}
+.cbits .cb{position:absolute;visibility:hidden}
+.cbits canvas{position:absolute;display:block}
 
 /* ---------- cannon, sockets, FIRE ---------- */
 #cannon{position:absolute;left:0;top:0}
@@ -258,8 +271,6 @@ body.dragging,body.dragging *{cursor:grabbing !important}
 .bshadow i{position:absolute;border-radius:50%}
 .bshadow .cast{left:-34px;top:-58px;width:124px;height:124px;background:radial-gradient(closest-side,rgba(52,18,0,.58),rgba(52,18,0,.5) 70%,rgba(52,18,0,0))} /* on the back wall, down-right of the ball */
 .bshadow .pool{left:-72px;top:28px;width:148px;height:32px;background:radial-gradient(closest-side,rgba(36,10,0,.9),rgba(36,10,0,.6) 58%,rgba(36,10,0,0))} /* where the ball meets the trough, just above the rail */
-.xfly{position:absolute;left:0;top:0;width:121px;height:115px;margin:-57.5px 0 0 -60.5px;pointer-events:none}
-.xfly img{width:100%;height:100%;display:block;filter:drop-shadow(0 0 10px rgba(255,255,255,.9)) drop-shadow(0 0 22px rgba(197,139,255,.8))}
 /* ---------- ground contact: shadow groups multiply onto the plaza; light + ring groups paint normally so colour reads on bright sand ---------- */
 #ground{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none}
 .gsh{position:absolute;left:0;top:0;width:0;height:0;transform-origin:0 0;pointer-events:none}

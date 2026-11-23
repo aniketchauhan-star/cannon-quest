@@ -200,6 +200,22 @@ const FX = {
     }
   },
   puffs(x, y, w, n = 16) { n = this.n(n); for (let i = 0; i < n; i++) this.add({ k: 'smoke', x: x + rr(-w / 2, w / 2), y: y + rr(-60, 60), vx: rr(-160, 160), vy: rr(-120, 40), g: 0, drag: 1.6, life: rr(0.7, 1.1), max: 1.1, size: rr(60, 110), grow: 1.6 }); },
+  // a cloud bursting: soft white mist thrown out from inside it (w × h), swelling as it thins away
+  vapour(x, y, w, h, n = 16) {
+    n = this.n(n);
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()), v = rr(140, 320);
+      this.add({ k: 'mist', x: x + Math.cos(a) * w * 0.5 * d, y: y + Math.sin(a) * h * 0.5 * d, vx: Math.cos(a) * v, vy: Math.sin(a) * v * 0.7 - 30, g: -20, drag: 2.4, life: rr(0.8, 1.2), max: 1.2, size: rr(34, 56), grow: rr(1, 1.6), a: rr(0.42, 0.6), col: '#f4fbff' });
+    }
+  },
+  // a new cloud gathering: wisps of mist drift in from round it (w × h), shrink and melt into it
+  gather(x, y, w, h, n = 14) {
+    n = this.n(n);
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + rr(-0.2, 0.2), d = rr(0.75, 1), px = x + Math.cos(a) * w * d, py = y + Math.sin(a) * h * d;
+      this.add({ k: 'mist', x: px, y: py, vx: (x - px) * 1.5, vy: (y - py) * 1.5, g: 0, drag: 1.9, life: rr(0.75, 1), max: 1, size: rr(36, 56), grow: -0.45, a: rr(0.4, 0.55), col: '#f4fbff' });
+    }
+  },
   confetti(x, y, n = 140, power = 900) {
     const cols = ['#ff4f8b', '#ffd23f', '#36d97a', '#22d3ee', '#9b5cff', '#ff9f1c', '#ffffff', '#3b82f6'];
     n = this.n(n);
@@ -294,6 +310,11 @@ const FX = {
         const age = 1 - k; c.globalAlpha = p.a * Math.min(1, age * 12) * Math.min(1, k * 1.8);
         const r = p.size * sc * d * (1 + Math.sqrt(age) * p.grow);
         c.drawImage(this.puffTex(p.col), X - r, Y - r, r * 2, r * 2);
+      } else if (p.k === 'mist') { // a cloud's white mist: fades in, then thins away as it swells (or shrinks, grow < 0)
+        c.globalCompositeOperation = 'source-over';
+        const age = 1 - k; c.globalAlpha = p.a * Math.min(1, age * 5) * Math.min(1, k * 1.6);
+        const r = p.size * sc * d * (1 + Math.sqrt(age) * p.grow);
+        c.drawImage(this.dot(p.col), X - r, Y - r, r * 2, r * 2);
       } else if (p.k === 'fire') { // the fireball: white-yellow → orange → red as it cools (painted, so it stays orange on a bright sky)
         c.globalCompositeOperation = 'source-over'; c.globalAlpha = Math.min(1, k * 1.5);
         const r = p.size * sc * d * (1 + (1 - k) * p.grow);
@@ -325,26 +346,263 @@ const Cloud = {
     if (tr !== this.lastTr) { this.el.style.transform = tr; this.lastTr = tr; }
     if (op !== this.lastOp) { this.el.style.opacity = op; this.lastOp = op; }
   },
-  // a new question arrives: the cloud sails in with its card (ease-out, a soft settle), then the card's tab drops on
-  async enter(fromX = 1250) {
-    Object.assign(this, { x: fromX, y: -40, s: 1, a: 1, blur: 0, rot: 0 });
+  // a new question: its cloud gathers in the same place, where the last one burst (it never sails in from the side:
+  // the user, 23 Nov). It fades in, swelling softly from a little smaller and lower, while wisps of vapour drift into
+  // it (ease-out, a soft settle); then the card's tab drops on
+  async enter() {
+    CloudBurst.reset();
+    Object.assign(this, { x: 0, y: 18, s: 0.88, a: 0, blur: 0, rot: 0 });
     QCard.hide();
     Sound.swoosh();
-    await tween(Motion.BEAT.CLOUD_IN, (e) => { this.x = lerp(fromX, 0, e); this.y = lerp(-40, 0, e); }, Ease.outBackSoft);
+    FX.gather(CLOUD_MID.x, CLOUD_MID.y + 26, 380, 150, 14);
+    await tween(Motion.BEAT.CLOUD_IN, (e, k) => { this.a = Ease.outQuad(Math.min(1, k * 1.4)); this.s = lerp(0.88, 1, e); this.y = lerp(18, 0, e); }, Ease.outBackSoft);
     QCard.pop();
   },
-  // in a round's timeline: floats away (ease-in), dissolves (ease-in), or wobbles
-  leaveTL(tl, pos, toX = -1250) {
-    let x0 = 0;
-    tl.call(() => { x0 = this.x; Sound.swoosh(); }, null, pos);
-    drive(Motion.BEAT.LEAVE, (e) => { this.x = lerp(x0, toX, e); this.y = -60 * e; this.rot = -5 * e; }, Ease.inQuad, tl, pos);
-  },
-  clearTL(tl, pos) {
-    tl.call(() => FX.puffs(CLOUD_MID.x, CLOUD_MID.y, 560 * CLOUD_FAR, 26), null, pos);
-    drive(Motion.BEAT.CLEAR, (e) => { this.s = 1 + 0.18 * e; this.a = 1 - e; this.y = -30 * e; }, Ease.inQuad, tl, pos);
+  // in a round's timeline, when the question is over (x freed or not): the cloud takes a breath while its equation
+  // fades away (ease-in), then it bursts IN PLACE into its own puffs, which drift apart, swell and fade
+  // (CloudBurst). It never sails off sideways (the user, 23 Nov: "don't make the cloud go to the left side… the
+  // cloud fades and bursts"). Returns the moment it pops.
+  burstTL(tl, pos) {
+    const B = Motion.BEAT, box = $('#eqBox'), tp = pos + B.SWELL;
+    tl.call(() => { CloudBurst.make(); box.style.willChange = 'transform,opacity'; }, null, pos);
+    drive(B.SWELL, (e) => {
+      this.s = 1 + 0.045 * e;
+      box.style.opacity = (1 - e).toFixed(3); box.style.transform = `translateY(${(-6 * e).toFixed(2)}px) scale(${(1 + 0.06 * e).toFixed(4)})`;
+    }, Ease.inOutQuad, tl, pos);
+    tl.call(() => {
+      CloudBurst.pop();
+      Sound.poof(); Stage.hit({ zoom: 0.012 });
+      const x = CLOUD_MID.x, y = CLOUD_MID.y + 34;
+      FX.ring(x, y, '#ffffff', 300); FX.vapour(x, y, 560, 190, 18); FX.burst(x, y, '#fff3c4', 24, 500, { g: 0, size: 0.7 });
+    }, null, tp);
+    drive(B.BURST, (e, k) => CloudBurst.fly(k), Ease.linear, tl, tp);
+    tl.call(() => CloudBurst.done(), null, tp + B.BURST);
+    return tp;
   },
   // "not yet": a slow rock that dies away (2 swings, not 3 quick ones)
   wobbleTL(tl, pos) { drive(Motion.BEAT.RATTLE, (e, k) => { this.rot = Math.sin(k * Math.PI * 4) * 3 * (1 - k); this.s = 1 + Math.sin(k * Math.PI * 6) * 0.02 * (1 - k); }, Ease.linear, tl, pos); },
+};
+
+// ---------- the cloud bursting: it comes apart into its own puffs ----------
+// The pieces are the cloud's own picture (cloud.webp) cut into canvases: each puff of tools/paint_cloud.py (PUFFS:
+// centre, radius, how far forward it sits; art px of the 760 × 281 picture, its OX included) less the puffs in front
+// of it, with a soft edge, so each piece is a soft lump of this very cloud; the flat blue base is cut into four
+// lengths. Each piece also has a blurred twin, so it can melt into mist as it goes. At the pop the pieces sit exactly
+// on the cloud and the cloud's picture lets go under them, so the swap never shows; they drift out from its middle
+// (the inner ones first), slowing as air does, rising a little and swelling, and soften into mist that fades. If the
+// cloud is repainted, keep CLOUD_PUFFS in step with paint_cloud.py (another cloud still bursts, only not along its
+// own puffs).
+const CLOUD_ART = { w: 760, h: 281, x: -52, y: 10, base: 262, mid: [392, 186] }; // (.cl in #cloud's box; its flat underside; the burst's centre)
+const CLOUD_PUFFS = [[392, 128, 118, 0], [262, 166, 84, 22], [524, 158, 88, 22], [170, 206, 56, 40], [622, 204, 54, 40], [98, 240, 24, 52],
+  [674, 238, 22, 52], [222, 230, 44, 58], [330, 224, 52, 58], [460, 222, 54, 58], [568, 228, 46, 58]];
+const CloudBurst = {
+  cl: null, wrap: null, bits: [], jobs: null, on: false,
+  // The pieces are cut once, one piece at a time while the browser is idle, from when the play scene's pictures are
+  // in (boot), so cutting them never costs a frame; a burst that comes sooner finishes them there and then.
+  // Soft edges F art px; the pieces at 1.5× the art's px (1× on the low tier), their blurred twins at 1×.
+  prepare() {
+    const img = this.cl = Cloud.el && Cloud.el.querySelector('.cl');
+    if (this.jobs || !img) return;
+    this.jobs = [];
+    const A = CLOUD_ART, F = 14, BL = 7, P = 18;
+    const cut = (x0, y0, x1, y1, cx, cy, paint) => this.jobs.push(() => {
+      const R = Perf.tier > 1 ? 1.5 : 1, k = img.naturalWidth / A.w;
+      if (!this.wrap) {
+        this.wrap = document.createElement('div'); this.wrap.className = 'cbits';
+        Object.assign(this.wrap.style, { left: A.x + 'px', top: A.y + 'px', width: A.w + 'px', height: A.h + 'px' });
+        img.after(this.wrap);
+      }
+      const bx = Math.max(0, Math.floor(x0)), by = Math.max(0, Math.floor(y0)), bw = Math.min(A.w, Math.ceil(x1)) - bx, bh = Math.min(A.h, Math.ceil(y1)) - by;
+      const c = document.createElement('canvas'); c.width = Math.ceil(bw * R); c.height = Math.ceil(bh * R);
+      const g = c.getContext('2d');
+      g.drawImage(img, bx * k, by * k, bw * k, bh * k, 0, 0, c.width, c.height);
+      const X = (x) => (x - bx) * R, Y = (y) => (y - by) * R;
+      const disc = (x, y, r) => { // a soft-edged disc: solid to r − F/2, clear from r + F/2
+        const gr = g.createRadialGradient(X(x), Y(y), Math.max(0, r - F / 2) * R, X(x), Y(y), (r + F / 2) * R);
+        gr.addColorStop(0, '#000'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, c.width, c.height);
+      };
+      paint(g, X, Y, disc, c);
+      const el = document.createElement('div'); el.className = 'cb';
+      Object.assign(el.style, { left: bx + 'px', top: by + 'px', width: bw + 'px', height: bh + 'px' });
+      Object.assign(c.style, { left: '0', top: '0', width: bw + 'px', height: bh + 'px' });
+      // its blurred twin (where canvas filters work), with room round it for the blur
+      let soft = null;
+      const s = document.createElement('canvas'), sg = s.getContext('2d');
+      if ('filter' in sg) {
+        s.width = bw + 2 * P; s.height = bh + 2 * P;
+        sg.filter = `blur(${BL}px)`; sg.drawImage(c, P, P, bw, bh);
+        Object.assign(s.style, { left: -P + 'px', top: -P + 'px', width: s.width + 'px', height: s.height + 'px', opacity: '0' });
+        el.appendChild(soft = s);
+      }
+      el.appendChild(c);
+      this.wrap.appendChild(el);
+      const dx = cx - A.mid[0], dy = cy - A.mid[1], len = Math.hypot(dx, dy) || 1, D = 28 + 0.42 * len;
+      this.bits.push({ el, sharp: c, soft, dx: (dx / len) * D, dy: (dy / len) * D * 0.8, dl: 0.08 * Math.min(1, len / 320), s1: 1.3, r1: 0, f: 1 });
+    });
+    // the puffs: each keeps what it shows of itself (less the puffs in front of it), down to the flat underside
+    CLOUD_PUFFS.forEach(([x, y, r, z]) => cut(x - r - F, y - r - F, x + r + F, Math.min(y + r + F, A.base + 2), x, Math.min(y, A.base - 30), (g, X, Y, disc, c) => {
+      g.globalCompositeOperation = 'destination-in';
+      disc(x, y, r);
+      const lg = g.createLinearGradient(0, Y(A.base - 4), 0, Y(A.base + 1)); lg.addColorStop(0, '#000'); lg.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = lg; g.fillRect(0, 0, c.width, c.height);
+      g.globalCompositeOperation = 'destination-out';
+      CLOUD_PUFFS.forEach(([x2, y2, r2, z2]) => { if (z2 > z && Math.hypot(x2 - x, y2 - y) < r + r2 + F) disc(x2, y2, r2); });
+    }));
+    // the flat base, in four lengths: what lies under the puffs' line, and what shows between them above it
+    [[0, 190], [190, 380], [380, 570], [570, A.w]].forEach(([x0, x1]) => cut(x0 - F, A.base - 46, x1 + F, A.h, (x0 + x1) / 2, A.base - 6, (g, X, Y, disc, c) => {
+      g.globalCompositeOperation = 'destination-in';
+      const l = X(x0 - F / 2), r = X(x1 + F / 2), lg = g.createLinearGradient(l, 0, r, 0), f = (F * (X(1) - X(0))) / (r - l);
+      lg.addColorStop(0, x0 > 0 ? 'rgba(0,0,0,0)' : '#000'); lg.addColorStop(f, '#000'); lg.addColorStop(1 - f, '#000'); lg.addColorStop(1, x1 < A.w ? 'rgba(0,0,0,0)' : '#000');
+      g.fillStyle = lg; g.fillRect(0, 0, c.width, c.height);
+      g.globalCompositeOperation = 'destination-out';
+      g.save(); g.beginPath(); g.rect(0, 0, c.width, Y(A.base - 2)); g.clip();
+      CLOUD_PUFFS.forEach(([x2, y2, r2]) => disc(x2, y2, r2));
+      g.restore();
+    }));
+    const idle = window.requestIdleCallback ? (f) => requestIdleCallback(f, { timeout: 400 }) : (f) => setTimeout(f, 40);
+    const next = () => { if (this.jobs.length && this.ready()) { this.jobs.shift()(); idle(next); } };
+    if (this.ready()) idle(next); else img.addEventListener('load', () => idle(next), { once: true });
+  },
+  ready() { return !!(this.cl && this.cl.complete && this.cl.naturalWidth); },
+  // at a burst: any pieces not cut yet are cut now (if the picture is in; if not, the cloud only fades)
+  make() { this.prepare(); if (this.ready()) while (this.jobs.length) this.jobs.shift()(); },
+  // the pop: the pieces show, exactly on the cloud (each burst throws them a little differently)
+  pop() {
+    this.on = true;
+    for (const b of this.bits) {
+      b.s1 = rr(1.25, 1.42); b.r1 = rr(-5, 5) + Math.sign(b.dx) * 3; b.f = rr(0.9, 1.12);
+      Object.assign(b.el.style, { visibility: 'visible', transform: 'none', willChange: 'transform' });
+      b.sharp.style.opacity = '1';
+      if (b.soft) b.soft.style.opacity = '0';
+    }
+  },
+  // k = 0…1 of Motion.BEAT.BURST: the pieces drift out (ease-out: the air slows them), rise a little and swell; each
+  // softens into its blurred twin and the mist fades. The cloud's own picture lets go under them in the first quarter
+  // second (ease-in)
+  fly(k) {
+    if (!this.on) return;
+    const T = Motion.BEAT.BURST, t = k * T;
+    if (this.cl) this.cl.style.opacity = (this.bits.length ? 1 - Ease.inQuad(Math.min(1, t / 0.28)) : 1 - Ease.inQuad(k)).toFixed(3);
+    for (const b of this.bits) {
+      const u = clamp((t - b.dl) / (T - b.dl), 0, 1), e = Ease.outCubic(u), s = 1 + (b.s1 - 1) * Ease.outQuad(u);
+      b.el.style.transform = `translate(${(b.dx * b.f * e).toFixed(2)}px,${(b.dy * b.f * e - 14 * u).toFixed(2)}px) rotate(${(b.r1 * e).toFixed(2)}deg) scale(${s.toFixed(4)})`;
+      if (b.soft) {
+        b.sharp.style.opacity = (1 - Ease.inQuad(Math.min(1, u / 0.6))).toFixed(3);
+        b.soft.style.opacity = (Math.min(1, u / 0.25) * (1 - Ease.inQuad(clamp((u - 0.25) / 0.75, 0, 1)))).toFixed(3);
+      } else b.sharp.style.opacity = (1 - Ease.inQuad(u)).toFixed(3);
+    }
+  },
+  // the burst is over: nothing of the cloud is left (it stays hidden until the next one gathers)
+  done() {
+    Cloud.a = 0; Cloud.s = 1; Cloud.el.style.opacity = '0'; Cloud.lastOp = '0.000';
+    this.reset();
+  },
+  // ready for a new cloud: its picture and its equation back, the pieces put away
+  reset() {
+    this.on = false;
+    for (const b of this.bits) Object.assign(b.el.style, { visibility: 'hidden', willChange: '' });
+    if (this.cl) this.cl.style.opacity = '';
+    const box = $('#eqBox'); if (box) Object.assign(box.style, { opacity: '', transform: '', willChange: '' });
+  },
+};
+
+// ---------- the cage breaking when x is freed ----------
+// (the user, 23 Nov: "the cage is burst, like cage broken, and then x comes out"). x pushes on the bars twice (the
+// cage bulges and creaks, a glow builds behind it) and the third push breaks it: the knob pops off like a cork, the
+// dome flies up, the ring cracks in two, the bars burst out sideways and the floor splits and drops. Every piece is
+// the cage's own picture, cage_empty.webp (tools/cut_cage_break.py: cage_x.webp with x taken out), cut by a
+// clip-path, so at the break the pieces are the cage exactly. They fly like thrown things (a burst of speed slowed
+// by the air, gravity, a spin), shrink a little and fade. x (xchar.webp) springs up from where it stood in the cage
+// and lands where the cage was, then breathes there. The pieces and x live in the cage's own box in the equation,
+// so they ride the cloud. Measured in cage_x px (199 × 262).
+const CAGE = { w: 199, h: 262, x: { cx: 100, feet: 230, h: 128 }, rest: 0.78, shift: -0.17 / 1.72 };
+// (x in cage_x: centre, feet, height. At rest x is 78 % of the cage's height, 0.17 em left of its middle: the "x = 2"
+// spacing it always had, now kept without moving the equation's layout)
+const CAGE_BITS = [ // outline (cage_x px), speed v (px/s), spin w (°/s)
+  { p: [[76, 0], [124, 0], [124, 42], [76, 42]], v: [70, -1000], w: 380 }, // the knob
+  { p: [[0, 0], [76, 0], [76, 42], [124, 42], [124, 0], [199, 0], [199, 72], [0, 72]], v: [-60, -720], w: -150 }, // the dome
+  { p: [[0, 72], [98, 72], [94, 80], [101, 88], [96, 97], [0, 97]], v: [-560, -460], w: -280 }, // the ring, left half…
+  { p: [[98, 72], [199, 72], [199, 97], [96, 97], [101, 88], [94, 80]], v: [560, -460], w: 280 }, // …and right
+  { p: [[0, 97], [42, 97], [42, 190], [0, 190]], v: [-680, -260], w: -300 }, // the bars
+  { p: [[42, 97], [62, 97], [62, 190], [42, 190]], v: [-470, -380], w: -200 },
+  { p: [[62, 97], [138, 97], [138, 190], [62, 190]], v: [30, -620], w: 160 },
+  { p: [[138, 97], [160, 97], [160, 190], [138, 190]], v: [470, -380], w: 200 },
+  { p: [[160, 97], [199, 97], [199, 190], [160, 190]], v: [680, -260], w: 300 },
+  { p: [[0, 190], [97, 190], [103, 214], [95, 236], [101, 262], [0, 262]], v: [-360, -220], w: -130 }, // the floor, left…
+  { p: [[97, 190], [199, 190], [199, 262], [101, 262], [95, 236], [103, 214]], v: [360, -220], w: 130 }, // …and right
+];
+const CageBreak = {
+  cage: null, img: null, aura: null, x: null, bits: [], W: 0, H: 0, p: 0,
+  // as x's freeing begins: the glow, the pieces and the free x are laid into the cage's box, hidden
+  prep(cage) {
+    this.cage = cage; this.bits = []; this.x = this.aura = this.img = null; this.W = this.H = this.p = 0;
+    if (!cage) return;
+    this.img = cage.querySelector('img');
+    this.aura = document.createElement('i'); this.aura.className = 'caura'; cage.prepend(this.aura);
+    for (const b of CAGE_BITS) {
+      const el = document.createElement('i'), n = b.p.length;
+      el.className = 'cbit';
+      el.style.clipPath = 'polygon(' + b.p.map(([x, y]) => `${(x / CAGE.w * 100).toFixed(2)}% ${(y / CAGE.h * 100).toFixed(2)}%`).join(',') + ')';
+      const cx = b.p.reduce((s, q) => s + q[0], 0) / n, cy = b.p.reduce((s, q) => s + q[1], 0) / n; // (its middle, cage_x px)
+      el.style.transformOrigin = `${(cx / CAGE.w * 100).toFixed(1)}% ${(cy / CAGE.h * 100).toFixed(1)}%`;
+      cage.appendChild(el);
+      this.bits.push({ el, cx, cy, v: b.v, w: b.w, f: rr(0.9, 1.1), sw: rr(0.8, 1.2) });
+    }
+    const x = this.x = document.createElement('img');
+    x.className = 'xfree'; x.src = IMG + 'xchar.webp'; x.alt = ''; x.draggable = false;
+    cage.appendChild(x);
+  },
+  // k = 0…1 of the push: two bulges (the cage widens and squats from its foot), then the last build into the break;
+  // the glow behind it grows with each push
+  strain(k) {
+    if (!this.img) return;
+    const bump = (u0, len, amp) => { const u = (k - u0) / len; return u > 0 && u < 1 ? amp * Math.sin(Math.PI * u) * (1 - 0.35 * u) : 0; };
+    const p = this.p = bump(0, 0.3, 0.07) + bump(0.38, 0.3, 0.1) + (k > 0.84 ? 0.12 * Ease.inQuad((k - 0.84) / 0.16) : 0);
+    this.img.style.transform = p ? `scale(${(1 + p).toFixed(4)},${(1 - 0.55 * p).toFixed(4)})` : '';
+    this.aura.style.opacity = Math.min(1, 0.12 + 0.5 * Ease.inQuad(k) + 3 * p).toFixed(3);
+  },
+  // the break: the whole cage hands over to its pieces (its picture keeps its place in the equation, unseen) and x
+  burst() {
+    if (!this.img) return;
+    this.W = this.cage.offsetWidth; this.H = this.cage.offsetHeight;
+    Object.assign(this.img.style, { transform: '', opacity: '0' });
+    this.cage.classList.remove('glowx');
+    for (const b of this.bits) Object.assign(b.el.style, { visibility: 'visible', willChange: 'transform,opacity' });
+    Object.assign(this.x.style, { visibility: 'visible', willChange: 'transform' });
+    this.fly(0); this.jump(0);
+  },
+  // k = 0…1 of Motion.BEAT.SHATTER: each piece flies (drag D, gravity G: x(t) = v(1 − e^−Dt)/D; the same with G
+  // pulling down), spins, shrinks a little and fades after its first third; the glow flares out. The pieces start
+  // from the bulge the cage broke at (q: its last push, let go in the first 0.1 s), so nothing snaps back
+  fly(k) {
+    if (!this.img || !this.W) return;
+    const t = k * Motion.BEAT.SHATTER, D = 1.8, G = 1150, ex = (1 - Math.exp(-D * t)) / D, px = this.H / CAGE.h;
+    const o = k < 0.3 ? 1 : 1 - Ease.inQuad((k - 0.3) / 0.7), s = 1 - 0.12 * k, q = this.p * Math.max(0, 1 - t / 0.1);
+    for (const b of this.bits) {
+      const x = b.v[0] * b.f * ex + q * (b.cx - CAGE.w / 2), y = (G / D) * t + (b.v[1] * b.f - G / D) * ex - 0.55 * q * (b.cy - 0.9 * CAGE.h), r = b.w * b.sw * ex;
+      b.el.style.transform = `translate(${(x * px).toFixed(2)}px,${(y * px).toFixed(2)}px) rotate(${r.toFixed(1)}deg) scale(${(s * (1 + q)).toFixed(4)},${(s * (1 - 0.55 * q)).toFixed(4)})`;
+      b.el.style.opacity = o.toFixed(3);
+      if (k >= 1) Object.assign(b.el.style, { visibility: 'hidden', willChange: '' });
+    }
+    const a = Math.min(1, k / 0.4);
+    this.aura.style.transform = `scale(${(1 + 0.9 * Ease.outCubic(a)).toFixed(3)})`;
+    this.aura.style.opacity = (1 - Ease.inQuad(a)).toFixed(3);
+  },
+  // k = 0…1 of Motion.BEAT.JUMP: x springs up out of the broken cage (stretched, growing to its full size, a happy
+  // lean), comes down where the cage stood and lands with a squash that settles (about its feet), then breathes
+  jump(k) {
+    const x = this.x;
+    if (!x || !this.W) return;
+    const H = this.H, J = Motion.BEAT.JUMP, t = k * J, R = 0.42, Fa = 0.26;
+    const X0 = (CAGE.x.cx / CAGE.w - 0.5) * this.W, Y0 = (CAGE.x.feet / CAGE.h - 0.5 - CAGE.rest / 2) * H, S0 = CAGE.x.h / CAGE.h / CAGE.rest;
+    const X1 = CAGE.shift * H, XA = lerp(X0, X1, 0.6), YA = -0.3 * H;
+    let px, py, s, r = 0, sx = 1, sy = 1;
+    if (t < R) { const u = t / R, e = Ease.outCubic(u); px = lerp(X0, XA, Ease.outQuad(u)); py = lerp(Y0, YA, e); s = lerp(S0, 1.05, e); r = -9 * Math.sin(Math.PI * u); sy = 1 + 0.12 * (1 - e); sx = 1 - 0.07 * (1 - e); }
+    else if (t < R + Fa) { const u = (t - R) / Fa, e = Ease.inQuad(u); px = lerp(XA, X1, u); py = lerp(YA, 0, e); s = lerp(1.05, 1, u); r = 3 * Math.sin(Math.PI * u); sy = 1 + 0.06 * e; sx = 1 - 0.04 * e; }
+    else { const u = Math.min(1, (t - R - Fa) / (J - R - Fa)), w = Math.exp(-5 * u) * Math.cos(10 * u) * (1 - u); px = X1; py = 0; s = 1; sy = 1 - 0.12 * w; sx = 1 + 0.09 * w; }
+    x.style.transform = `translate(-50%,-50%) translate(${px.toFixed(2)}px,${py.toFixed(2)}px) rotate(${r.toFixed(2)}deg) scale(${(s * sx).toFixed(4)},${(s * sy).toFixed(4)})`;
+    if (k >= 1 && !x.classList.contains('live')) { x.classList.add('live'); x.style.willChange = ''; }
+  },
 };
 
 // ---------- ground contact helpers: a 'shadow' group multiplies onto the plaza, a 'light' group screens ----------

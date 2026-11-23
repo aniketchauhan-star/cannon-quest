@@ -126,8 +126,24 @@ const Sound = {
   charge() { this.play('air', { vol: 0.3, rate: 1.55, vary: 0.02 }); this.play('whoosh', { vol: 0.22, rate: 1.7, vary: 0.02 }); },
   ding(i = 0) { const r = [1, 1.26, 1.5, 2][i % 4]; if (!this.play(i % 2 ? 'glass2' : 'glass1', { vol: 0.55, rate: r, verb: 0.3, vary: 0.01 })) this.tone({ f: 1318 * r, dur: 0.6, vol: 0.12 }); },
   sparkle() { [1.5, 1.68, 2, 2.24, 2.52].forEach((r, i) => { if (!this.play('glass2', { vol: 0.28, rate: r, t: i * 0.05, verb: 0.4, vary: 0.005 })) this.tone({ type: 'triangle', f: 1568 * r / 1.5, t: i * 0.045, dur: 0.22, vol: 0.05 }); }); },
-  unlock() { if (!this.play('key', { vol: 0.85, verb: 0.15, pan: 0 })) this.noise({ dur: 0.05, vol: 0.2, type: 'highpass', f: 2500 }); },
-  creak() { this.play('creak', { vol: 0.55, rate: 1.15, verb: 0.2 }); },
+  // x pushing on its cage's bars (i = 0, 1: the second push harder): the cage's metal groans
+  strain(i = 0) {
+    this.play('creak', { vol: 0.42 + 0.12 * i, rate: 1.05 + 0.12 * i, verb: 0.2, pan: 0 });
+    this.play('metal3', { vol: 0.16 + 0.08 * i, rate: 0.8, t: 0.05, verb: 0.15, pan: 0 });
+  },
+  // the cage breaking: its lock snaps, an iron bar's clang (pitched up: a small golden cage), then its bars clatter down
+  cageBreak() {
+    if (!this.play('key', { vol: 0.7, rate: 0.85, verb: 0.15, pan: 0 })) this.noise({ dur: 0.05, vol: 0.2, type: 'highpass', f: 2500 });
+    this.play('clang', { vol: 0.62, rate: 1.3, t: 0.01, verb: 0.3, pan: 0 });
+    [0.14, 0.26, 0.4, 0.55, 0.72].forEach((t, i) => this.play(i % 2 ? 'metal2' : 'metal3', { vol: 0.34 - i * 0.05, rate: rr(1.05, 1.35), t, pan: i % 2 ? 0.35 : -0.35, verb: 0.2, vary: 0.06 }));
+  },
+  // the cloud bursting: a soft, airy puff (recorded air whooshes and a cloth flap) with a faint twinkle
+  poof() {
+    if (!this.play('airmid', { vol: 0.4, rate: 0.82, verb: 0.25, pan: 0 })) this.noise({ dur: 0.7, vol: 0.08, type: 'bandpass', f: 900, f2: 300, q: 0.7, attack: 0.03 });
+    this.play('cloth', { vol: 0.32, rate: 0.72, verb: 0.2, pan: 0 });
+    this.play('air', { vol: 0.25, rate: 0.62, t: 0.03, pan: 0 });
+    [2, 2.52, 3].forEach((r, i) => this.play('glass2', { vol: 0.08, rate: r, t: 0.08 + i * 0.07, verb: 0.5, vary: 0.01 }));
+  },
   spring() { this.play('spring', { vol: 0.5, rate: 1.1, verb: 0.15 }); },
   fanfare() {
     if (!this.play('bellbig', { vol: 0.55, verb: 0.35, pan: 0 })) this.tone({ type: 'triangle', f: 1046, dur: 1, vol: 0.1 });

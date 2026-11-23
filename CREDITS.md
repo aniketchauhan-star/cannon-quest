@@ -31,18 +31,18 @@ They are stored as Opus (`assets/sfx/*.webm`) to keep the game small.
 | plop, pluck | Picking a ball | plop_02, pluck_002 |
 | latch, woodhit | Ball seating in a socket | metalLatch, sfx100v2_wood_hit_01 |
 | woodhit2, wooden | Balls settling, "socket full" knock | sfx100v2_wood_hit_02, wooden_02 |
-| air, airmid, airlong | Whooshes (balls, shots, clouds) | sfx100v2_air_01–03 |
+| air, airmid, airlong | Whooshes (balls, shots, clouds) and the cloud bursting | sfx100v2_air_01–03 |
 | glass1, glass2, bell, bellbig | Tokens landing, sparkles, Fire ready, success | glass_001/003, bell_02/03 |
-| key, creak | Cage unlocking and door swinging open | key_open_01, creak1 |
-| pot, metal2, metal3, tools | Cage rattling | metalPot2, sfx100v2_metal_02/03, tools_01 |
+| key, creak | The cage's lock snapping as it breaks, and its bars creaking as x pushes them | key_open_01, creak1 |
+| pot, metal2, metal3, tools | Cage rattling, and the broken cage's bars clattering | metalPot2, sfx100v2_metal_02/03, tools_01 |
 | spring, springlow | x jumping out, cloud wobble | spring_03, spring_01 |
 | toggle, click, tick | Fire button and UI | toggle_002, click_002, tick_002 |
-| cloth | x landing on the plaza | cloth2 |
+| cloth | The cloud bursting (a soft flap) | cloth2 |
 | water | Lake-side ambience | sfx100v2_loop_water_01 |
 | swish | Start screen: the sign and the cage falling | [BigSoundBank #1799](https://bigsoundbank.com/whoosh-6-s1799.html), "Whoosh 6", a wooden sheet swung through the air (CC0) |
 | knock | Start screen: the CANNON QUEST sign landing | [BigSoundBank #1588](https://bigsoundbank.com/gavel-1-blow-s1588.html), "Gavel 1 blow", a wooden gavel (CC0) |
 | thud | Start screen: the cannon planting itself, the sign's and the cage's weight | [BigSoundBank #1841](https://bigsoundbank.com/jumping-on-wooden-pontoon-1-s1841.html), "Jumping on wooden pontoon 1" (CC0) |
-| clang | Start screen: the golden cage landing on the deck | [BigSoundBank #234](https://bigsoundbank.com/iron-bar-falling-1-s0234.html), "Iron bar falling 1" (CC0) |
+| clang | Start screen: the golden cage landing on the deck; in play, the cage breaking | [BigSoundBank #234](https://bigsoundbank.com/iron-bar-falling-1-s0234.html), "Iron bar falling 1" (CC0) |
 | roll | Start screen: the cannon sliding in (low-passed) | [BigSoundBank #1316](https://bigsoundbank.com/devil-handling-1-s1316.html), "Devil handling 1", a hand truck rolling (CC0) |
 | cork | Start screen: the Play button popping up | [BigSoundBank #648](https://bigsoundbank.com/champagne-cork-2-s0648.html), "Champagne cork 2" (CC0) |
 
