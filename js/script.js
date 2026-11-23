@@ -1586,7 +1586,7 @@ const CloudBurst = {
 };
 
 // ---------- x's moods: pictures that move frame by frame (the user's art, 23 Nov: tools/cut_x_sprites.py) ----------
-// A mood is a row of frames in one picture (assets/img/<src>.webp), seen through a window one frame wide (.spr): the
+// A mood is a row of frames in one picture (assets/img/<src>.webp), seen through a window one frame wide (.mood): the
 // row slides along, a frame at a time (transform only). The frames turn on the game's clock, so they freeze on pause,
 // keep their beat when the equation is redrawn (its cage is a new element each time) and need no timer of their own.
 // Under reduced motion each shows one still frame and nothing moves. d: each frame's time (s), round a loop.
@@ -1604,11 +1604,11 @@ const Sprite = {
   // a mood's window, with its row of frames in it (frame 1 shows until it is played or held)
   html(name, cls = '', alt = '') {
     const s = SPR[name];
-    return `<span class="spr ${cls}" data-spr="${name}" style="aspect-ratio:${s.w}/${s.h}"><img src="${IMG}${s.src}.webp" alt="${alt}" draggable="false"></span>`;
+    return `<span class="mood ${cls}" data-mood="${name}" style="aspect-ratio:${s.w}/${s.h}"><img src="${IMG}${s.src}.webp" alt="${alt}" draggable="false"></span>`;
   },
   // every new window under root plays its loop on the shared beat (from t = 0), so a redrawn cage just carries on
-  scan(root) { root.querySelectorAll('.spr').forEach((el) => { if (!el._s) this.play(el); }); },
-  play(el, name = el.dataset.spr, t0 = 0) { if (!el) return; el._s = { a: SPR[name], t0, hold: -1, f: -1, tr: '' }; this.live.add(el); this.paint(el, Clock.t); },
+  scan(root) { root.querySelectorAll('.mood').forEach((el) => { if (!el._s) this.play(el); }); },
+  play(el, name = el.dataset.mood, t0 = 0) { if (!el) return; el._s = { a: SPR[name], t0, hold: -1, f: -1, tr: '' }; this.live.add(el); this.paint(el, Clock.t); },
   hold(el, f) { if (!el) return; if (!el._s) this.play(el); el._s.hold = f; this.paint(el, Clock.t); }, // one frame, still
   tick(t) { for (const el of this.live) { if (el.isConnected) this.paint(el, t); else this.live.delete(el); } },
   paint(el, t) {

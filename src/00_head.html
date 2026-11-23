@@ -169,9 +169,10 @@ img{-webkit-user-drag:none;user-select:none}
 .msg .m1{font-size:.5em;color:var(--ink);letter-spacing:.01em}
 .msg .m2{font-size:1em;margin-top:.04em}
 /* x's moods (Sprite in src/30_stage.js, the user's art of 23 Nov): a row of frames seen through a window one frame
-   wide; the row slides along a frame at a time (transform). The window's shape is its frame's (aspect-ratio, inline) */
-.spr{display:block;position:relative;overflow:hidden;height:100%;flex:none}
-.spr>img{position:absolute;left:0;top:0;height:100%;width:auto;max-width:none;display:block;pointer-events:none;-webkit-user-select:none;user-select:none}
+   wide (.mood); the row slides along a frame at a time (transform). The window's shape is its frame's (aspect-ratio,
+   inline). (Not .spr: that is the plain placed picture, the orbs' tray for one) */
+.mood{display:block;position:relative;overflow:hidden;height:100%;flex:none}
+.mood>img{position:absolute;left:0;top:0;height:100%;width:auto;max-width:none;display:block;pointer-events:none;-webkit-user-select:none;user-select:none}
 /* the cage around x (x in it, crying: its window .cg) */
 .cage{height:1.72em;margin:0 .02em}
 .cage .cg{transform-origin:50% 90%}
@@ -198,7 +199,7 @@ img{-webkit-user-drag:none;user-select:none}
   -webkit-mask-image:radial-gradient(closest-side,#000 10%,rgba(0,0,0,.55) 42%,transparent 76%);mask-image:radial-gradient(closest-side,#000 10%,rgba(0,0,0,.55) 42%,transparent 76%)}
 .cage .xfree{position:absolute;left:50%;top:50%;height:79.4%;aspect-ratio:491/396;visibility:hidden;pointer-events:none;transform-origin:50% 100%;transform:translate(-50%,-50%);
   filter:drop-shadow(0 0 8px #fff) drop-shadow(0 0 18px rgba(197,139,255,.85))}
-.cage .xfree .spr{width:100%;transform-origin:50% 100%}
+.cage .xfree .mood{width:100%;transform-origin:50% 100%}
 .cage .xfree.xwhite{filter:brightness(0) invert(1) drop-shadow(0 0 10px #fff) drop-shadow(0 0 22px #ffe9a0)}
 /* the end card's x (EndX): on the deck, right of the cannon; placed and sized by EndX, moved about its feet */
 #xEnd{position:absolute;pointer-events:none;transform-origin:50% 100%}
