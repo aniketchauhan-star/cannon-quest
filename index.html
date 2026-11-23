@@ -172,34 +172,41 @@ img{-webkit-user-drag:none;user-select:none}
 .msg{display:flex;flex-direction:column;align-items:center;color:#7b2ff0}
 .msg .m1{font-size:.5em;color:var(--ink);letter-spacing:.01em}
 .msg .m2{font-size:1em;margin-top:.04em}
-/* the cage around x */
+/* x's moods (Sprite in src/30_stage.js, the user's art of 23 Nov): a row of frames seen through a window one frame
+   wide; the row slides along a frame at a time (transform). The window's shape is its frame's (aspect-ratio, inline) */
+.spr{display:block;position:relative;overflow:hidden;height:100%;flex:none}
+.spr>img{position:absolute;left:0;top:0;height:100%;width:auto;max-width:none;display:block;pointer-events:none;-webkit-user-select:none;user-select:none}
+/* the cage around x (x in it, crying: its window .cg) */
 .cage{height:1.72em;margin:0 .02em}
-.cage img{height:100%;width:auto;display:block;transform-origin:50% 90%}
-.cage.push img{animation:cpush 1.2s ease-in-out 2}
+.cage .cg{transform-origin:50% 90%}
+.cage.push .cg{animation:cpush 1.2s ease-in-out 2}
 @keyframes cpush{0%,100%{transform:none}20%{transform:translateX(-4%) rotate(-5deg)}35%{transform:translateX(-5%) scaleX(.96)}55%{transform:translateX(4%) rotate(5deg)}70%{transform:translateX(5%) scaleX(.96)}}
-.cage.rattle img{animation:rattle .16s ease-in-out 8} /* (a rocking "not yet", ~6 per second: 11 per second read as jitter) */
+.cage.rattle .cg{animation:rattle .16s ease-in-out 8} /* (a rocking "not yet", ~6 per second: 11 per second read as jitter) */
 @keyframes rattle{25%{transform:translateX(-6%) rotate(-6deg)}75%{transform:translateX(6%) rotate(6deg)}}
-.cage.glowx img{filter:drop-shadow(0 0 10px #fff) drop-shadow(0 0 24px #c58bff)}
-.cage.open img{animation:copen .5s ease-out}
+.cage.glowx .cg{filter:drop-shadow(0 0 10px #fff) drop-shadow(0 0 24px #c58bff)}
+.cage.open .cg{animation:copen .5s ease-out}
 @keyframes copen{40%{transform:scale(1.15) rotate(-6deg)}}
 /* freed: the cage cracks open and x comes out (CageBreak in src/30_stage.js moves them all by transform + opacity).
    The cage's own picture stays in the equation unseen, so nothing in the line moves; a glow behind the cage builds
-   with x's pushes and flares out at the break; its cracks are drawn on a canvas over it (.ccrk, masked by its
-   picture); behind it a fan of golden light rays (.crays: one conic gradient, turned by transform) wakes with the
-   pushes, flares at the break and stays as a soft halo behind x; its shards fly on the FX canvas. The free x stands
-   where the cage was, 78 % of its height, and breathes about its feet (the scale property, so it adds to its own
-   transform); its white twin (.xwhite) lies over it and fades as x rises out of the light */
+   with x's pushes and flares out at the break; its cracks are drawn on a canvas over it (.ccrk, masked by the cage
+   as it shows round x); behind it a fan of golden light rays (.crays: one conic gradient, turned by transform) wakes
+   with the pushes, flares at the break and stays as a soft halo behind x; its shards fly on the FX canvas. The free x
+   (the dance's frames; its box, taller than x, is sized by CageBreak.prep) stands where it stood in the cage, 75 % of
+   the cage's height, and dances there (its window hops and squashes about x's feet, the box's foot); its white twin
+   (.xwhite) lies over it and fades as x rises out of the light */
 .cage .caura{position:absolute;left:-40%;top:-22%;width:180%;height:144%;z-index:-1;border-radius:50%;opacity:0;pointer-events:none;
   background:radial-gradient(closest-side,rgba(255,255,255,.95),rgba(255,240,170,.62) 38%,rgba(197,139,255,.34) 66%,rgba(197,139,255,0))}
 .cage .ccrk{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;transform-origin:50% 90%}
 .cage .crays{position:absolute;left:50%;top:50%;width:6.8em;height:6.8em;z-index:-2;border-radius:50%;opacity:0;pointer-events:none;will-change:transform,opacity;transform:translate(-50%,-50%);
   background:repeating-conic-gradient(from 0deg,rgba(255,190,40,0) 0deg,rgba(255,200,60,.7) 5deg,rgba(255,226,130,0) 11deg,rgba(255,226,130,0) 22.5deg);
   -webkit-mask-image:radial-gradient(closest-side,#000 10%,rgba(0,0,0,.55) 42%,transparent 76%);mask-image:radial-gradient(closest-side,#000 10%,rgba(0,0,0,.55) 42%,transparent 76%)}
-.cage .xfree{position:absolute;left:50%;top:50%;height:78%;width:auto;visibility:hidden;pointer-events:none;transform-origin:50% 100%;transform:translate(-50%,-50%);
+.cage .xfree{position:absolute;left:50%;top:50%;height:79.4%;aspect-ratio:491/396;visibility:hidden;pointer-events:none;transform-origin:50% 100%;transform:translate(-50%,-50%);
   filter:drop-shadow(0 0 8px #fff) drop-shadow(0 0 18px rgba(197,139,255,.85))}
+.cage .xfree .spr{width:100%;transform-origin:50% 100%}
 .cage .xfree.xwhite{filter:brightness(0) invert(1) drop-shadow(0 0 10px #fff) drop-shadow(0 0 22px #ffe9a0)}
-.cage .xfree.live{animation:xbreathe 1.4s ease-in-out infinite}
-@keyframes xbreathe{0%,100%{scale:1}50%{scale:1.06}} /* the freed x rests on the cloud and breathes, in step with “= 2” */
+/* the end card's x (EndX): on the deck, right of the cannon; placed and sized by EndX, moved about its feet */
+#xEnd{position:absolute;pointer-events:none;transform-origin:50% 100%}
+#xEnd>img{display:block;width:100%;height:100%}
 /* "= 2" lights up as x lands, growing 18 %; it steps aside to keep "x = 2" apart (translate, not margins: the
    equation's layout never changes, so nothing jumps) */
 .tk.eqs.win{translate:.06em 0}

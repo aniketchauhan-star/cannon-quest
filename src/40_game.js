@@ -553,6 +553,7 @@ async function showEnd() {
   await Cloud.enter();
   Sound.fanfare();
   if (G.freed) { FX.confetti(CLOUD_MID.x, CLOUD_MID.y + 40, 100 + G.freed * 30, 1100); Fireworks.show(2 + G.freed); } // (the more x freed, the more fireworks)
+  EndX.show(G.freed); // x on the deck: free and dancing, or (none freed) still crying in its cage
   $('#endUI').classList.add('on');
   VO.sayAfter(endLine(), 0.8);
 }
@@ -564,7 +565,7 @@ async function restartGame() {
   $('#endUI').classList.remove('on');
   Cannon.setFireActive(false); for (let i = 0; i < 2; i++) Cannon.highlight(i, false);
   $('#fly').innerHTML = '';
-  Object.assign(Stage.cam, { fx: CX, fy: CY, z: 1 }); Stage.snap(); TimeFx.reset(); Cannon.settle(); FX.clear(); CageBreak.kill(); Fireworks.stop(); Vignette.to(0, 0);
+  Object.assign(Stage.cam, { fx: CX, fy: CY, z: 1 }); Stage.snap(); TimeFx.reset(); Cannon.settle(); FX.clear(); CageBreak.kill(); EndX.hide(); Fireworks.stop(); Vignette.to(0, 0);
   Cloud.a = 1; Cloud.s = 1; Cloud.blur = 0; Cloud.rot = 0; Cloud.sq.reset(); CloudBurst.reset();
   QCard.label(null); // back to no label during play
   G.rackFor = null;
@@ -649,7 +650,7 @@ function frame(time, deltaMs) {
   Clock.t += dt; const t = Clock.t;
   Music.update(rdt);
   if (G.state === 'title' && !Motion.reduced) { const c = Stage.cam, tt = t - Title.t0; c.fx = CX + Math.sin(tt * 0.22) * 28; c.fy = CY + Math.sin(tt * 0.31) * 10; c.z = 1.05 + Math.sin(tt * 0.17) * 0.02; } // (drifts from where boot framed it)
-  Cloud.apply(t, dt); Cannon.update(dt, t); updateBalls(dt, t); Rack.applyEnter(); Title.update(t, dt);
+  Cloud.apply(t, dt); Cannon.update(dt, t); updateBalls(dt, t); Rack.applyEnter(); Title.update(t, dt); Sprite.tick(t);
   if (G.inputOn && !G.helping) { G.idle += dt; if (G.idle > 7) { G.idle = 0; idleHint(); } }
   Stage.update(rdt); Spot.update(dt, t); FX.update(dt); FX.draw();
 }
@@ -658,8 +659,9 @@ function frame(time, deltaMs) {
 // in case Play is tapped first) ----
 const Pics = {
   TITLE: ['bg_sky', 'sun_glow', 'sun_rays', 'bg_mount', 'bg_trees', 'bg_plantL', 'bg_plantR', 'bg_deck', 't_logo', 't_cannon', 'playbtn', 't_cage', 't_x', 't_cage_front'],
-  GAME: ['cloud', 'cannon1', 'cannon2', 'cannon1_front', 'cannon2_front', 'rack', 'rack_front', 'fire', 'fire2', 'cage_x', 'cage_empty', 'xchar', 'hand', 'pause', 'play', 'sound', 'question_board',
+  GAME: ['cloud', 'cannon1', 'cannon2', 'cannon1_front', 'cannon2_front', 'rack', 'rack_front', 'fire', 'fire2', 'x_cry', 'cage_empty', 'cage_crack', 'hand', 'pause', 'play', 'sound', 'question_board',
     ...[0, 1, 2, 3, 4, 5, 6, 7].map((i) => `ball_${i}`)],
+  LATER: ['x_dance', 'x_free'], // (wanted only once x is first freed, and at the end: fetched after the rest)
   game: null, // (a promise: the play scene's pictures and the font)
   // resolves when every picture has arrived and is decoded (so it shows without a hitch), or after cap seconds,
   // so a picture that never comes never holds the game up
@@ -685,7 +687,7 @@ async function boot() {
   Cloud.init(); Cannon.init(); Rack.init(); EqUI.init(); Title.init(); Spot.init(); Skip.init();
   wireInput();
   gsap.ticker.add(frame);
-  window.__cqBooted = true; window.__cq = { G, Clock, Rack, Drag, Sound, Music, Stage, EqUI, VO, Motion, Skip, Spot, Title, Cloud, Cannon, TimeFx, Perf, FX, Pics, CageBreak, CloudBurst, Fracture, Vignette, Fireworks };
+  window.__cqBooted = true; window.__cq = { G, Clock, Rack, Drag, Sound, Music, Stage, EqUI, VO, Motion, Skip, Spot, Title, Cloud, Cannon, TimeFx, Perf, FX, Pics, CageBreak, CloudBurst, Fracture, Vignette, Fireworks, Sprite, EndX };
   // the start screen: the scene fades in while the title plays its intro, and the Play button pops in
   G.state = 'title';
   Title.start();
@@ -696,7 +698,7 @@ async function boot() {
   Rack.balls = ROUNDS[0].balls.map((s, i) => createBall(s, i)); G.rackFor = ROUNDS[0];
   const font = document.fonts && document.fonts.load ? Promise.all([document.fonts.load('600 64px Poppins', '0123456789+−×='), document.fonts.load("400 64px 'Trig Text'", '0123456789+−×÷=()')]).catch(() => {}) : null;
   Pics.game = Pics.load(Pics.GAME, 15, font ? [font] : []);
-  Pics.game.then(() => { CloudBurst.prepare(); CageBreak.load(); }); // (the cloud's burst pieces are cut while the browser is idle; the cage's fracture is worked out)
+  Pics.game.then(() => { CloudBurst.prepare(); CageBreak.load(); Pics.load(Pics.LATER, 30); }); // (the cloud's burst pieces are cut while the browser is idle; the cage's fracture is worked out; then x's dance and the end card's picture)
   const sfx = document.createElement('script'); sfx.src = 'js/sfx.js'; document.body.appendChild(sfx); // (it hands itself to Sound.loadSfx)
 }
 boot();

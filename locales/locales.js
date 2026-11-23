@@ -23,6 +23,8 @@ window.GAME_LOCALES = {
     "btnPlayAgain": "Play again",
     "btnSkip": "Skip",
     "altX": "x",
+    "altXFree": "x is free and dancing",
+    "altXCaged": "x is still crying in its cage",
     "qScore": "Your score",
     "endFreed": "You freed",
     "endScore": "{freed} out of {total}!",

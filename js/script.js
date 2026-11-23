@@ -95,7 +95,8 @@ const BALL_INK = ['#a312c0', '#d0106d', '#2f8a00', '#0089a6', '#d8352b', '#1d5fd
 const IMG = 'assets/img/';
 const symHTML = (s) => (s === '÷' ? '<span class="dv"></span>' : s);
 const labelHTML = (op) => symHTML(op.sym) + op.n;
-const cageHTML = () => `<span class="tk cage" data-key="x"><img class="cg" src="${IMG}cage_x.webp" alt="${T('altX')}" draggable="false"></span>`;
+// x in its cage, crying (its frames: Sprite and SPR.cry in 30_stage.js)
+const cageHTML = () => `<span class="tk cage" data-key="x">${Sprite.html('cry', 'cg', T('altX'))}</span>`;
 const tk = (cls, key, inner) => `<span class="tk ${cls}" data-key="${key}">${inner}</span>`;
 function numHTML(fr) {
   const neg = fr.n < 0, a = Math.abs(fr.n);
@@ -1584,25 +1585,78 @@ const CloudBurst = {
   },
 };
 
+// ---------- x's moods: pictures that move frame by frame (the user's art, 23 Nov: tools/cut_x_sprites.py) ----------
+// A mood is a row of frames in one picture (assets/img/<src>.webp), seen through a window one frame wide (.spr): the
+// row slides along, a frame at a time (transform only). The frames turn on the game's clock, so they freeze on pause,
+// keep their beat when the equation is redrawn (its cage is a new element each time) and need no timer of their own.
+// Under reduced motion each shows one still frame and nothing moves. d: each frame's time (s), round a loop.
+//   cry:   x crying in its cage: sad, its tears well up and roll, it squeezes its eyes shut, wails, sobs, sniffles
+//   dance: the freed x dancing, two steps to a loop: a crouch, a hop with its fists up, a wink and a wave; a crouch, a
+//          hop with its arms out, a wave (2 beats of the music, ~81 bpm). The sheet draws its hops a little higher; here
+//          each hop rises and falls smoothly through its frame (hop: how high, of the frame's height) and each landing
+//          gives a little squash. stand: the standing body's height (px of the frame's h)
+const SPR = {
+  cry: { src: 'x_cry', n: 6, w: 382, h: 503, d: [0.5, 0.36, 0.26, 0.56, 0.32, 0.46], still: 1 },
+  dance: { src: 'x_dance', n: 6, w: 491, h: 396, d: [0.185, 0.278, 0.278, 0.185, 0.278, 0.278], still: 1, stand: 374, hops: [1, 4], hop: 0.1 },
+};
+const Sprite = {
+  live: new Set(),
+  // a mood's window, with its row of frames in it (frame 1 shows until it is played or held)
+  html(name, cls = '', alt = '') {
+    const s = SPR[name];
+    return `<span class="spr ${cls}" data-spr="${name}" style="aspect-ratio:${s.w}/${s.h}"><img src="${IMG}${s.src}.webp" alt="${alt}" draggable="false"></span>`;
+  },
+  // every new window under root plays its loop on the shared beat (from t = 0), so a redrawn cage just carries on
+  scan(root) { root.querySelectorAll('.spr').forEach((el) => { if (!el._s) this.play(el); }); },
+  play(el, name = el.dataset.spr, t0 = 0) { if (!el) return; el._s = { a: SPR[name], t0, hold: -1, f: -1, tr: '' }; this.live.add(el); this.paint(el, Clock.t); },
+  hold(el, f) { if (!el) return; if (!el._s) this.play(el); el._s.hold = f; this.paint(el, Clock.t); }, // one frame, still
+  tick(t) { for (const el of this.live) { if (el.isConnected) this.paint(el, t); else this.live.delete(el); } },
+  paint(el, t) {
+    const s = el._s, a = s.a;
+    let f = s.hold, u = 0;
+    if (f < 0) {
+      if (Motion.reduced) f = a.still;
+      else { // (which frame at time t, and how far through it)
+        const T = a.T || (a.T = a.d.reduce((p, q) => p + q, 0));
+        u = (((t - s.t0) % T) + T) % T; f = 0;
+        while (f < a.n - 1 && u >= a.d[f]) u -= a.d[f++];
+        u = Math.min(1, u / a.d[f]);
+      }
+    }
+    if (f !== s.f) { s.f = f; el.firstChild.style.transform = `translateX(${((-100 * f) / a.n).toFixed(4)}%)`; }
+    if (!a.hops) return;
+    let y = 0, sx = 1, sy = 1;
+    if (s.hold < 0 && !Motion.reduced) {
+      if (a.hops.includes(f)) y = -100 * a.hop * Math.sin(Math.PI * u); // up and down within its frame
+      else if (a.hops.includes(f - 1) && u < 0.45) { const w = Math.sin((Math.PI * u) / 0.45); sx = 1 + 0.045 * w; sy = 1 - 0.07 * w; } // the landing
+    }
+    const tr = y || sx !== 1 ? `translateY(${y.toFixed(2)}%) scale(${sx.toFixed(4)},${sy.toFixed(4)})` : '';
+    if (tr !== s.tr) { s.tr = tr; el.style.transform = tr; }
+  },
+};
+
 // ---------- the cage cracking open when x is freed ----------
 // (the user, 23 Nov: "extreme… cage crack, and x come out from that… slow animation of the cage crack and x come out
-// from them"). x pushes on the bars three times, and each push cracks the cage further: glowing cracks run out over
-// its gold from where x's hands are, light leaks through them, a fan of light rays wakes behind the cage and chips of
-// gold fly. After the third push the cracks race over the whole cage and it trembles, about to give; then it bursts
-// along its cracks: a flash, and its shards tumble away (some toward us, some away), slowing in the air and fading,
-// while x rises out of the light, hovers with sparkles circling it, and comes down where the cage stood.
+// from them"). x stops crying and looks up; it pushes on the bars three times, and each push cracks the cage further:
+// glowing cracks run out over its gold from where x's hands are, light leaks through them, a fan of light rays wakes
+// behind the cage and chips of gold fly. After the third push the cracks race over the whole cage and it trembles,
+// about to give; then it bursts along its cracks: a flash, and its shards tumble away (some toward us, some away),
+// slowing in the air and fading, while x rises out of the light with its fists up, hovers with sparkles circling it,
+// comes down where the cage stood and dances there.
 // The cracks ARE where it comes apart: one fracture (Fracture: a Voronoi pattern round x's chest, its edges made
 // jagged) gives both the lines that crack and the shards. The cracks are drawn on a canvas over the cage, masked by
-// the cage's own picture so they show only on its gold; the shards are that picture (cage_empty.webp: cage_x.webp with
-// x taken out, tools/cut_cage_break.py) cut along the cracks and flown on the FX canvas (a layer), over the scene. x
-// (xchar.webp), its white twin and the rays live in the cage's box in the equation, so they ride the cloud. Measured
-// in cage_x px (199 × 262).
-const CAGE = { w: 199, h: 262, x: { cx: 100, feet: 230, h: 128 }, rest: 0.78, shift: -0.17 / 1.72,
-  core: [100, 158], hands: [[52, 172], [149, 172]], // x's chest (the fracture's centre) and its gloves on the front bars (where the pushes land)
+// the cage as it shows round x (cage_crack.webp), so they run only over its gold; the shards are the cage of the
+// crying frame x holds, with x taken out (cage_empty.webp, both cut by tools/cut_x_sprites.py), cut along the cracks
+// and flown on the FX canvas (a layer), over the scene. The free x (the dance's frames), its white twin and the rays
+// live in the cage's box in the equation, so they ride the cloud. Measured in cage units: the cage's box is 199 × 262
+// (its pictures are 382 × 503 px).
+const CAGE = { w: 199, h: 262, x: { cx: 99.6, feet: 229.7, h: 134.4 }, rest: 0.75, shift: -0.17 / 1.72,
+  core: [100, 164], hands: [[51.4, 186.7], [149.6, 186.8]], // x's chest (the fracture's centre) and its gloves on the front bars (where the pushes land)
   push: [0.15, 1.0, 1.85],                           // the three pushes, s into Motion.BEAT.CRACK (the break comes at its end)
-  rise: { up: 0.47, hover: 0.72, drop: 0.86 } };     // x's rise, as fractions of Motion.BEAT.RISE: up out of the light, hover, drop, land
-// (x in cage_x: centre, feet, height. At rest x is 78 % of the cage's height, 0.17 em left of its middle: the "x = 2"
-// spacing it always had, kept without moving the equation's layout)
+  rise: { up: 0.47, hover: 0.72, drop: 0.86, top: -0.07 } }; // x's rise, as fractions of Motion.BEAT.RISE: up out of the light, hover, drop, land (top: its feet at the hover, of the cage's height from its middle)
+// (x in its cage: centre, feet, height. The free x stands 75 % of the cage's height tall where it stood (its feet on the
+// cage's floor), 0.17 em left of the cage's middle: the "x = 2" spacing it always had, kept without moving the
+// equation's layout)
 
 // The fracture: seeds in rings round x's chest (a fixed seed, so it is the same each time), each seed's Voronoi cell
 // cut out of the cage's box by half-planes; every shared edge made jagged once and used by both its cells, so the
@@ -1671,17 +1725,21 @@ const Fracture = {
 };
 
 const CageBreak = {
-  cage: null, img: null, aura: null, rays: null, cv: null, g: null, x: null, xw: null, pic: null, layer: null, W: 0, H: 0, p: 0, tw: -1,
-  // the empty cage's picture (the cracks' mask and the shards) and the fracture, once the play scene's pictures are in
-  load() { if (!this.pic) { this.pic = new Image(); this.pic.src = IMG + 'cage_empty.webp'; } Fracture.make(); },
-  // as x's freeing begins: the glow, the rays, the crack canvas and the free x (with its white twin) are laid into the
-  // cage's box, hidden
+  cage: null, img: null, aura: null, rays: null, cv: null, g: null, x: null, xw: null, xs: null, pic: null, mask: null, layer: null, W: 0, H: 0, hb: 0, p: 0, tw: -1,
+  // the empty cage's picture (the shards), the cracks' mask and the fracture, once the play scene's pictures are in
+  load() {
+    if (!this.pic) { this.pic = new Image(); this.pic.src = IMG + 'cage_empty.webp'; this.mask = new Image(); this.mask.src = IMG + 'cage_crack.webp'; }
+    Fracture.make();
+  },
+  // as x's freeing begins: x stops crying and looks up (it holds the crying frame the shards are cut from); the glow,
+  // the rays, the crack canvas and the free x (with its white twin) are laid into the cage's box, hidden
   prep(cage) {
     this.kill();
-    this.cage = cage; this.x = this.xw = this.aura = this.rays = this.cv = this.g = this.img = null; this.W = this.H = this.p = 0; this.tw = -1;
+    this.cage = cage; this.x = this.xw = this.xs = this.aura = this.rays = this.cv = this.g = this.img = null; this.W = this.H = this.p = 0; this.tw = -1;
     if (!cage) return;
     this.load();
-    this.img = cage.querySelector('img');
+    this.img = cage.querySelector('.cg'); // (the cage's picture: the window onto its crying frames)
+    Sprite.hold(this.img, 0);
     this.aura = document.createElement('i'); this.aura.className = 'caura'; cage.prepend(this.aura);
     this.rays = document.createElement('i'); this.rays.className = 'crays'; cage.prepend(this.rays);
     // the cracks' canvas, with as many px as the cage will have on screen in the close-up (the zoom then, the screen's px)
@@ -1689,10 +1747,14 @@ const CageBreak = {
     const k = ((r.width / w) || 1) * (CAM.ZMAX / (Stage.z || 1)) * Math.min(2, devicePixelRatio || 1);
     cv.className = 'ccrk'; cv.width = Math.max(64, Math.round(w * k)); cv.height = Math.max(84, Math.round(h * k));
     cage.appendChild(cv); this.g = cv.getContext('2d');
-    const x = this.x = document.createElement('img');
-    x.className = 'xfree'; x.src = IMG + 'xchar.webp'; x.alt = ''; x.draggable = false;
-    const xw = this.xw = x.cloneNode(); xw.className = 'xfree xwhite';
+    // the free x: the dance's frames, holding frame 2 (its fists up) until it lands. Its box is taller than x (room
+    // for its arms), sized so that x stands CAGE.rest of the cage's height; x's feet are the box's foot
+    this.hb = (CAGE.rest * SPR.dance.h) / SPR.dance.stand;
+    const x = this.x = document.createElement('span');
+    x.className = 'xfree'; x.innerHTML = Sprite.html('dance'); x.style.height = (100 * this.hb).toFixed(3) + '%';
+    const xw = this.xw = x.cloneNode(true); xw.className = 'xfree xwhite';
     cage.appendChild(x); cage.appendChild(xw);
+    this.xs = x.firstChild; Sprite.hold(this.xs, 1); Sprite.hold(xw.firstChild, 1);
   },
   // t = s into Motion.BEAT.CRACK: the bulge of each push (the cage widens and squats from its foot; the third builds
   // into the break and holds), the tremble before it gives, the cracks so far, how much light comes through them, the
@@ -1715,14 +1777,14 @@ const CageBreak = {
     this.aura.style.opacity = Math.min(1, 0.12 + 0.55 * build + 0.45 * flare).toFixed(3);
   },
   // the cracks at time t, glow = how much light comes through them: a soft wide warm light round each crack, the dark
-  // split, white-hot light inside it and a bright point where a crack is still running; then masked by the cage's
-  // own picture (no cracks over x, or over the sky between the bars). Without that picture there are no cracks
+  // split, white-hot light inside it and a bright point where a crack is still running; then masked by the cage as it
+  // shows round x (cage_crack: no cracks over x, or over the sky between the bars). Without the mask there are none
   drawCracks(t, glow) {
-    const g = this.g, cv = this.cv;
+    const g = this.g, cv = this.cv, m = this.mask;
     if (!g) return;
     const W = cv.width, H = cv.height, lines = [], tips = [];
     g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, W, H);
-    if (!(this.pic && this.pic.complete && this.pic.naturalWidth)) return;
+    if (!(m && m.complete && m.naturalWidth)) return;
     for (const c of Fracture.cracks) {
       const u = (t - c.t0) / c.dur; if (u <= 0) continue;
       let left = c.L * Math.min(1, u); const q = c.pts, out = [q[0]];
@@ -1742,7 +1804,7 @@ const CageBreak = {
     g.fillStyle = '#fffbe8';
     for (const p of tips) { g.beginPath(); g.arc(p.x, p.y, 4.2, 0, Math.PI * 2); g.fill(); }
     g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'destination-in';
-    g.drawImage(this.pic, 0, 0, W, H);
+    g.drawImage(m, 0, 0, W, H);
     g.globalCompositeOperation = 'source-over';
   },
   // the fan of light behind the cage (op, size); it turns slowly all the time it shows
@@ -1763,7 +1825,7 @@ const CageBreak = {
     FX.burst(w.x, w.y, '#fff3b8', 5 + 3 * i, 220, { size: 0.55, white: 0.5 });
     FX.star(w.x, w.y, '#fff1b0', 70 + 25 * i, 0.22, { n: 6 });
   },
-  // a point of the cage (cage_x px) in art space, from where the cage is on screen
+  // a point of the cage (cage units) in art space, from where the cage is on screen
   pt(px, py) {
     const r = this.cage.getBoundingClientRect();
     return Stage.s2w(r.left + (px / CAGE.w) * r.width, r.top + (py / CAGE.h) * r.height);
@@ -1789,6 +1851,7 @@ const CageBreak = {
   // and fade after 0.7 s. They start from the bulge the cage broke at, let go in the first 0.12 s
   shatter(rect, bulge) {
     const T = Motion.BEAT.SHATTER, D = 2.3, G = 600, pic = this.pic, [ccx, ccy] = CAGE.core, O = [CAGE.w / 2, CAGE.h * 0.9], k = rect.s / 0.4;
+    const qx = pic.naturalWidth / CAGE.w, qy = pic.naturalHeight / CAGE.h; // (the picture's px per cage unit)
     const shards = Fracture.cells.map((pts) => {
       let cx = 0, cy = 0, x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
       for (const q of pts) { cx += q.x; cy += q.y; x0 = Math.min(x0, q.x); y0 = Math.min(y0, q.y); x1 = Math.max(x1, q.x); y1 = Math.max(y1, q.y); }
@@ -1816,7 +1879,7 @@ const CageBreak = {
           c.translate(x, y); c.rotate(s.w * ex + s.w2 * t); c.scale(sc * sxb, sc * syb * fy);
           c.beginPath(); s.pts.forEach((q, i) => (i ? c.lineTo(q.x, q.y) : c.moveTo(q.x, q.y))); c.closePath();
           c.save(); c.clip();
-          c.drawImage(pic, s.bx, s.by, s.bw, s.bh, s.bx - s.cx, s.by - s.cy, s.bw, s.bh);
+          c.drawImage(pic, s.bx * qx, s.by * qy, s.bw * qx, s.bh * qy, s.bx - s.cx, s.by - s.cy, s.bw, s.bh);
           const shade = fl < 0 ? 0.42 * Math.min(1, -fl * 1.5) : 0;
           if (hot > 0 || shade > 0) {
             c.globalCompositeOperation = 'source-atop';
@@ -1829,34 +1892,36 @@ const CageBreak = {
       },
     };
   },
-  // k = 0…1 of Motion.BEAT.RISE: x rises out of the light (white-hot at first, at its size inside the cage, growing a
-  // little past its full size as it goes up, leaning), hovers at the top of its rise, then comes down where the cage
-  // stood and lands with a squash that settles about its feet; then it breathes there (CSS). The glow behind flares
+  // k = 0…1 of Motion.BEAT.RISE: x rises out of the light with its fists up (white-hot at first, at its size inside the
+  // cage, growing a little past its full size as it goes up, leaning), hovers at the top of its rise, then comes down
+  // where it stood in the cage and lands with a squash that settles about its feet; then it dances there (Sprite:
+  // SPR.dance, from its crouch). Its place is worked out from its feet (the foot of its box). The glow behind flares
   // out at the break, and the rays flare, then calm to a halo behind x
   rise(k) {
     const x = this.x;
     if (!x || !this.W) return;
-    const H = this.H, t = k * Motion.BEAT.RISE, R = CAGE.rise;
-    const X0 = (CAGE.x.cx / CAGE.w - 0.5) * this.W, Y0 = (CAGE.x.feet / CAGE.h - 0.5 - CAGE.rest / 2) * H, S0 = CAGE.x.h / CAGE.h / CAGE.rest;
-    const X1 = CAGE.shift * H, XA = lerp(X0, X1, 0.55), YA = -0.46 * H;
-    let px, py, s, r = 0, sx = 1, sy = 1;
-    if (k < R.up) { const u = k / R.up, e = Ease.outCubic(u); px = lerp(X0, XA, Ease.outQuad(u)); py = lerp(Y0, YA, e); s = lerp(S0, 1.12, e); r = -6 * Math.sin(Math.PI * u); sy = 1 + 0.1 * (1 - e); sx = 1 - 0.06 * (1 - e); }
-    else if (k < R.hover) { const u = (k - R.up) / (R.hover - R.up); px = XA; py = YA - 0.025 * H * Math.sin(Math.PI * u); s = 1.12; r = 2.5 * Math.sin(Math.PI * 2 * u); }
-    else if (k < R.drop) { const u = (k - R.hover) / (R.drop - R.hover), e = Ease.inQuad(u); px = lerp(XA, X1, u); py = lerp(YA, 0, e); s = lerp(1.12, 1, u); sy = 1 + 0.07 * e; sx = 1 - 0.05 * e; }
-    else { const u = (k - R.drop) / (1 - R.drop), w = Math.exp(-4.5 * u) * Math.cos(9 * u) * (1 - u); px = X1; py = 0; s = 1; sy = 1 - 0.14 * w; sx = 1 + 0.1 * w; }
-    const tr = `translate(-50%,-50%) translate(${px.toFixed(2)}px,${py.toFixed(2)}px) rotate(${r.toFixed(2)}deg) scale(${(s * sx).toFixed(4)},${(s * sy).toFixed(4)})`;
+    const H = this.H, t = k * Motion.BEAT.RISE, R = CAGE.rise, hb = (this.hb * H) / 2; // (hb: half its box: from its middle to its feet)
+    const X0 = (CAGE.x.cx / CAGE.w - 0.5) * this.W, F0 = (CAGE.x.feet / CAGE.h - 0.5) * H, S0 = CAGE.x.h / CAGE.h / CAGE.rest;
+    const X1 = CAGE.shift * H, XA = lerp(X0, X1, 0.55), FA = R.top * H;
+    let px, f, s, r = 0, sx = 1, sy = 1;
+    if (k < R.up) { const u = k / R.up, e = Ease.outCubic(u); px = lerp(X0, XA, Ease.outQuad(u)); f = lerp(F0, FA, e); s = lerp(S0, 1.12, e); r = -6 * Math.sin(Math.PI * u); sy = 1 + 0.1 * (1 - e); sx = 1 - 0.06 * (1 - e); }
+    else if (k < R.hover) { const u = (k - R.up) / (R.hover - R.up); px = XA; f = FA - 0.025 * H * Math.sin(Math.PI * u); s = 1.12; r = 2.5 * Math.sin(Math.PI * 2 * u); }
+    else if (k < R.drop) { const u = (k - R.hover) / (R.drop - R.hover), e = Ease.inQuad(u); px = lerp(XA, X1, u); f = lerp(FA, F0, e); s = lerp(1.12, 1, u); sy = 1 + 0.07 * e; sx = 1 - 0.05 * e; }
+    else { const u = (k - R.drop) / (1 - R.drop), w = Math.exp(-4.5 * u) * Math.cos(9 * u) * (1 - u); px = X1; f = F0; s = 1; sy = 1 - 0.14 * w; sx = 1 + 0.1 * w; }
+    const tr = `translate(-50%,-50%) translate(${px.toFixed(2)}px,${(f - hb).toFixed(2)}px) rotate(${r.toFixed(2)}deg) scale(${(s * sx).toFixed(4)},${(s * sy).toFixed(4)})`;
     x.style.transform = tr; this.xw.style.transform = tr;
     this.xw.style.opacity = (1 - Ease.outQuad(Math.min(1, t / 0.6))).toFixed(3);
     const a = Math.min(1, t / 0.45);
     this.aura.style.transform = `scale(${(1 + 1.1 * Ease.outCubic(a)).toFixed(3)})`; this.aura.style.opacity = (1 - Ease.inQuad(a)).toFixed(3);
     this.setRays(t < 0.25 ? 1 : lerp(1, 0.55, Ease.inOutQuad(Math.min(1, (t - 0.25) / 1.0))),
       1 + 0.45 * Ease.outCubic(Math.min(1, t / 0.4)) - 0.15 * Ease.inOutQuad(clamp((t - 0.4) / 1.2, 0, 1)));
-    if (k >= 1 && !x.classList.contains('live')) { x.classList.add('live'); x.style.willChange = ''; this.xw.style.visibility = 'hidden'; }
+    if (k >= 1 && !x.classList.contains('live')) { x.classList.add('live'); x.style.willChange = ''; this.xw.style.visibility = 'hidden'; Sprite.play(this.xs, 'dance', Clock.t); }
   },
   // as x hovers at the top of its rise: sparkles circle it, and a ring of light runs out from it
   orbit() {
     if (!this.x || !this.W) return;
-    const XA = lerp((CAGE.x.cx / CAGE.w - 0.5) * this.W, CAGE.shift * this.H, 0.55), c = this.pt(CAGE.w / 2 + (XA / this.W) * CAGE.w, CAGE.h * -0.007);
+    const XA = lerp((CAGE.x.cx / CAGE.w - 0.5) * this.W, CAGE.shift * this.H, 0.55);
+    const c = this.pt(CAGE.w / 2 + (XA / this.W) * CAGE.w, CAGE.h * (0.5 + CAGE.rise.top - 0.56 * CAGE.rest)); // (its middle: its feet, less half its height at 1.12)
     const R = (this.cage.getBoundingClientRect().height / (Stage.S * Stage.z)) * 0.62 || 60;
     FX.orbit(c.x, c.y, 16, R);
     FX.ring(c.x, c.y, '#ffd84a', R * 2.2, { lw: 7, life: 0.6, paint: true, delay: 0.35 });
@@ -1864,7 +1929,7 @@ const CageBreak = {
   // x comes down: a puff of gold sparkles and a ring at its feet, and a soft landing
   landFx() {
     if (!this.x || !this.W) return;
-    const f = this.pt(CAGE.w / 2 + ((CAGE.shift * this.H) / this.W) * CAGE.w, CAGE.h * 0.89);
+    const f = this.pt(CAGE.w / 2 + ((CAGE.shift * this.H) / this.W) * CAGE.w, CAGE.x.feet);
     Sound.land();
     FX.burst(f.x, f.y, '#ffd84a', 14, 300, { paint: true, dir: -Math.PI / 2, spread: 1.3, size: 0.6, g: 700, white: 0.2 });
     FX.ring(f.x, f.y - 6, '#ffc21a', 120, { lw: 6, life: 0.45, paint: true });
@@ -1883,6 +1948,72 @@ const CageBreak = {
   },
   // the freeing is over or torn down (Skip, restart): its shards stop
   kill() { if (this.layer) { this.layer.kill(); this.layer = null; } },
+};
+
+// ---------- the end card: x on the deck, right of the cannon (the user's art, 23 Nov) ----------
+// x freed at least once: x free and dancing by its broken cage (x_free.webp); never: x still crying in its cage (its
+// crying frames: "Play again to free them all!"). It stands on the deck right of the cannon, clear of the caption on
+// the left: it jumps up from behind the railing, lands on the boards with a squash, a puff of dust and its shadow,
+// and then the free x keeps hopping to the music's beat (2 hops, ~81 bpm, swaying left and right); the caged one just
+// cries. Transform + opacity only, on GSAP, so it freezes on pause; under reduced motion it simply stands there.
+// XEND: where its feet are (art px), and how tall it is, free or caged; FREE_PIC: x_free.webp's size, and what
+// touches the ground in it (each: its middle, as a fraction of the width; how far up from the picture's foot, as a
+// fraction of the height; its width, as a fraction of the width): the cage's base, the bars and bolt in front of it,
+// and x's foot
+const XEND = { x: 1330, foot: 732, free: 300, cage: 262 };
+const FREE_PIC = { w: 900, h: 762, touch: [[0.171, 0.118, 0.33], [0.175, 0.012, 0.3], [0.42, 0.012, 0.1]] };
+const EndX = {
+  el: null, sh: null, tl: null, loop: null,
+  show(freed) {
+    this.hide();
+    const free = freed > 0, h = free ? XEND.free : XEND.cage;
+    const w = free ? (h * FREE_PIC.w) / FREE_PIC.h : (h * SPR.cry.w) / SPR.cry.h;
+    const el = this.el = document.createElement('div');
+    el.id = 'xEnd';
+    el.innerHTML = free ? `<img src="${IMG}x_free.webp" alt="${T('altXFree')}" draggable="false">` : Sprite.html('cry', '', T('altXCaged'));
+    // (the caged one's frames keep a little clear space under the cage's base: its base sits on the boards)
+    const lift = free ? 0 : h * (11 / SPR.cry.h);
+    Object.assign(el.style, { left: (XEND.x - w / 2).toFixed(1) + 'px', top: (XEND.foot - h + lift).toFixed(1) + 'px', width: w.toFixed(1) + 'px', height: h + 'px' });
+    $('#world').insertBefore(el, $('#cannon'));
+    if (!free) Sprite.play(el.firstChild);
+    // its shadow on the deck: one soft pool under all of it, and a darker contact under what touches the boards
+    const sh = this.sh = groundGroup($('#ground'), 'shadow', XEND.x, XEND.foot);
+    groundBlob(sh, 'soft', w * 0.04, 2, w * 0.92, 30);
+    if (free) for (const [fx, fy, fw] of FREE_PIC.touch) groundBlob(sh, 'contact', (fx - 0.5) * w, -fy * h, fw * w, 14);
+    else groundBlob(sh, 'contact', 0, 0, w * 0.86, 16);
+    if (Motion.still()) return;
+    // the jump up onto the deck: up from behind the railing (stretched), down, a squash on the boards, settle
+    gsap.set(el, { opacity: 0, y: 80, scaleX: 0.9, scaleY: 1.1 });
+    gsap.set(sh, { opacity: 0, scale: 0.5 });
+    const tl = this.tl = gsap.timeline({ delay: 0.35 });
+    tl.to(el, { opacity: 1, duration: 0.12, ease: 'none' }, 0)
+      .to(el, { y: -54, scaleX: 0.96, scaleY: 1.06, duration: 0.34, ease: 'power2.out' }, 0)
+      .to(sh, { opacity: 0.55, scale: 0.7, duration: 0.34, ease: 'power2.out' }, 0)
+      .to(el, { y: 0, scaleX: 1, scaleY: 1, duration: 0.26, ease: 'power2.in' })
+      .to(sh, { opacity: 1, scale: 1, duration: 0.26, ease: 'power2.in' }, '<')
+      .call(() => { Sound.land(); FX.dust(XEND.x - w * 0.25, XEND.foot, -1, 7); FX.dust(XEND.x + w * 0.25, XEND.foot, 1, 7); })
+      .to(el, { scaleX: 1.08, scaleY: 0.9, duration: 0.08, ease: 'power2.out' })
+      .to(el, { scaleX: 1, scaleY: 1, duration: 0.36, ease: 'back.out(2)' });
+    if (!free) return;
+    // then it dances: a hop on each beat, leaning one way, then the other
+    tl.call(() => {
+      const L = this.loop = gsap.timeline({ repeat: -1 });
+      for (const lean of [-2.5, 2.5]) {
+        L.to(el, { y: -16, rotation: lean, duration: 0.26, ease: 'power2.out' })
+          .to(sh, { scale: 0.86, opacity: 0.75, duration: 0.26, ease: 'power2.out' }, '<')
+          .to(el, { y: 0, rotation: 0, duration: 0.2, ease: 'power2.in' })
+          .to(sh, { scale: 1, opacity: 1, duration: 0.2, ease: 'power2.in' }, '<')
+          .to(el, { scaleX: 1.05, scaleY: 0.94, duration: 0.07, ease: 'power2.out' })
+          .to(el, { scaleX: 1, scaleY: 1, duration: 0.211, ease: 'power2.out' });
+      }
+    });
+  },
+  // the end card goes (Play again): its timelines are killed, x and its shadow taken away
+  hide() {
+    for (const k of ['tl', 'loop']) if (this[k]) { this[k].kill(); this[k] = null; }
+    if (this.el) { gsap.killTweensOf(this.el); this.el.remove(); this.el = null; }
+    if (this.sh) { gsap.killTweensOf(this.sh); this.sh.remove(); this.sh = null; }
+  },
 };
 
 // ---------- ground contact helpers: a 'shadow' group multiplies onto the plaza, a 'light' group screens ----------
@@ -2172,6 +2303,7 @@ const EqUI = {
     const old = new Map();
     if (flip) this.el.querySelectorAll('[data-key]').forEach((e) => old.set(e.dataset.key, e.getBoundingClientRect()));
     this.el.innerHTML = html;
+    Sprite.scan(this.el); // (x in its cage cries on: its frames keep the shared beat)
     this.fit();
     if (!flip || !old.size) return;
     const s = this.el.getBoundingClientRect().width / (this.el.offsetWidth || 1) || 1;
@@ -3436,6 +3568,7 @@ async function showEnd() {
   await Cloud.enter();
   Sound.fanfare();
   if (G.freed) { FX.confetti(CLOUD_MID.x, CLOUD_MID.y + 40, 100 + G.freed * 30, 1100); Fireworks.show(2 + G.freed); } // (the more x freed, the more fireworks)
+  EndX.show(G.freed); // x on the deck: free and dancing, or (none freed) still crying in its cage
   $('#endUI').classList.add('on');
   VO.sayAfter(endLine(), 0.8);
 }
@@ -3447,7 +3580,7 @@ async function restartGame() {
   $('#endUI').classList.remove('on');
   Cannon.setFireActive(false); for (let i = 0; i < 2; i++) Cannon.highlight(i, false);
   $('#fly').innerHTML = '';
-  Object.assign(Stage.cam, { fx: CX, fy: CY, z: 1 }); Stage.snap(); TimeFx.reset(); Cannon.settle(); FX.clear(); CageBreak.kill(); Fireworks.stop(); Vignette.to(0, 0);
+  Object.assign(Stage.cam, { fx: CX, fy: CY, z: 1 }); Stage.snap(); TimeFx.reset(); Cannon.settle(); FX.clear(); CageBreak.kill(); EndX.hide(); Fireworks.stop(); Vignette.to(0, 0);
   Cloud.a = 1; Cloud.s = 1; Cloud.blur = 0; Cloud.rot = 0; Cloud.sq.reset(); CloudBurst.reset();
   QCard.label(null); // back to no label during play
   G.rackFor = null;
@@ -3532,7 +3665,7 @@ function frame(time, deltaMs) {
   Clock.t += dt; const t = Clock.t;
   Music.update(rdt);
   if (G.state === 'title' && !Motion.reduced) { const c = Stage.cam, tt = t - Title.t0; c.fx = CX + Math.sin(tt * 0.22) * 28; c.fy = CY + Math.sin(tt * 0.31) * 10; c.z = 1.05 + Math.sin(tt * 0.17) * 0.02; } // (drifts from where boot framed it)
-  Cloud.apply(t, dt); Cannon.update(dt, t); updateBalls(dt, t); Rack.applyEnter(); Title.update(t, dt);
+  Cloud.apply(t, dt); Cannon.update(dt, t); updateBalls(dt, t); Rack.applyEnter(); Title.update(t, dt); Sprite.tick(t);
   if (G.inputOn && !G.helping) { G.idle += dt; if (G.idle > 7) { G.idle = 0; idleHint(); } }
   Stage.update(rdt); Spot.update(dt, t); FX.update(dt); FX.draw();
 }
@@ -3541,8 +3674,9 @@ function frame(time, deltaMs) {
 // in case Play is tapped first) ----
 const Pics = {
   TITLE: ['bg_sky', 'sun_glow', 'sun_rays', 'bg_mount', 'bg_trees', 'bg_plantL', 'bg_plantR', 'bg_deck', 't_logo', 't_cannon', 'playbtn', 't_cage', 't_x', 't_cage_front'],
-  GAME: ['cloud', 'cannon1', 'cannon2', 'cannon1_front', 'cannon2_front', 'rack', 'rack_front', 'fire', 'fire2', 'cage_x', 'cage_empty', 'xchar', 'hand', 'pause', 'play', 'sound', 'question_board',
+  GAME: ['cloud', 'cannon1', 'cannon2', 'cannon1_front', 'cannon2_front', 'rack', 'rack_front', 'fire', 'fire2', 'x_cry', 'cage_empty', 'cage_crack', 'hand', 'pause', 'play', 'sound', 'question_board',
     ...[0, 1, 2, 3, 4, 5, 6, 7].map((i) => `ball_${i}`)],
+  LATER: ['x_dance', 'x_free'], // (wanted only once x is first freed, and at the end: fetched after the rest)
   game: null, // (a promise: the play scene's pictures and the font)
   // resolves when every picture has arrived and is decoded (so it shows without a hitch), or after cap seconds,
   // so a picture that never comes never holds the game up
@@ -3568,7 +3702,7 @@ async function boot() {
   Cloud.init(); Cannon.init(); Rack.init(); EqUI.init(); Title.init(); Spot.init(); Skip.init();
   wireInput();
   gsap.ticker.add(frame);
-  window.__cqBooted = true; window.__cq = { G, Clock, Rack, Drag, Sound, Music, Stage, EqUI, VO, Motion, Skip, Spot, Title, Cloud, Cannon, TimeFx, Perf, FX, Pics, CageBreak, CloudBurst, Fracture, Vignette, Fireworks };
+  window.__cqBooted = true; window.__cq = { G, Clock, Rack, Drag, Sound, Music, Stage, EqUI, VO, Motion, Skip, Spot, Title, Cloud, Cannon, TimeFx, Perf, FX, Pics, CageBreak, CloudBurst, Fracture, Vignette, Fireworks, Sprite, EndX };
   // the start screen: the scene fades in while the title plays its intro, and the Play button pops in
   G.state = 'title';
   Title.start();
@@ -3579,7 +3713,7 @@ async function boot() {
   Rack.balls = ROUNDS[0].balls.map((s, i) => createBall(s, i)); G.rackFor = ROUNDS[0];
   const font = document.fonts && document.fonts.load ? Promise.all([document.fonts.load('600 64px Poppins', '0123456789+−×='), document.fonts.load("400 64px 'Trig Text'", '0123456789+−×÷=()')]).catch(() => {}) : null;
   Pics.game = Pics.load(Pics.GAME, 15, font ? [font] : []);
-  Pics.game.then(() => { CloudBurst.prepare(); CageBreak.load(); }); // (the cloud's burst pieces are cut while the browser is idle; the cage's fracture is worked out)
+  Pics.game.then(() => { CloudBurst.prepare(); CageBreak.load(); Pics.load(Pics.LATER, 30); }); // (the cloud's burst pieces are cut while the browser is idle; the cage's fracture is worked out; then x's dance and the end card's picture)
   const sfx = document.createElement('script'); sfx.src = 'js/sfx.js'; document.body.appendChild(sfx); // (it hands itself to Sound.loadSfx)
 }
 boot();

@@ -95,7 +95,8 @@ const BALL_INK = ['#a312c0', '#d0106d', '#2f8a00', '#0089a6', '#d8352b', '#1d5fd
 const IMG = 'assets/img/';
 const symHTML = (s) => (s === '÷' ? '<span class="dv"></span>' : s);
 const labelHTML = (op) => symHTML(op.sym) + op.n;
-const cageHTML = () => `<span class="tk cage" data-key="x"><img class="cg" src="${IMG}cage_x.webp" alt="${T('altX')}" draggable="false"></span>`;
+// x in its cage, crying (its frames: Sprite and SPR.cry in 30_stage.js)
+const cageHTML = () => `<span class="tk cage" data-key="x">${Sprite.html('cry', 'cg', T('altX'))}</span>`;
 const tk = (cls, key, inner) => `<span class="tk ${cls}" data-key="${key}">${inner}</span>`;
 function numHTML(fr) {
   const neg = fr.n < 0, a = Math.abs(fr.n);
