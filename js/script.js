@@ -1465,8 +1465,8 @@ const Cannon = {
     this.placeFire(n); this.fitFire(); // (each round: by now the word is in, whatever the language)
     this.c1.style.display = this.c1f.style.display = n === 1 ? '' : 'none'; this.c2.style.display = this.c2f.style.display = n === 2 ? '' : 'none';
     const fx = $('#sockFx'); fx.innerHTML = '';
-    this.sock = []; this.tags = []; this.backs = [];
-    this.holes(n).forEach((h, i) => {
+    this.sock = []; this.backs = []; // (no 1/2 order markers beside the sockets: the user had them removed, 23 Nov)
+    this.holes(n).forEach((h) => {
       // the socket's dark lining, shown while a ball sits in it (the ring's inner edge, so the ring covers its rim)
       const k = document.createElement('i'); k.className = 'sbk'; const kd = h.r * 2 + 1;
       Object.assign(k.style, { left: h.x - kd / 2 + 'px', top: h.y - kd / 2 + 'px', width: kd + 'px', height: kd + 'px' });
@@ -1474,11 +1474,6 @@ const Cannon = {
       const g = document.createElement('div'); g.className = 'sglow';
       const d = h.r * 2.55; Object.assign(g.style, { left: h.x - d / 2 + 'px', top: h.y - d / 2 + 'px', width: d + 'px', height: d + 'px' });
       fx.appendChild(g); this.sock.push(g);
-      if (n > 1) { // the order markers sit beside the sockets on the gold side bands, 1 on the left, 2 on the right (above
-        // them is the barrel), a little above the sockets' middle, so the band's rivet never shows through the glass
-        const t = document.createElement('div'); t.className = 'stag'; t.textContent = i + 1;
-        Object.assign(t.style, { left: h.x + (i === 0 ? -1 : 1) * (h.r + 36) + 'px', top: h.y - 14 + 'px' }); fx.appendChild(t); this.tags.push(t);
-      }
     });
     const [sw, sh] = CANNON.src[n], w = sw * CANNON.h / sh, fw = (this.footW = w * CANNON.foot[n].w);
     this.gShadow.innerHTML = ''; this.gLight.innerHTML = '';
@@ -1509,7 +1504,6 @@ const Cannon = {
   hint() { this.fire.classList.remove('hint'); void this.fire.offsetWidth; this.fire.classList.add('hint'); },
   highlight(i, on) { if (this.sock[i]) this.sock[i].classList.toggle('on', on); },
   pulseSockets() {
-    this.tags.forEach((t, i) => { t.classList.remove('pulse'); void t.offsetWidth; t.style.animationDelay = i * 0.25 + 's'; t.classList.add('pulse'); });
     this.sock.forEach((g, i) => { tween(0.9, (e, k) => (g.style.opacity = Math.sin(k * Math.PI).toFixed(2)), Ease.linear, i * 0.25).then(() => (g.style.opacity = '')); });
   },
   // the shot: anticipation (antic, tweened in the timeline) is released into a stretch that jiggles back on a
