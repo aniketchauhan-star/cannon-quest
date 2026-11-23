@@ -4,10 +4,16 @@
 All game art comes from the files you supplied, kept in `art/`: the sprite sheets (`art/sprite_sheets/`), the start-screen sheet and Play button (`art/start_screen/`), and the deck background picture with its parts sheet (`art/background/`).
 
 ## Music
-**"New Shoes"** by HoliznaCC0, from the album "Happy Lo-Fi (Lofi Collection)" on OpenGameArt: [opengameart.org/content/happy-lo-fi-lofi-collection](https://opengameart.org/content/happy-lo-fi-lofi-collection).
-A light, happy lo-fi tune at about 81 bpm, with very little bass. Released as **CC0 (public domain)**. No credit is required; it is given here anyway.
-Stored as `assets/music/newshoes.webm` (Opus, 80 kbps): a 141 s seamless loop. The original's fade-out is replaced by a 3 s crossfade back into its own start, the deep rumble below 80 Hz is cut, and it is set to −17 LUFS, 3 dB quieter than the track before it.
-It replaced "Bravery Run" by MintoDog (CC0, 170 bpm electric guitar and synth) on 20 Nov 2026, when the user found that track too heavy and asked for light music. Before that came "Blue Skies" by HoliznaCC0 and "Chill Wave" by Kevin MacLeod (CC BY 4.0).
+**"War on Water: Chapter 1"** by yd, from "War on Water: Tracks" on OpenGameArt: [opengameart.org/content/war-on-water-tracks](https://opengameart.org/content/war-on-water-tracks).
+An orchestral march with marching drums from a naval-battle game, 85 bpm, with light bass. Released as **CC0 (public domain)**. No credit is required; it is given here anyway.
+Mixed into it are real recordings of nature and distant cannon fire, all by Joseph SARDIN, [BigSoundBank.com](https://bigsoundbank.com) (**CC0**):
+- [#904](https://bigsoundbank.com/forest-wind-in-the-trees-s0904.html) "Forest: wind in the trees" (with its birds): a soft bed all the way through
+- [#1446](https://bigsoundbank.com/small-waves-and-beach-1-s1446.html) "Small waves and beach 1": a soft bed all the way through
+- [#2573](https://bigsoundbank.com/gulls-on-the-harbor-s2573.html) "Gulls on the harbor": four distant gull cries
+- [#1023](https://bigsoundbank.com/explosion-far-away-s1023.html) "Explosion far away" and [#1806](https://bigsoundbank.com/explosion-far-away-2-s1806.html) "Explosion far away 2": distant cannon fire, nine shots on the music's downbeats, slowed 20% (a bigger gun), muffled and given a long echo, as if a battle is going on far across the water
+
+`tools/mix_bgm.py` builds `assets/music/battle.webm` (Opus, 80 kbps): a 135.5 s seamless loop, exactly the track's 48 bars, with the reverb tail past its last bar laid over its first. It is set to −19 LUFS, 2 dB quieter than the track before it, and the game plays it at 20%.
+It replaced "New Shoes" by HoliznaCC0 (CC0, a light happy lo-fi tune) on 23 Nov 2026, when the user asked for music "like cannon, some fighting sound, but not too loud", with natural sound effects in it. Before that came "Bravery Run" by MintoDog (CC0, 170 bpm electric guitar and synth; dropped as too heavy), "Blue Skies" by HoliznaCC0 and "Chill Wave" by Kevin MacLeod (CC BY 4.0).
 
 ## Voice-over
 Every line is said by a real person: one recording of `docs/VO_RECORD.txt`, cut into clips by `tools/vo_split.py` (`tools/vo_takes.json` records which recording each clip came from). No AI or synthetic voice is used, at the user's request of 20 Nov 2026. That includes the TTS studio, the device's own voice, and the earlier Kokoro clips (removed 18 Nov 2026).

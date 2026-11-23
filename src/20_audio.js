@@ -231,13 +231,16 @@ const Sound = {
   },
 };
 
-// ---------- background music: "New Shoes" (HoliznaCC0, CC0 public domain, see CREDITS.md) ----------
-// The user, 20 Nov: "the BGM is too heavy… I want light music, not high music". So the 170 bpm guitar + synth track
-// (Bravery Run) gave way to a light, happy lo-fi tune: ~81 bpm, very little bass, no drums pounding. It is cut into
-// a seamless loop (its fade-out replaced by a 3 s crossfade into its own start) and stored 3 dB quieter than the
-// old track (−17 LUFS). It plays at its own speed, at 20% volume (level; the user, 20 Nov: "40% only", then "20%"), and dips
-// to 40% of that while the voice speaks (duck), so it always sits softly UNDER the lesson.
-const TRACKS = { game: 'assets/music/newshoes.webm' };
+// ---------- background music: a naval battle far off, with nature round it (CC0, see CREDITS.md) ----------
+// The user, 23 Nov: "change the BG music… like cannon, some fighting sound, but not too loud… add natural SFX in
+// music". So the light lo-fi tune ("New Shoes") gave way to "War on Water: Chapter 1" (yd, CC0): an orchestral march
+// from a naval-battle game, 85 bpm with marching drums but light bass (on 20 Nov a 170 bpm guitar track was "too
+// heavy"). tools/mix_bgm.py mixes real recordings into it: wind in the trees, small waves on the shore, a few
+// distant gulls, and distant cannon fire on the music's downbeats (muffled, with an echo off the water). One
+// 135.5 s seamless loop (exactly 48 bars), at −19 LUFS (2 dB under the old track). It plays at its own speed, at
+// 20% volume (level; the user, 20 Nov: "40% only", then "20%"), and dips to 40% of that while the voice speaks
+// (duck), so it always sits softly UNDER the lesson.
+const TRACKS = { game: 'assets/music/battle.webm' };
 // a short buzz on phones that support it (never when muted or with reduced motion)
 const Haptic = { buzz(p) { if (Sound.muted || Motion.still() || !navigator.vibrate) return; try { navigator.vibrate(p); } catch (e) { /* ignore */ } } };
 
