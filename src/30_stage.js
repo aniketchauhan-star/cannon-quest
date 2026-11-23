@@ -618,7 +618,7 @@ function updateBalls(dt, t) {
 //  EQUATION UI — tokens glide (FLIP) when the equation changes
 // =====================================================================
 const EqUI = {
-  el: null, maxW: 470, maxH: 126, // (the cloud's body below its label, with a margin: the equation always stays inside the cloud)
+  el: null, maxW: 440, maxH: 124, // (the cloud's body, with a margin: the equation always stays inside the cloud)
   init() { this.el = $('#eq'); this.el.style.transformOrigin = '50% 50%'; },
   fit() {
     this.el.style.transform = 'translate(-50%,-50%)';

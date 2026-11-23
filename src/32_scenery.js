@@ -6,7 +6,7 @@
 //    layers (sun_glow / sun_rays, drawn by tools/make_sun.py).
 //  • NO painted clouds: the only cloud in the game is the equation's (the user, 19 Nov).
 //  • JUNGLE: low mist drifting between the trees, soft shafts of sunlight that breathe, sunlit specks floating up,
-//    and now and then a leaf tumbling down from the big trees.
+//    and now and then a leaf tumbling down from the trees.
 //  • BIRDS: a small flock (1–3) now and then, crossing between the hills and the treetops. They flap a few beats
 //    and glide. GSAP, so they stop with the game on pause; none under reduced motion.
 //  • WIND: the two leafy plants behind the railing sway on one gust curve (Wind.lean). Each plant's delay follows
@@ -26,9 +26,10 @@ const MIST = [
 // light shafts: from the sun toward these points in the forest (x, y), width; the near part is masked off so each
 // shaft only shows as it falls through the trees
 const SHAFTS = [[1210, 590, 110], [1040, 610, 70], [880, 600, 130], [1390, 620, 60], [700, 610, 80]];
-// where leaves fall from (under the big trees' crowns): x, y; each falls with its own timing. Sunlit yellow-green
-// and a few golden ones, so they show against the green trees
-const LEAF_FROM = [[350, 355], [470, 345], [1320, 330], [1450, 360], [1570, 350], [1230, 385], [420, 375], [1500, 335]];
+// where leaves fall from (under the crowns of the trees that stand out of the forest; the three biggest were taken
+// out on 23 Nov, tools/thin_trees.py): x, y; each falls with its own timing. Sunlit yellow-green and a few golden
+// ones, so they show against the green trees
+const LEAF_FROM = [[150, 400], [230, 405], [560, 430], [650, 425], [1120, 415], [1260, 420], [1345, 430], [1600, 440]];
 const LEAF_HUE = ['#d4ec4c', '#f2c94c', '#c3e24a', '#ffd95a'];
 
 // ---------- WIND ----------

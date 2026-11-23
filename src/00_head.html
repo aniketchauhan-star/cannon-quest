@@ -83,7 +83,7 @@ img{-webkit-user-drag:none;user-select:none}
 #bgTrees{left:0;top:263.5px;width:1672px;height:455.5px}
 /* the jungle's life, over the trees and behind the railing (Jungle in src/32_scenery.js places each piece):
    mist drifting low between the trees, soft shafts of sunlight that breathe, sunlit specks floating up, and now and
-   then a leaf tumbling down from the big trees */
+   then a leaf tumbling down from the trees */
 #bgJungle{left:0;top:0;width:0;height:0}
 #bgJungle>i{position:absolute;display:block;pointer-events:none}
 #bgJungle .ms{border-radius:50%;background:radial-gradient(closest-side,rgba(234,251,246,.72),rgba(234,251,246,.36) 55%,rgba(234,251,246,0));animation:mdrift 50s ease-in-out infinite alternate}
@@ -114,17 +114,19 @@ img{-webkit-user-drag:none;user-select:none}
 /* ---------- the equation cloud: the question sits right on the cloud ---------- */
 /* (far off in the sky: Cloud.apply draws it, label and equation included, at CLOUD_FAR; lifted so its top stays near the screen's top edge) */
 #cloud{position:absolute;left:500px;top:-23px;width:656px;height:300px;transform-origin:50% 62%;will-change:transform}
-/* the cloud art: no outline, soft and hazy (tools/soft_cloud.py), where the painted cloud was less its old blue stroke */
-#cloud .cl{position:absolute;left:10px;top:10px;width:636px;height:281px}
+/* the cloud art (tools/paint_cloud.py): painted like the clouds of the deck picture, so it belongs to that sky: a big
+   dome, puffs stepping down, a flat blue base whose wisps run out 62 px past the box on each side; lit by the sun */
+#cloud .cl{position:absolute;left:-52px;top:10px;width:760px;height:281px}
 /* No box: the question sits right on the cloud (the user asked to remove the card on 19 Nov). During play there is no
    label, only the equation (the user removed "Find the value of x" on 19 Nov); at the end a small dark label
    (the same dark glass + gold ring as Skip and the caption) reads "Your score", under the cloud's top bump. The equation
-   sits in the cloud's widest part, always fitted inside the cloud (EqUI.maxW / maxH). Measured on cloud.webp,
-   in #cloud box px: the art is ≥ 520 px wide from y 115 to 250, and its middle is x 328 */
+   sits in the middle of the cloud's body (its centre of mass), always fitted inside the cloud (EqUI.maxW / maxH).
+   Measured on cloud.webp (tools/paint_cloud.py), in #cloud box px: the body is solid from x 108 to 548 below y 166,
+   down to its flat base at y 270; its middle is x 328 */
 #qCard{position:absolute;left:0;top:0;width:656px;height:0;pointer-events:none}
 #qTab{position:absolute;left:328px;top:80px;translate:-50% -50%;padding:7px 24px;border-radius:99px;background:var(--glass);box-shadow:0 0 0 3px #ffd23d,0 5px 12px rgba(20,10,60,.24);color:#fff;font-size:25px;line-height:1.2;letter-spacing:.01em;white-space:nowrap}
 #qTab:empty{display:none}
-#eqBox{position:absolute;left:328px;top:184px;width:0;height:0} /* (the middle of the cloud's body) */
+#eqBox{position:absolute;left:328px;top:178px;width:0;height:0} /* (the middle of the cloud's body) */
 /* the equation, the orbs' numbers and the caption's words (on the user's question template): Trig Text (the user's
    font, 19 Nov), its one weight (400) */
 #eq,.ball b,#cap .txt{font-family:'Trig Text','Poppins',system-ui,sans-serif;font-weight:400}
