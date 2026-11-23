@@ -429,7 +429,8 @@ const fireSpot = () => Spot.boxOf($('#fireBtn'));
 async function tutorialLoad() {
   G.taught1 = true; G.tutSkip = false;
   Skip.show(skipTutorial);
-  // 1) the equation, 2) the cannon, 3) the orbs: one at a time, everything else dimmed and blurred
+  // 1) the equation, 2) the cannon, 3) the orbs: one at a time, everything else dimmed (not blurred: the equation
+  // must stay readable in every step, user 23 Nov)
   const parts = [
     [eqSpot, { sx: 1.08, sy: 1.25, pad: 30 }, 'tutEquation'],
     [cannonSpot, { sx: 1.12, sy: 1.12, pad: 20 }, 'tutCannon'],

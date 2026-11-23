@@ -285,7 +285,7 @@ const TimeFx = {
     this.scale = 1;
   },
 };
-// Adaptive quality (§9.4): tier 2 = full, tier 1 = half the particles, no rotational shake, dim-only spotlight.
+// Adaptive quality (§9.4): tier 2 = full, tier 1 = half the particles, no rotational shake.
 // Starts low on weak devices; steps down if frames stay slow, but only between shots, never mid-shot.
 const Perf = {
   tier: 2, ema: 16.7, slowFor: 0, wantDown: false, since: 0,
@@ -2265,9 +2265,10 @@ const QCard = {
 };
 
 // =====================================================================
-//  SPOTLIGHT: first-time tutorial focus. Everything is blurred + dimmed
-//  except one target (a soft elliptical hole), or two (the −5 and the
-//  socket it goes into; FIRE and the loaded socket), each with a gold
+//  SPOTLIGHT: first-time tutorial focus. Everything is dimmed, never
+//  blurred (user, 23 Nov: the equation must stay readable), except one
+//  target (a soft elliptical hole), or two (the −5 and the socket it
+//  goes into; FIRE and the loaded socket), each with a gold
 //  ring, and a little hand that shows what to do: it taps a button, or
 //  carries a see-through copy of the ball into the cannon (the drag
 //  lesson). Only opacity and transform move: each of the two dim layers
@@ -2330,7 +2331,7 @@ const Spot = {
     const o = this.opts, b2 = o.also ? o.also() : null;
     const h1 = this.hole(b, o.sx ?? 1.3, o.sy ?? 1.3, o.pad ?? 24), h2 = b2 ? this.hole(b2, o.sx2 ?? 1.3, o.sy2 ?? 1.3, o.pad2 ?? 24) : null;
     const D = animate ? Motion.DUR.SLOW : 0, px = (v) => v.toFixed(1) + 'px';
-    // the dim + blur: the other layer takes the new holes, then the two cross-fade (no second hole: it is off screen)
+    // the dim: the other layer takes the new holes, then the two cross-fade (no second hole: it is off screen)
     const prev = this.layers[this.front];
     this.front ^= 1;
     const next = this.layers[this.front], st = next.style;
@@ -3311,7 +3312,8 @@ const fireSpot = () => Spot.boxOf($('#fireBtn'));
 async function tutorialLoad() {
   G.taught1 = true; G.tutSkip = false;
   Skip.show(skipTutorial);
-  // 1) the equation, 2) the cannon, 3) the orbs: one at a time, everything else dimmed and blurred
+  // 1) the equation, 2) the cannon, 3) the orbs: one at a time, everything else dimmed (not blurred: the equation
+  // must stay readable in every step, user 23 Nov)
   const parts = [
     [eqSpot, { sx: 1.08, sy: 1.25, pad: 30 }, 'tutEquation'],
     [cannonSpot, { sx: 1.12, sy: 1.12, pad: 20 }, 'tutCannon'],

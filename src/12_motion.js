@@ -155,7 +155,7 @@ const TimeFx = {
     this.scale = 1;
   },
 };
-// Adaptive quality (§9.4): tier 2 = full, tier 1 = half the particles, no rotational shake, dim-only spotlight.
+// Adaptive quality (§9.4): tier 2 = full, tier 1 = half the particles, no rotational shake.
 // Starts low on weak devices; steps down if frames stay slow, but only between shots, never mid-shot.
 const Perf = {
   tier: 2, ema: 16.7, slowFor: 0, wantDown: false, since: 0,

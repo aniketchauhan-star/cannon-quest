@@ -53,7 +53,7 @@ It is based on the *Cannon Quest* deck, the POD A stand-up brief (16 Nov 2026), 
 - **Not freeing x:** the cage rattles with sparks flying off its bars, then a gentler cloudburst (no shower). There is no "wrong" label and no retry, and the game moves to the next round.
 - **End card:** confetti, and fireworks in the sky either side of the score cloud, one more for each x freed.
 - **Grounded scene:** the cannon and the ball tray cast soft shadows on the deck, balls sit down into their cups, and a loaded ball fills its cannon socket edge to edge, centred, with no dark gap round it (you asked on 20 Nov: "fully absorb in circle, no negative space"). Its orb is 1.015 × the opening (`CANNON.seat`), so its edge tucks about a pixel under the gold ring's inner lip and nothing shows outside the ring. As it lands it swells a touch and settles (no squash, which would open a gap). The FIRE button fills the recess in the cannon's gold bezel exactly, centred on it (`CANNON.fire`, measured in the cannon art).
-- **First-time spotlight tutorial:** only ONE, on the first screen (x + 5 = 7) and on no other screen. Everything is blurred and dimmed except what is being shown, with a gold ring:
+- **First-time spotlight tutorial:** only ONE, on the first screen (x + 5 = 7) and on no other screen. Everything else is dimmed, but never blurred, so the equation can always be read (you asked on 23 Nov). What is being shown gets a gold ring:
   1. the equation on the cloud ("This is the equation.");
   2. the cannon ("This is the cannon.");
   3. the orbs in the tray, which glow one after another ("These are the orbs.");

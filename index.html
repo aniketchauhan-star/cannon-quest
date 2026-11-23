@@ -321,12 +321,13 @@ body.dragging,body.dragging *{cursor:grabbing !important}
 
 /* ---------- HUD (from the art: pause, sound) ---------- */
 #hud{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .3s ease-out}
-/* ---------- spotlight tutorial: blur + dim everything except the focus ----------
+/* ---------- spotlight tutorial: a light dim over everything except the focus, and NO blur (user, 23 Nov: the blur
+   hid the equation; it must stay readable in every step) ----------
    up to two clear holes (--x/--y/--rx/--ry, and --x2/… for a second one, parked off screen when unused): each mask
    layer is clear inside its hole, and the two are intersected, so both holes stay clear */
 #spot{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none}
 #spot .sl{position:absolute;inset:0;opacity:0;--x:0px;--y:0px;--rx:100px;--ry:100px;--x2:-9999px;--y2:-9999px;--rx2:1px;--ry2:1px;
-  background:rgba(14,10,42,.36);-webkit-backdrop-filter:blur(7px) saturate(.8);backdrop-filter:blur(7px) saturate(.8);
+  background:rgba(14,10,42,.36);
   -webkit-mask-image:radial-gradient(ellipse var(--rx) var(--ry) at var(--x) var(--y),transparent 0,transparent 78%,#000 100%),radial-gradient(ellipse var(--rx2) var(--ry2) at var(--x2) var(--y2),transparent 0,transparent 78%,#000 100%);
   mask-image:radial-gradient(ellipse var(--rx) var(--ry) at var(--x) var(--y),transparent 0,transparent 78%,#000 100%),radial-gradient(ellipse var(--rx2) var(--ry2) at var(--x2) var(--y2),transparent 0,transparent 78%,#000 100%);
   -webkit-mask-composite:source-in;mask-composite:intersect}
@@ -355,8 +356,6 @@ body.spot #hud.on{opacity:.5}
    the stage + camera transform that Stage keeps in step with the world */
 #stageTop{position:absolute;left:0;top:0;width:1672px;height:941px;transform-origin:0 0;pointer-events:none}
 #worldTop{position:absolute;left:0;top:0;width:1672px;height:941px;transform-origin:0 0;will-change:transform;pointer-events:none}
-/* low quality tier (Perf): the spotlight dims without the live blur */
-body.lowfx #spot .sl{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(14,10,42,.52)}
 /* glows whose opacity breathes all the time get their own layer, so they never repaint the plaza */
 .gsh.light{will-change:opacity}
 #thumb.live .gsh{will-change:transform,opacity}
