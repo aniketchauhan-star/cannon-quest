@@ -816,14 +816,14 @@ const DW = 1672, DH = 941, CX = DW / 2, CY = DH / 2;
 const CANNON = { x: 836, bottom: 762, h: 360, src: { 1: [613, 449], 2: [613, 449] },
   // each socket's centre + radius: x and r as fractions of the sprite width, y of its height. r comes from where the
   // ring's gold starts (found on 240 rays): r × seat = the ring's widest inner edge + 1.8 canvas px (see seat)
-  holes: { 1: [[0.498, 0.5057, 0.1156]], 2: [[0.3497, 0.523, 0.0885], [0.6509, 0.5234, 0.0886]] },
+  holes: { 1: [[0.498, 0.5057, 0.1156]], 2: [[0.3473, 0.5194, 0.0884], [0.6507, 0.5202, 0.0892]] },
   // base footprint width (fraction of the sprite); the wooden base has no light strips
-  foot: { 1: { w: 0.7667, strips: [] }, 2: { w: 0.8059, strips: [] } },
+  foot: { 1: { w: 0.7667, strips: [] }, 2: { w: 0.8148, strips: [] } },
   // the dark recess inside each cannon's gold FIRE bezel, in sprite px: centre + size (Cannon.placeFire). The button
   // is placed by this, never by the sprite's middle. Each cannon has its own pill picture (1: fire.webp, 2: fire2.webp,
   // .p1 / .p2 in #fireBtn); `art` = the picture's size with its pill's size inside it, so the pill fills the recess exactly
   fire: { 1: { cx: 304.6, cy: 374.1, w: 244.9, h: 92.0, art: [495, 189, 490.0, 184.0] },
-    2: { cx: 306.5, cy: 372.3, w: 254.5, h: 97.4, art: [257.0, 99.5, 254.5, 97.4] } },
+    2: { cx: 304.0, cy: 372.3, w: 252.0, h: 96.6, art: [254.0, 99.0, 252.0, 96.6] } },
   // a loaded ball fills its socket edge to edge (user, 20 Nov: "fully absorb in circle, no negative space"): its
   // painted orb is this much of the hole's width. Each hole's r is set so that edge sits 1.8 canvas px (~0.7 game px)
   // under the gold ring where the ring is widest (the holes are not perfect circles), and the ring layer

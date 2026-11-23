@@ -113,12 +113,19 @@ def ring(cx, cy, r0):
 rings = [ring(*s_) for s_ in seeds]
 
 # =====================================================================================================
-# the FIRE pill: the red, filled, grown over its dark outline up to the gold bezel; its bounding box gives a stadium
+# the FIRE pill, whatever its colour (red on the first double cannon, yellow on the second, both 23 Nov): find the
+# white word in the lower middle, flood the pill from just left of it up to the pill's dark outline (darker than
+# the pill, it parts the pill from the gold bezel), grow over that outline; its bounding box gives a stadium
 # =====================================================================================================
-red = (r > 150) & (g < 110) & (b < 110) & (a > 200) & ~gold; red[:int(H * 0.6)] = False
-lab, n = nd.label(red); red = lab == (np.argmax(nd.sum(red, lab, range(1, n + 1))) + 1)
-grow = nd.binary_fill_holes(nd.binary_closing(red, iterations=3))
-for _ in range(6): grow |= nd.binary_dilation(grow) & ~gold & (a > 200) & (L < 100)
+wht = (r > 200) & (g > 200) & (b > 200) & (a > 200)
+wht[:int(H * 0.65)] = False; wht[int(H * 0.95):] = False; wht[:, :int(W * 0.25)] = False; wht[:, int(W * 0.75):] = False
+lab, n = nd.label(wht); objs = nd.find_objects(lab)
+lt = [k for k in range(n) if objs[k][0].stop - objs[k][0].start >= 60]  # the letters (≈110 px tall)
+sy, sx = (min(objs[k][0].start for k in lt) + max(objs[k][0].stop for k in lt)) // 2, min(objs[k][1].start for k in lt) - 30
+Lpill = float(np.median(L[sy - 4:sy + 5, sx - 4:sx + 5]))
+lab, n = nd.label(~((L < 0.6 * Lpill) | (a < 200)))  # (the outline is under 0.6 × the pill's brightness)
+grow = nd.binary_fill_holes(lab == lab[sy, sx])
+for _ in range(5): grow |= nd.binary_dilation(grow) & (L < 0.85 * Lpill) & (a > 200)  # over the outline, to the bezel
 grow = nd.binary_fill_holes(grow)
 ys, xs = np.nonzero(grow); pbox = (int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1)
 px0, py0, px1, py1 = pbox
@@ -133,7 +140,7 @@ M_ = 8
 P = A[py0 - M_:py1 + M_, px0 - M_:px1 + M_].astype(np.float64); Lp = L[py0 - M_:py1 + M_, px0 - M_:px1 + M_]
 NR = P.shape[0]; rr = np.arange(NR)[:, None]
 sp = stadium(P.shape[:2], (M_, M_, M_ + px1 - px0, M_ + py1 - py0)) > 0.5
-white = (P[..., 1] > 140) & (P[..., 2] > 110) & nd.binary_erosion(sp, iterations=6)
+white = (P[..., :3] > 215).all(-1) & nd.binary_erosion(sp, iterations=6)  # pure white (the yellow pill's light top band is cream)
 lab, n = nd.label(white); objs = nd.find_objects(lab); area = nd.sum(white, lab, range(1, n + 1))
 tall = [k for k in range(n) if objs[k][0].stop - objs[k][0].start >= 60]  # the letters (gloss blobs are ≤ 45 px tall)
 y0w, y1w = min(objs[k][0].start for k in tall), max(objs[k][0].stop for k in tall)
@@ -148,11 +155,12 @@ near = dist(word) <= 8  # small white bits next to a letter are the letter's, no
 for k in range(n):
     if (near & (lab == k + 1)).any(): word |= lab == k + 1
 gloss = dist(white & ~word) <= 4
-drop = word.copy()
-for dy in range(1, 31): drop[dy:] |= word[:-dy]
-halo = (dist(word) <= 17) | (dist(drop) <= 5)
+drop = word.copy()  # (the shadow falls down and a little to the right)
+for dy in range(1, 33): drop[dy:, dy // 4:] |= word[:-dy, :word.shape[1] - dy // 4]
+halo = (dist(word) <= 21) | (dist(drop) <= 7)
 # …but never into the rim light: in each column, stop just above the first bright row under the letters
-rim = (Lp > 80) & (rr >= y1w + 14) & sp  # (+14: past the letters' own bright bottom edge and the shadow's core)
+below = (rr >= y1w + 14) & sp  # (+14: past the letters' own bright bottom edge and the shadow's core)
+rim = (Lp > np.median(Lp[below & (rr < y1w + 24)]) + 15) & below  # (the light line near the pill's bottom)
 halo &= rr < (np.where(rim.any(0), rim.argmax(0), NR) - 1)[None, :]
 fill = nd.binary_fill_holes(halo & nd.binary_erosion(sp, iterations=6)) & ~gloss  # (+ any pocket it encloses)
 
@@ -172,7 +180,10 @@ def laplace_fill(img, mask, keep):
     return out
 
 
-E = P.copy(); E[..., :3] = laplace_fill(P[..., :3], fill, gloss)
+E = P.copy(); E[..., :3] = laplace_fill(P[..., :3], fill, gloss | (rr >= (np.where(rim.any(0), rim.argmax(0), NR) - 1)[None, :]))
+# a light blur deep inside the fill (none at its edge), so no faint point of a leftover shadow pixel survives
+wdeep = np.clip(nd.distance_transform_edt(fill) / 8, 0, 1)[..., None]
+E[..., :3] = E[..., :3] * (1 - wdeep) + nd.gaussian_filter(E[..., :3], (2.5, 2.5, 0)) * wdeep
 if args.debug:
     dbg = P[..., :3].copy(); dbg[fill] = dbg[fill] * 0.4 + np.array([0, 255, 0]) * 0.6; dbg[gloss & sp] = dbg[gloss & sp] * 0.4 + np.array([0, 0, 255]) * 0.6
     Image.fromarray(np.clip(dbg, 0, 255).astype(np.uint8)).save(f'{args.out}/debug_fill.png')
