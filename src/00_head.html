@@ -3,231 +3,424 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>Cannon Quest</title>
-<meta name="description" content="Cannon Quest — load operations into the cannon, fire, and free x!">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<title data-i18n="gameTitle"></title>
+<meta name="description" content="" data-i18n-attr="content:metaDescription">
+<!-- No loading screen: the start screen shows as soon as the game and the start screen's pictures are in. So all of
+     it starts downloading with the page itself, before anything else, and first: the scripts (each one waits on the
+     one before it, so none may queue behind a picture), the words, then every picture on the start screen. The play
+     scene's own pictures have data-src in the markup (no download yet): boot gives them their src once the start screen
+     is up, so they arrive while the player looks at it. -->
+<link rel="preload" href="libs/gsap.min.js" as="script">
+<link rel="preload" href="js/i18n.js" as="script">
+<link rel="preload" href="js/script.js" as="script">
+<link rel="preload" href="js/sfx_title.js" as="script">
+<script>/* the words (js/i18n.js reads the .json, or the .js from disk, where a fetch is blocked) */
+(function () { var l = document.createElement('link'), disk = location.protocol === 'file:'; l.rel = 'preload';
+  if (disk) { l.as = 'script'; l.href = 'locales/locales.js'; } else { l.as = 'fetch'; l.crossOrigin = 'anonymous'; l.href = 'locales/locales.json'; }
+  document.head.appendChild(l); })();
+</script>
+<link rel="preload" as="image" href="assets/img/bg_sky.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/sun_glow.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/sun_rays.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/bg_mount.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/bg_trees.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/bg_plantL.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/bg_plantR.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/bg_deck.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/t_logo.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/t_cannon.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/playbtn.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/t_cage.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/t_x.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/t_cage_front.webp" fetchpriority="high">
+<!--FONTS-->
 <style>
-:root{--ink:#1a1740;--gold:#ffcb3d;--orange:#ff9418;--plum:#2a1c5c}
+:root{--ink:#1a1740;--gold:#ffcb3d;--orange:#ff9418;--plum:#2a1c5c;--glass:rgba(28,19,78,.88);--glass-hi:rgba(48,34,120,.94)}
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{width:100%;height:100%;overflow:hidden;background:#3cb8f6;font-family:'Fredoka',ui-rounded,'Arial Rounded MT Bold',system-ui,sans-serif;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:none;color:var(--ink)}
+/* one typeface, one weight: Poppins SemiBold (600), embedded by build.sh. No outlines on text, no fake bold */
+html,body{width:100%;height:100%;overflow:hidden;background:#0198fc;font-family:'Poppins',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-weight:600;font-synthesis:none;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:none;color:var(--ink)}
 button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
 img{-webkit-user-drag:none;user-select:none}
-#viewport{position:fixed;inset:0;overflow:hidden;background:linear-gradient(#36b3f5,#9ad9ff)}
+#viewport{position:fixed;inset:0;overflow:hidden;background:linear-gradient(#0198fc,#0aa3fc 22%,#53c9fd 32%,#96eefd 38%,#00b1a6 50%,#ec9e4c 70%,#d8853b)} /* (the picture's colours, until it has loaded) */
 #stage{position:absolute;left:0;top:0;width:1672px;height:941px;transform-origin:0 0}
 #world{position:absolute;left:0;top:0;width:1672px;height:941px;transform-origin:0 0;will-change:transform}
 .spr{position:absolute;display:block;pointer-events:none}
-#bg{position:absolute;display:block;pointer-events:none;max-width:none}
-.mini{position:absolute;width:190px;opacity:.9;pointer-events:none;will-change:transform}
+/* ---------- background: the user's deck picture (art/background/new_background.png), cut into parallax layers by
+   tools/cut_deck_bg.py (bg units = the 1672×941 frame; Stage scales it to cover). At rest the layers stack back into
+   the picture exactly. Each one also goes on a little under the layer in front of it, for the camera's parallax
+   (PARALLAX in src/30_stage.js). The boxes are the ones that tool prints. ---------- */
+#bg{position:absolute;left:0;top:0;width:1672px;height:941px;transform-origin:0 0;pointer-events:none}
+#bg .bl{position:absolute;display:block;max-width:none;pointer-events:none}
+/* the sky without its clouds: a smooth gradient, saved at 1/4 size and stretched. The only cloud in the game is the
+   equation's (the user removed the painted ones on 19 Nov) */
+#bgSky{left:0;top:0;width:1672px;height:941px}
+/* the sun, top right (SUN in src/32_scenery.js places it): the sky brightening toward it, its bloom, two
+   counter-turning glare layers (sun_glow / sun_rays from tools/make_sun.py), a lens streak and the white disc */
+#bgSun{left:0;top:0;width:0;height:0}
+#bgSun>*{position:absolute;display:block;max-width:none;pointer-events:none}
+#bgSun .sk{left:-850px;top:-850px;width:1700px;height:1700px;border-radius:50%;background:radial-gradient(closest-side,rgba(255,253,234,.55),rgba(255,250,222,.28) 22%,rgba(255,250,222,.1) 55%,rgba(255,250,222,0))}
+#bgSun .sg{left:-380px;top:-380px;width:760px;height:760px;animation:sglow 5.5s ease-in-out infinite alternate}
+#bgSun .sr{left:-500px;top:-500px;width:1000px;height:1000px;opacity:.6}
+#bgSun .r1{animation:sspin 210s linear infinite,sbreath 4.7s ease-in-out infinite alternate}
+#bgSun .r2{transform:scaleX(-1) rotate(17deg);animation:sspin2 270s linear infinite,sbreath 6.3s -3s ease-in-out infinite alternate-reverse}
+#bgSun .ss{left:-320px;top:-2.5px;width:640px;height:5px;border-radius:50%;opacity:.5;background:linear-gradient(90deg,rgba(255,250,235,0),rgba(255,250,235,.25) 32%,rgba(255,255,255,.85) 50%,rgba(255,250,235,.25) 68%,rgba(255,250,235,0))}
+#bgSun .sd{left:-28px;top:-28px;width:56px;height:56px;border-radius:50%;background:radial-gradient(closest-side,#fff 0,#fff 70%,rgba(255,255,250,.92) 80%,rgba(255,253,240,.4) 91%,rgba(255,250,232,0) 100%);animation:spulse 3.3s ease-in-out infinite alternate}
+@keyframes sglow{from{opacity:.86}to{opacity:1}}
+@keyframes sspin{to{transform:rotate(360deg)}}
+@keyframes sspin2{from{transform:scaleX(-1) rotate(17deg)}to{transform:scaleX(-1) rotate(377deg)}}
+@keyframes sbreath{from{opacity:.42}to{opacity:.82}}
+@keyframes spulse{to{transform:scale(1.07)}}
+/* birds: a few, now and then, crossing the sky between the hills and the treetops (Birds in src/32_scenery.js flies
+   each one; GSAP, so they stop on pause). Each flaps a few times, then glides, rising a little on the beats */
+#bgBirds{left:0;top:0;width:0;height:0}
+.bird{position:absolute;left:0;top:0;width:44px;height:30px;margin:-15px 0 0 -22px;will-change:transform}
+.bird .bb{display:block;width:100%;height:100%;animation:bbob 2.4s ease-in-out infinite}
+.bird svg{display:block;width:100%;height:100%;overflow:visible;fill:#24395a;opacity:.86}
+.bird .w{transform-box:view-box;transform-origin:22px 15px;animation:flap 2.4s ease-in-out infinite}
+@keyframes flap{0%,16%,32%{transform:scaleY(1)}8%,24%,40%{transform:scaleY(-.6)}50%,100%{transform:scaleY(.55)}}
+@keyframes bbob{0%{transform:translateY(0)}42%{transform:translateY(-5px)}100%{transform:translateY(0)}}
+#bgMount{left:0;top:261.5px;width:1672px;height:229.5px}
+#bgTrees{left:0;top:263.5px;width:1672px;height:455.5px}
+/* the jungle's life, over the trees and behind the railing (Jungle in src/32_scenery.js places each piece):
+   mist drifting low between the trees, soft shafts of sunlight that breathe, sunlit specks floating up, and now and
+   then a leaf tumbling down from the big trees */
+#bgJungle{left:0;top:0;width:0;height:0}
+#bgJungle>i{position:absolute;display:block;pointer-events:none}
+#bgJungle .ms{border-radius:50%;background:radial-gradient(closest-side,rgba(234,251,246,.72),rgba(234,251,246,.36) 55%,rgba(234,251,246,0));animation:mdrift 50s ease-in-out infinite alternate}
+@keyframes mdrift{from{transform:translateX(calc(var(--mx) * -1))}to{transform:translateX(var(--mx))}}
+#bgJungle .sh{transform-origin:50% 0;background:linear-gradient(90deg,rgba(255,247,210,0),rgba(255,247,210,.4) 30%,rgba(255,250,225,.55) 50%,rgba(255,247,210,.4) 70%,rgba(255,247,210,0));
+  -webkit-mask-image:linear-gradient(rgba(0,0,0,0) 0,rgba(0,0,0,0) 30%,#000 56%,rgba(0,0,0,.65) 80%,rgba(0,0,0,0));mask-image:linear-gradient(rgba(0,0,0,0) 0,rgba(0,0,0,0) 30%,#000 56%,rgba(0,0,0,.65) 80%,rgba(0,0,0,0));
+  animation:shb 7s ease-in-out infinite alternate}
+@keyframes shb{from{opacity:.3}to{opacity:.85}}
+#bgJungle .mt{width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;opacity:0;background:radial-gradient(closest-side,#fffbe6,rgba(255,244,190,.75) 45%,rgba(255,240,170,0));animation:mote 9s ease-in-out infinite}
+@keyframes mote{0%{opacity:0;transform:translate(0,0) scale(.6)}30%{opacity:1}65%{opacity:.8}100%{opacity:0;transform:translate(var(--mx),var(--my)) scale(1)}}
+#bgJungle .lf{opacity:0;animation:lfall 16s linear infinite}
+#bgJungle .lf b{display:block;animation:lsway 2.6s ease-in-out infinite alternate}
+#bgJungle .lf svg{display:block;width:26px;height:26px;animation:lspin 1.9s ease-in-out infinite alternate}
+@keyframes lfall{0%{opacity:0;transform:translate(0,0)}6%{opacity:1}52%{opacity:1}62%,100%{opacity:0;transform:translate(var(--lx),var(--ly))}}
+@keyframes lsway{from{transform:translateX(-16px)}to{transform:translateX(16px)}}
+@keyframes lspin{from{transform:rotate(-34deg) scaleX(1)}to{transform:rotate(38deg) scaleX(.35)}}
+/* the two leafy plants behind the railing sway in the wind about their roots, under the deck (keyframes made there) */
+.plant{transform-origin:50% 100%}
+.plant img{display:block;width:100%;height:100%;transform-origin:50% 100%;animation:wplant 12s linear infinite}
+#bgPlantL{left:82px;top:557px;width:114.5px;height:107px}
+#bgPlantR{left:1496.5px;top:554.5px;width:93px;height:108.5px}
+/* the railing (posts + ropes) and the wooden deck the cannon and the tray stand on */
+#bgDeck{left:0;top:464px;width:1672px;height:477px}
+/* the scenery freezes with the game */
+.scnPause #bg *{animation-play-state:paused !important}
 
-/* ---------- the equation cloud ---------- */
-#cloud{position:absolute;left:398px;top:12px;width:860px;height:352px;transform-origin:50% 62%;will-change:transform,opacity}
-#cloud .cl{position:absolute;inset:0;width:100%;height:100%}
-#eqBox{position:absolute;left:430px;top:170px;width:0;height:0}
-#eq{position:absolute;left:0;top:0;transform:translate(-50%,-50%);display:flex;align-items:center;white-space:nowrap;font-weight:700;font-size:116px;line-height:1;color:var(--ink);-webkit-text-stroke:3px var(--ink);transform-origin:0 0}
+
+/* ---------- the equation cloud: the question sits right on the cloud ---------- */
+/* (far off in the sky: Cloud.apply draws it, label and equation included, at CLOUD_FAR; lifted so its top stays near the screen's top edge) */
+#cloud{position:absolute;left:500px;top:-23px;width:656px;height:300px;transform-origin:50% 62%;will-change:transform}
+/* the cloud art: no outline, soft and hazy (tools/soft_cloud.py), where the painted cloud was less its old blue stroke */
+#cloud .cl{position:absolute;left:10px;top:10px;width:636px;height:281px}
+/* No box: the question sits right on the cloud (the user asked to remove the card on 19 Nov). During play there is no
+   label, only the equation (the user removed "Find the value of x" on 19 Nov); at the end a small dark label
+   (the same dark glass + gold ring as Skip and the caption) reads "Your score", under the cloud's top bump. The equation
+   sits in the cloud's widest part, always fitted inside the cloud (EqUI.maxW / maxH). Measured on cloud.webp,
+   in #cloud box px: the art is ≥ 520 px wide from y 115 to 250, and its middle is x 328 */
+#qCard{position:absolute;left:0;top:0;width:656px;height:0;pointer-events:none}
+#qTab{position:absolute;left:328px;top:80px;translate:-50% -50%;padding:7px 24px;border-radius:99px;background:var(--glass);box-shadow:0 0 0 3px #ffd23d,0 5px 12px rgba(20,10,60,.24);color:#fff;font-size:25px;line-height:1.2;letter-spacing:.01em;white-space:nowrap}
+#qTab:empty{display:none}
+#eqBox{position:absolute;left:328px;top:184px;width:0;height:0} /* (the middle of the cloud's body) */
+/* the equation, the orbs' numbers and the caption's words (on the user's question template): Trig Text (the user's
+   font, 19 Nov), its one weight (400) */
+#eq,.ball b,#cap .txt{font-family:'Trig Text','Poppins',system-ui,sans-serif;font-weight:400}
+#eq{position:absolute;left:0;top:0;transform:translate(-50%,-50%);display:flex;align-items:center;white-space:nowrap;font-size:70px;line-height:1;letter-spacing:-.01em;font-variant-numeric:lining-nums;color:var(--ink);transform-origin:0 0}
 #eq.wob{animation:eqwob .45s ease-in-out 3}
 @keyframes eqwob{25%{rotate:-3deg}75%{rotate:3deg}}
 .tk{display:inline-flex;align-items:center;justify-content:center;position:relative;flex:none}
 .op{margin:0 .17em}
 .eqs{margin:0 .24em}
-.paren{font-weight:600;transform:scaleY(1.15);margin:0 .02em}
+.paren{transform:scaleY(1.12);margin:0 .02em}
 .frac{display:inline-flex;flex-direction:column;align-items:center;font-size:.78em;margin:0 .06em}
 .frac>.fn,.frac>.fd{display:flex;align-items:center;justify-content:center;padding:0 .12em}
-.frac>.fb{align-self:stretch;height:.1em;min-height:5px;border-radius:9px;background:currentColor;margin:.07em 0}
+.frac>.fb{align-self:stretch;height:.08em;min-height:4px;border-radius:9px;background:currentColor;margin:.08em 0}
 .ng{margin-right:.04em}
-.dv{display:inline-block;position:relative;width:.58em;height:.68em;flex:none}
-.dv::before{content:'';position:absolute;left:0;right:0;top:calc(50% - .07em);height:.14em;background:currentColor;border-radius:1em}
-.dv::after{content:'';position:absolute;left:50%;top:.02em;width:.17em;height:.17em;margin-left:-.085em;border-radius:50%;background:currentColor;box-shadow:0 .47em 0 currentColor}
-.inc{color:var(--tok);-webkit-text-stroke:3px var(--tok)}
+/* ÷ drawn to the same stroke weight as Poppins SemiBold's + − = */
+.dv{display:inline-block;position:relative;width:.56em;height:.62em;flex:none}
+.dv::before{content:'';position:absolute;left:.02em;right:.02em;top:calc(50% - .045em);height:.09em;background:currentColor;border-radius:1em}
+.dv::after{content:'';position:absolute;left:50%;top:.04em;width:.13em;height:.13em;margin-left:-.065em;border-radius:50%;background:currentColor;box-shadow:0 .41em 0 currentColor}
+/* in Trig Text (the equation, the orbs) the font's own ÷ matches its digits, so the drawn one gives way to it */
+#eq .dv,.ball b .dv{width:auto;height:auto}
+#eq .dv::before,.ball b .dv::before{content:'÷';position:static;background:none;height:auto;border-radius:0}
+#eq .dv::after,.ball b .dv::after{content:none}
+.inc{color:var(--tok)}
 .inc .op{margin:0 .12em 0 .17em}
-.hid{opacity:0;transform:scale(.2)}
-.pop{animation:pop .5s cubic-bezier(.2,1.7,.45,1) both}
-@keyframes pop{0%{opacity:0;transform:scale(.15)}100%{opacity:1;transform:scale(1)}}
-.van{animation:van .46s ease-in forwards}
-@keyframes van{0%{opacity:1;transform:scale(1)}35%{opacity:1;transform:scale(1.3) translateY(-.06em);filter:brightness(1.6) drop-shadow(0 0 .2em #fff38a)}100%{opacity:0;transform:scale(.05)}}
-.msg{display:flex;flex-direction:column;align-items:center;color:#7b2ff0;-webkit-text-stroke:3px #7b2ff0}
-.msg .m1{font-size:.56em}
-.msg .m2{font-size:1em;margin-top:.06em}
+.hid{opacity:0;transform:scale(.4)}
+/* a term arriving: fades up from 40 % with a small overshoot (back.out ~1.25), then rests */
+.pop{animation:pop .6s cubic-bezier(.3,1.3,.6,1) both}
+@keyframes pop{0%{opacity:0;transform:scale(.4)}40%{opacity:1}100%{opacity:1;transform:scale(1)}}
+/* the terms about to combine light up together: one soft gold pill behind each side's group, so "+5 −5" reads as
+   one group and "7 −5" as another (EqUI.pair places it, in #eq's own units, under the terms) */
+.hlg{position:absolute;box-sizing:content-box;padding:.06em .16em;margin:-.06em 0 0 -.16em;border-radius:.3em;pointer-events:none;
+  background:linear-gradient(#fff0b0,#ffe07a);box-shadow:0 0 0 .035em rgba(255,176,30,.5),0 .05em .14em rgba(170,100,0,.16);animation:hlin .55s cubic-bezier(.22,1,.36,1) both}
+.hlg.out{animation:hlout .7s ease-in forwards}
+@keyframes hlin{from{opacity:0;transform:scale(.86,.5)}to{opacity:1;transform:none}}
+@keyframes hlout{from{opacity:1}to{opacity:0}}
+/* terms that cancel: a small lift, then shrink + fade (ease-in; its length is set from Motion.BEAT.CANCEL, which the timeline waits for) */
+.van{animation:van .7s cubic-bezier(.5,0,.75,.45) forwards}
+@keyframes van{0%{opacity:1;transform:none}30%{opacity:1;transform:scale(1.06) translateY(-.04em)}100%{opacity:0;transform:scale(.35) translateY(-.08em)}}
+.msg{display:flex;flex-direction:column;align-items:center;color:#7b2ff0}
+.msg .m1{font-size:.5em;color:var(--ink);letter-spacing:.01em}
+.msg .m2{font-size:1em;margin-top:.04em}
 /* the cage around x */
-.cage{height:1.95em;margin:0 .02em;-webkit-text-stroke:0}
+.cage{height:1.72em;margin:0 .02em}
 .cage img{height:100%;width:auto;display:block;transform-origin:50% 90%}
 .cage.push img{animation:cpush 1.2s ease-in-out 2}
 @keyframes cpush{0%,100%{transform:none}20%{transform:translateX(-4%) rotate(-5deg)}35%{transform:translateX(-5%) scaleX(.96)}55%{transform:translateX(4%) rotate(5deg)}70%{transform:translateX(5%) scaleX(.96)}}
-.cage.rattle img{animation:rattle .09s linear 16}
+.cage.rattle img{animation:rattle .16s ease-in-out 8} /* (a rocking "not yet", ~6 per second: 11 per second read as jitter) */
 @keyframes rattle{25%{transform:translateX(-6%) rotate(-6deg)}75%{transform:translateX(6%) rotate(6deg)}}
 .cage.glowx img{filter:drop-shadow(0 0 10px #fff) drop-shadow(0 0 24px #c58bff)}
 .cage.open img{animation:copen .5s ease-out}
 /* freed: the happy x replaces the cage so the cloud reads “x = 2” */
-.cage.free img{height:78%;animation:xfree .6s cubic-bezier(.2,1.7,.45,1) both,xhop .8s .6s ease-in-out infinite;filter:drop-shadow(0 0 8px #fff) drop-shadow(0 0 18px rgba(197,139,255,.85))}
+.cage.free img{height:78%;animation:xfree .8s cubic-bezier(.25,1.45,.45,1) both,xpulse 1.4s .85s ease-in-out infinite;filter:drop-shadow(0 0 8px #fff) drop-shadow(0 0 18px rgba(197,139,255,.85))}
 @keyframes xfree{0%{transform:scale(.2) rotate(-25deg)}100%{transform:none}}
-@keyframes xhop{50%{transform:translateY(-9%) rotate(5deg)}}
+@keyframes xpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}} /* the freed x rests on the cloud and pulses, in step with “= 2” */
 .tk.eqs.win{margin-left:.42em}
-.tk.win{color:#7a22d6;-webkit-text-stroke-color:#7a22d6;animation:winpop .65s cubic-bezier(.2,1.7,.45,1) both,winglow 1.1s .65s ease-in-out infinite alternate}
-@keyframes winpop{0%{transform:scale(1)}50%{transform:scale(1.4)}100%{transform:scale(1.18)}}
-@keyframes winglow{from{transform:scale(1.18);text-shadow:0 0 10px rgba(255,214,70,.6)}to{transform:scale(1.26);text-shadow:0 0 22px rgba(255,214,70,.95),0 0 40px rgba(255,180,30,.6)}}
-#eq.fadeout{opacity:0 !important;transition:opacity .4s !important}
+.tk.num.win{margin-left:.16em} /* (both grow 18 %: keeps “= 2” apart) */
+.tk.win{color:#7a22d6;text-shadow:0 0 16px rgba(255,214,70,.85),0 0 32px rgba(255,180,30,.5);animation:winpop .8s cubic-bezier(.22,1,.36,1) both,winglow 1.4s .85s ease-in-out infinite}
+@keyframes winpop{0%{transform:scale(1)}45%{transform:scale(1.3)}100%{transform:scale(1.18)}}
+@keyframes winglow{0%,100%{transform:scale(1.18)}50%{transform:scale(1.26)}}
+#eq.fadeout{opacity:0 !important;transition:opacity .6s ease-in !important}
 @keyframes copen{40%{transform:scale(1.15) rotate(-6deg)}}
 
 /* ---------- cannon, sockets, FIRE ---------- */
 #cannon{position:absolute;left:0;top:0}
-#cannonBody,#cannonFrontBody{position:absolute;width:0;height:0;transform-origin:0 0;will-change:transform}
+#cannonBody,#cannonFrontBody{position:absolute;width:0;height:0;transform-origin:0 0}
 #cannonBody img,#cannonFrontBody img{position:absolute;bottom:0;transform:translateX(-50%);left:0}
 #cannonFront{position:absolute;left:0;top:0;pointer-events:none}
+/* a loaded socket's dark lining (the hole's art is lit at the bottom, which made the ball look pushed up): an even,
+   deep socket all round the ball, a little darker under the ring's top lip */
+.sbk{position:absolute;display:block;border-radius:50%;pointer-events:none;opacity:0;transition:opacity .2s ease-out;
+  background:radial-gradient(circle at 50% 46%,#2b1306 0,#1a0903 58%,#0d0401 100%);box-shadow:inset 0 5px 7px rgba(0,0,0,.65)}
+.sbk.on{opacity:1}
 .sglow{position:absolute;border-radius:50%;pointer-events:none;opacity:0;box-shadow:0 0 0 7px rgba(255,236,120,.95),0 0 34px 16px rgba(255,196,40,.9),inset 0 0 26px 8px rgba(255,220,90,.7);transition:opacity .2s}
 .sglow.on{opacity:1;animation:sg .5s ease-in-out infinite alternate}
 @keyframes sg{to{transform:scale(1.08)}}
-.stag{position:absolute;width:44px;height:44px;margin:-22px 0 0 -22px;border-radius:12px;background:#3d2a6b;border:4px solid var(--gold);color:#fff;font-weight:700;font-size:27px;display:grid;place-items:center;box-shadow:0 4px 0 rgba(0,0,0,.2);transition:transform .3s}
-.stag.pulse{animation:tagp 1s ease-in-out 2}
-@keyframes tagp{50%{transform:scale(1.4)}}
-#fireBtn{position:absolute;cursor:pointer;transition:filter .35s,transform .12s;transform-origin:50% 60%}
-#fireBtn img{width:100%;height:100%;display:block;pointer-events:none}
-#fireBtn.off{filter:grayscale(1) brightness(1.06) contrast(.85);cursor:default}
+/* socket order markers (1, 2): the same dark-glass chip as the caption and Skip */
+.stag{position:absolute;width:42px;height:42px;margin:-21px 0 0 -21px;border-radius:50%;background:var(--glass);box-shadow:0 0 0 2.5px var(--gold),0 4px 10px rgba(20,10,60,.3);color:#fff;font-size:22px;line-height:1;display:grid;place-items:center;padding-top:1px}
+.stag.pulse{animation:tagp .9s ease-in-out 2}
+@keyframes tagp{50%{transform:scale(1.22)}}
+#fireBtn{position:absolute;cursor:pointer;transition:transform .12s ease-out;transform-origin:50% 60%}
+#fireBtn img{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none}
+#fireBtn .gr{filter:grayscale(1) brightness(1.06) contrast(.85);opacity:0;transition:opacity .25s ease-in}#fireBtn.off .gr{opacity:1;transition-timing-function:ease-out}
+#fireBtn.off{cursor:default}
+/* the word on the button (the pill art is blank): T('btnFire'), white like the painted word; Cannon sets its size
+   from the button's height and shrinks it to fit a longer word */
+#fireBtn .ft{position:absolute;left:50%;top:50%;transform:translate(-50%,-44%);color:#fff;line-height:1;letter-spacing:.03em;text-transform:uppercase;white-space:nowrap;pointer-events:none;text-shadow:0 .05em 0 rgba(140,24,0,.55),0 0 .14em rgba(120,20,0,.35)}
+#fireBtn.off .ft{text-shadow:0 .05em 0 rgba(60,60,60,.45)}
+#fireBtn .fgl{position:absolute;inset:-45% -22%;border-radius:50%;pointer-events:none;opacity:0;background:radial-gradient(closest-side,rgba(255,236,120,.95),rgba(255,160,40,.7) 45%,rgba(255,106,31,0))}
 #fireBtn.glow{animation:fglow .9s ease-out 1}
-@keyframes fglow{30%{transform:scale(1.14);filter:drop-shadow(0 0 22px #ffd04d) drop-shadow(0 0 40px #ff6a1f) brightness(1.15)}}
+#fireBtn.glow .fgl{animation:fglowL .9s ease-out 1}
+@keyframes fglow{30%{transform:scale(1.14)}}
+@keyframes fglowL{30%{opacity:1}100%{opacity:0}}
 #fireBtn.hint{animation:fhint .9s ease-in-out 3}
-@keyframes fhint{50%{transform:scale(1.1);filter:drop-shadow(0 0 18px #ffe066) brightness(1.12)}}
+#fireBtn.hint .fgl{animation:fhintL .9s ease-in-out 3}
+@keyframes fhint{50%{transform:scale(1.1)}}
+@keyframes fhintL{50%{opacity:.8}}
 #fireBtn.press{transform:scale(.9)}
 
 /* ---------- rack + balls ---------- */
-.hglow{position:absolute;width:116px;height:54px;margin:-27px 0 0 -58px;border-radius:50%;pointer-events:none;opacity:0;box-shadow:0 0 0 5px #ffe46b,0 0 28px 12px rgba(255,205,50,.85)}
+.hglow{position:absolute;width:126px;height:58px;margin:-29px 0 0 -63px;border-radius:50%;pointer-events:none;opacity:0;box-shadow:0 0 0 5px #ffe46b,0 0 28px 12px rgba(255,205,50,.85)}
 .hglow.on{animation:hg 1s ease-out 1}
 @keyframes hg{25%{opacity:1}100%{opacity:0}}
-.ball{position:absolute;left:0;top:0;width:112px;height:112px;margin:-56px 0 0 -56px;cursor:pointer;will-change:transform;touch-action:none}
+.ball{position:absolute;left:0;top:0;width:122px;height:122px;margin:-61px 0 0 -61px;cursor:grab;touch-action:none} /* = BALL_D */
+/* a ball in the player's hand (Drag): it rides in #fly, above everything, with a soft shadow dropped below it */
+.ball.drag img{filter:drop-shadow(0 16px 10px rgba(40,18,4,.34))}
+body.dragging,body.dragging *{cursor:grabbing !important}
+.ball.mv{will-change:transform}
 .ball img{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-.ball b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:52px;letter-spacing:-1px;color:var(--ink);-webkit-text-stroke:2.4px var(--ink);padding-bottom:4px;pointer-events:none;text-shadow:0 3px 0 rgba(255,255,255,.3)}
+.ball b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:52px;line-height:1;letter-spacing:-.02em;color:var(--ink);padding-top:2px;pointer-events:none;text-shadow:0 2px 0 rgba(255,255,255,.28)}
 .ball b .dv{margin-right:.03em}
-.ball.guide img{filter:drop-shadow(0 0 9px #fff6a0) drop-shadow(0 0 20px #ffc800);animation:guide .9s ease-in-out infinite}
-@keyframes guide{50%{filter:drop-shadow(0 0 18px #fffbd0) drop-shadow(0 0 40px #ffc400) brightness(1.18)}}
+.ball .gl{position:absolute;inset:-34%;border-radius:50%;pointer-events:none;opacity:0;background:radial-gradient(closest-side,rgba(255,251,208,.95),rgba(255,214,40,.75) 48%,rgba(255,196,0,0))}
+.ball.guide img{filter:drop-shadow(0 0 9px #fff6a0) drop-shadow(0 0 20px #ffc800)}
+.ball.guide .gl{animation:guide .9s ease-in-out infinite alternate}
+@keyframes guide{from{opacity:.55;transform:scale(.9)}to{opacity:1;transform:scale(1.06)}}
 .ball.hov img{filter:brightness(1.12)}
 .ball.gone{display:none}
-.ball .ao{position:absolute;inset:3%;border-radius:50%;background:radial-gradient(ellipse 72% 46% at 50% 97%,rgba(24,14,58,.62),rgba(24,14,58,.28) 55%,rgba(24,14,58,0) 100%);opacity:0;transition:opacity .25s;pointer-events:none}
+.ball .ao{position:absolute;inset:3%;border-radius:50%;background:radial-gradient(ellipse 70% 32% at 50% 90%,rgba(66,26,4,.5),rgba(66,26,4,.2) 58%,rgba(66,26,4,0) 100%);opacity:0;transition:opacity .25s;pointer-events:none}
 .ball.seated .ao{opacity:1}
-.bshadow{position:absolute;width:98px;height:36px;margin:-18px 0 0 -49px;border-radius:50%;background:radial-gradient(ellipse at center,rgba(18,22,70,.5) 0,rgba(18,22,70,.25) 45%,rgba(18,22,70,0) 72%);opacity:0;transition:opacity .25s;pointer-events:none}
+/* in the cannon's socket the orb fills the hole edge to edge: only a soft shade where the ring's top lip overhangs
+   it (none round the sides or the bottom, so no dark band reads as a gap between the orb and the ring) */
+.ball.insock .ao{opacity:1;inset:2%;background:radial-gradient(circle at 50% 64%,rgba(40,14,0,0) 60%,rgba(40,14,0,.22) 80%,rgba(40,14,0,.34) 100%)}
+.bshadow{position:absolute;width:0;height:0;opacity:0;transition:opacity .25s;pointer-events:none} /* at the seated ball's centre */
 .bshadow.on{opacity:1}
-.xfly{position:absolute;left:0;top:0;width:112px;height:107px;margin:-53.5px 0 0 -56px;pointer-events:none;will-change:transform,opacity}
+.bshadow i{position:absolute;border-radius:50%}
+.bshadow .cast{left:-34px;top:-58px;width:124px;height:124px;background:radial-gradient(closest-side,rgba(52,18,0,.58),rgba(52,18,0,.5) 70%,rgba(52,18,0,0))} /* on the back wall, down-right of the ball */
+.bshadow .pool{left:-72px;top:28px;width:148px;height:32px;background:radial-gradient(closest-side,rgba(36,10,0,.9),rgba(36,10,0,.6) 58%,rgba(36,10,0,0))} /* where the ball meets the trough, just above the rail */
+.xfly{position:absolute;left:0;top:0;width:121px;height:115px;margin:-57.5px 0 0 -60.5px;pointer-events:none}
 .xfly img{width:100%;height:100%;display:block;filter:drop-shadow(0 0 10px rgba(255,255,255,.9)) drop-shadow(0 0 22px rgba(197,139,255,.8))}
 /* ---------- ground contact: shadow groups multiply onto the plaza; light + ring groups paint normally so colour reads on bright sand ---------- */
 #ground{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none}
 .gsh{position:absolute;left:0;top:0;width:0;height:0;transform-origin:0 0;pointer-events:none}
 .gsh.shadow{mix-blend-mode:multiply}
 .gsh i{position:absolute;display:block;border-radius:50%}
-.gsh .soft{background:radial-gradient(closest-side,rgba(52,30,78,.7),rgba(52,30,78,.42) 45%,rgba(52,30,78,0));filter:blur(6px)}
-.gsh .cast{background:radial-gradient(closest-side,rgba(52,30,78,.45),rgba(52,30,78,.24) 50%,rgba(52,30,78,0));filter:blur(9px)}
-.gsh .contact{background:radial-gradient(closest-side,rgba(26,14,40,.95),rgba(26,14,40,.62) 50%,rgba(26,14,40,0));filter:blur(2px)}
+/* (warm brown: the cannon and tray stand on a wooden deck) */
+.gsh .soft{background:radial-gradient(closest-side,rgba(70,36,10,.7),rgba(70,36,10,.42) 45%,rgba(70,36,10,0));filter:blur(6px)}
+.gsh .cast{background:radial-gradient(closest-side,rgba(70,36,10,.45),rgba(70,36,10,.24) 50%,rgba(70,36,10,0));filter:blur(9px)}
+.gsh .pool{background:radial-gradient(closest-side,rgba(66,32,8,.72),rgba(66,32,8,.6) 55%,rgba(66,32,8,.3) 82%,rgba(66,32,8,0));filter:blur(7px)} /* (a wide, even shadow that spreads past a base: start screen) */
+.gsh .contact{background:radial-gradient(closest-side,rgba(40,18,4,.95),rgba(40,18,4,.62) 50%,rgba(40,18,4,0));filter:blur(2px)}
+.gsh .ao{background:radial-gradient(closest-side,rgba(30,12,2,.95),rgba(30,12,2,.75) 60%,rgba(30,12,2,0));filter:blur(1.5px)} /* (where a base meets the boards: start screen) */
 .gsh .glow{background:radial-gradient(closest-side,rgba(90,236,255,.62),rgba(90,236,255,.28) 50%,rgba(90,236,255,0));filter:blur(2px)}
 .gsh .gold{border:3px solid rgba(255,248,205,.95);box-shadow:0 0 6px 2px rgba(255,214,70,.95),0 0 18px 7px rgba(255,176,20,.65),inset 0 0 8px 2px rgba(255,214,70,.8)}
 
-/* ---------- caption bubble (temporary VO) ---------- */
+/* ---------- caption (what the voice says): the user's question template, on the left, halfway down ----------
+   art/ui/question_template.png (an orange wooden frame, dark-brown outline, cream panel), cut by
+   tools/cut_question_board.py at 0.5 into assets/img/question_board.webp (1070×272) and painted as a 9-slice at 0.25
+   (half the WebP, so it stays sharp on a 2× screen) into the canvas .bg by Caption.paint (src/20_audio.js), in whole
+   device pixels so the pieces meet without seams. That is the template's own proportions: the whole thick wooden
+   frame and its grain show; the corners stay as drawn and only straight frame and cream stretch to the words. The
+   words (36px) sit in the cream panel, whose inset at 0.25 is 24 / 19 / 19.5 / 18.5 px (top right bottom left), with
+   the speaker icon on the first line. Dark-brown words on the cream, so they always read. It hugs its words
+   (Caption.fit: as wide as its longest line), is at most 560 wide (its right edge stays clear of the cannon at
+   x ~595) and stays centred on y 470 (#capPos, in #stageTop: above the FX canvas, so cannon smoke never hides the
+   words). It shows only while a voice line is being said: it rises in as the voice starts, each word pops in as it
+   is said, it glides between lines and sinks away after the line (transform + opacity) */
 #overlay{position:absolute;inset:0;pointer-events:none}
-#cap{position:absolute;left:58px;top:420px;width:440px;padding:22px 26px 22px 70px;border-radius:28px;background:rgba(30,20,82,.9);color:#fff;font-weight:600;font-size:30px;line-height:1.25;box-shadow:0 0 0 4px var(--gold),0 14px 30px rgba(0,0,0,.25);opacity:0;transform:translateY(24px) scale(.92);transition:opacity .35s,transform .35s}
-#cap.on{opacity:1;transform:none}
-#cap svg{position:absolute;left:22px;top:24px;width:34px;height:34px}
+#capPos{position:absolute;left:30px;top:470px;height:0;display:flex;align-items:center;pointer-events:none}
+#cap{position:relative;flex:none;max-width:560px;padding:40px 42px 35px 82px;color:#4a2508;font-size:36px;line-height:1.3;letter-spacing:.005em;opacity:0;transform-origin:0 50%}
+#cap .bg{position:absolute;left:0;top:0;width:100%;height:100%;display:block;transform-origin:0 0;filter:drop-shadow(0 7px 9px rgba(40,18,4,.3))}
+#cap .txt{display:block;position:relative;text-wrap:balance}
+/* its words come one by one with the voice (Caption.upTo): each is its own box so it can pop in (transform +
+   opacity); a one-letter word (x) and the word after it share a .nw group, so x never ends a row */
+#cap .w{display:inline-block;opacity:0}
+#cap .nw{white-space:nowrap}
+#cap svg{position:absolute;left:34px;top:47px;width:33px;height:33px;color:#c2621a}
 
 /* ---------- HUD (from the art: pause, sound) ---------- */
-#hud{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .5s,filter .45s}
-/* ---------- spotlight tutorial: blur + dim everything except the focus ---------- */
-#spot{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none;opacity:0;transition:opacity .45s;--x:0px;--y:0px;--rx:100px;--ry:100px;
+#hud{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .3s ease-out}
+/* ---------- spotlight tutorial: blur + dim everything except the focus ----------
+   up to two clear holes (--x/--y/--rx/--ry, and --x2/… for a second one, parked off screen when unused): each mask
+   layer is clear inside its hole, and the two are intersected, so both holes stay clear */
+#spot{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none}
+#spot .sl{position:absolute;inset:0;opacity:0;--x:0px;--y:0px;--rx:100px;--ry:100px;--x2:-9999px;--y2:-9999px;--rx2:1px;--ry2:1px;
   background:rgba(14,10,42,.36);-webkit-backdrop-filter:blur(7px) saturate(.8);backdrop-filter:blur(7px) saturate(.8);
-  -webkit-mask-image:radial-gradient(ellipse var(--rx) var(--ry) at var(--x) var(--y),transparent 0,transparent 78%,#000 100%);
-  mask-image:radial-gradient(ellipse var(--rx) var(--ry) at var(--x) var(--y),transparent 0,transparent 78%,#000 100%)}
-#spot.on{opacity:1}
-#spotRing{position:absolute;left:0;top:0;width:0;height:0;border-radius:50%;pointer-events:none;opacity:0;transition:opacity .35s;
+  -webkit-mask-image:radial-gradient(ellipse var(--rx) var(--ry) at var(--x) var(--y),transparent 0,transparent 78%,#000 100%),radial-gradient(ellipse var(--rx2) var(--ry2) at var(--x2) var(--y2),transparent 0,transparent 78%,#000 100%);
+  mask-image:radial-gradient(ellipse var(--rx) var(--ry) at var(--x) var(--y),transparent 0,transparent 78%,#000 100%),radial-gradient(ellipse var(--rx2) var(--ry2) at var(--x2) var(--y2),transparent 0,transparent 78%,#000 100%);
+  -webkit-mask-composite:source-in;mask-composite:intersect}
+/* the drag lesson's see-through ball (Spot.demo): a copy of the −5 with a soft light round it */
+#spotGhost{pointer-events:none;cursor:default;opacity:0}
+#spotGhost img{filter:drop-shadow(0 0 8px rgba(255,248,200,.95)) drop-shadow(0 0 18px rgba(255,214,70,.6))}
+#spotRing,#spotRing2{position:absolute;left:0;top:0;width:200px;height:200px;border-radius:50%;pointer-events:none;opacity:0;
   border:5px solid rgba(255,228,120,.95);box-shadow:0 0 16px 5px rgba(255,196,50,.55),inset 0 0 12px 3px rgba(255,220,100,.35)}
-#spotRing.on{opacity:1}
-#spotHand{position:absolute;left:0;top:0;width:96px;height:116px;margin-left:-40px;pointer-events:none;opacity:0;transition:opacity .3s;transform-origin:40px 0;overflow:visible;filter:drop-shadow(0 6px 7px rgba(20,10,60,.35))}
-#spotHand.on{opacity:1}
-body.spot #hud{filter:blur(3px) brightness(.62)}
+#spotHand{position:absolute;left:0;top:0;width:90px;height:126.9px;margin:-32.6px 0 0 -34.4px;display:block;max-width:none;pointer-events:none;opacity:0;transform-origin:34.4px 32.6px;filter:drop-shadow(0 6px 7px rgba(20,10,60,.35))} /* your hand (art/ui/hand.webp); its fingertip is the point that taps */
+body.spot #hud.on{opacity:.5}
 #hud.on{opacity:1}
-.hbtn{position:absolute;top:max(10px,2.4vh);width:clamp(46px,5.3vw,96px);aspect-ratio:125/120;pointer-events:auto;transition:transform .12s;filter:drop-shadow(0 4px 6px rgba(0,0,0,.18))}
+.hbtn{position:absolute;top:max(10px,2.4vh);width:clamp(46px,5.3vw,96px);aspect-ratio:132/133;pointer-events:auto;transition:transform .12s;filter:drop-shadow(0 4px 6px rgba(0,0,0,.18))}
 .hbtn img{width:100%;height:100%;display:block}
 .hbtn:active{transform:scale(.9)}
 #pauseBtn{left:max(10px,2vw)}
 #sndBtn{left:calc(max(10px,2vw) + clamp(46px,5.3vw,96px) + max(8px,1vw))}
 #sndBtn.muted::after{content:'';position:absolute;left:14%;right:14%;top:47%;height:9%;background:#e8132b;border-radius:9px;transform:rotate(-40deg);box-shadow:0 0 0 3px #fff}
+#skipBtn{position:absolute;top:max(10px,2.4vh);right:max(10px,2vw);height:clamp(40px,4.4vw,58px);padding:0 clamp(14px,1.5vw,22px) 0 clamp(16px,1.7vw,24px);display:flex;align-items:center;gap:.4em;border-radius:99px;background:var(--glass);color:#fff;font-size:clamp(16px,1.7vw,23px);line-height:1;letter-spacing:.01em;box-shadow:0 0 0 2px rgba(255,210,61,.85),0 6px 16px rgba(20,10,60,.24);opacity:0;pointer-events:none;transition:background-color .15s ease-out,scale .12s ease-out}
+#skipBtn.on{pointer-events:auto}
+#skipBtn:hover{background:var(--glass-hi)}
+#skipBtn:active{scale:.95} /* (scale, not transform: GSAP owns its transform for the enter/exit) */
+#skipBtn span{padding-top:.08em}
+#skipBtn svg{width:.9em;height:.9em;flex:none}
 #fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none}
+/* flying balls ride above the particles (so a ball and its label read through the muzzle blast), in a copy of
+   the stage + camera transform that Stage keeps in step with the world */
+#stageTop{position:absolute;left:0;top:0;width:1672px;height:941px;transform-origin:0 0;pointer-events:none}
+#worldTop{position:absolute;left:0;top:0;width:1672px;height:941px;transform-origin:0 0;will-change:transform;pointer-events:none}
+/* low quality tier (Perf): the spotlight dims without the live blur */
+body.lowfx #spot .sl{-webkit-backdrop-filter:none;backdrop-filter:none;background:rgba(14,10,42,.52)}
+/* glows whose opacity breathes all the time get their own layer, so they never repaint the plaza */
+.gsh.light{will-change:opacity}
+#thumb.live .gsh{will-change:transform,opacity}
 
-/* ---------- start screen (thumbnail from the art) ---------- */
+/* ---------- start screen: the user's mockup (art/start_screen/start_mockup.png), see src/35_title.js ---------- */
 #world.title #cloud,#world.title #cannon,#world.title #rack,#world.title #rackFront,#world.title #balls,#world.title #bshadows,#world.title #hglows,#world.title #ground,#world.title #cannonFront{visibility:hidden}
 #thumb{position:absolute;inset:0;pointer-events:none}
 #thumb.gone{display:none}
-.tp{position:absolute;display:block;transform-origin:50% 50%;will-change:transform,opacity;pointer-events:none}
-#rays{position:absolute;left:836px;top:560px;width:2700px;height:2700px;border-radius:50%;opacity:0;pointer-events:none;will-change:transform,opacity;
-  background:repeating-conic-gradient(from 0deg,rgba(255,255,255,.36) 0deg 5deg,rgba(255,255,255,0) 5deg 15deg);
-  -webkit-mask:radial-gradient(circle,#000 0,rgba(0,0,0,.7) 16%,transparent 58%);mask:radial-gradient(circle,#000 0,rgba(0,0,0,.7) 16%,transparent 58%)}
-#sunGlow{position:absolute;left:836px;top:560px;width:720px;height:720px;border-radius:50%;opacity:0;pointer-events:none;will-change:transform,opacity;
-  background:radial-gradient(circle,rgba(255,255,240,1) 0,rgba(255,250,215,.75) 16%,rgba(255,246,200,.25) 36%,rgba(255,255,255,0) 62%)}
-#playBtn{position:absolute;pointer-events:auto;cursor:pointer;transform-origin:50% 50%;will-change:transform,opacity}
-#playBtn img{position:relative;width:100%;height:100%;display:block;pointer-events:none}
+.tp{position:absolute;display:block;transform-origin:50% 50%;pointer-events:none}
+#thumb.live .tp,#thumb.live #playBtn,#thumb.live .tx{will-change:transform,opacity}
+.tp.lit{filter:brightness(1.2) drop-shadow(0 0 16px rgba(255,236,150,.9))}
+/* the cannon group: its picture + a glint; the cage group: its whole picture, x's shadow on the floor, x, its front
+   bars (x is inside, between them), a glint */
+.tgrp img{position:absolute;display:block;max-width:none;pointer-events:none}
+/* a glint (Title.glint): a soft slanted band of light; through it shows the piece's gold, washed bright */
+.gband{position:absolute;left:0;top:0;overflow:hidden;transform-origin:0 0;opacity:0;pointer-events:none;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 30%,#000 70%,transparent);mask-image:linear-gradient(90deg,transparent,#000 30%,#000 70%,transparent)}
+.gband img{left:0;top:0;transform-origin:0 0}
+#thumb.live .gband,#thumb.live .gband img{will-change:transform,opacity}
+.tcage .tx{transform-origin:50% 92%}
+.tcage .xsh{position:absolute;display:block;border-radius:50%;transform-origin:50% 50%;background:radial-gradient(closest-side,rgba(120,56,0,.6),rgba(120,56,0,.28) 55%,rgba(120,56,0,0))}
+#playBtn{position:absolute;pointer-events:auto;cursor:pointer;transform-origin:50% 50%}
+#playBtn img{position:relative;width:100%;height:100%;display:block;pointer-events:none;filter:drop-shadow(0 6px 10px rgba(80,20,0,.35))}
+#playBtn .pg{position:absolute;inset:-16%;border-radius:50%;pointer-events:none;opacity:0;background:radial-gradient(closest-side,rgba(255,226,120,.95),rgba(255,214,90,.55) 55%,rgba(255,214,90,0))}
 #playBtn .rp{position:absolute;inset:6%;border-radius:50%;border:5px solid rgba(255,232,140,.9);opacity:0;pointer-events:none}
 #playBtn.live .rp{animation:ripple 2.2s ease-out infinite}
 @keyframes ripple{0%{transform:scale(.95);opacity:.8}100%{transform:scale(1.45);opacity:0}}
-#credits{position:fixed;right:10px;bottom:6px;font-size:11px;font-weight:500;color:rgba(255,255,255,.95);text-shadow:0 1px 2px rgba(20,10,60,.8);pointer-events:none;transition:opacity .6s}
-#credits.hide{opacity:0}
 
 /* ---------- end ---------- */
-#endUI{position:fixed;left:50%;bottom:5vh;transform:translate(-50%,30px);display:flex;gap:3vmin;align-items:center;opacity:0;pointer-events:none;transition:opacity .5s,transform .5s}
-#endUI.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
-.rbtn{width:clamp(76px,14vmin,124px);aspect-ratio:1;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 34% 26%,#ffe1a1 0 7%,#ffb03b 26%,#ff8a0d 58%,#ef6400 100%);box-shadow:0 0 0 .6vmin #fff,0 1vmin 0 .6vmin #b84e00,0 2.2vmin 4vmin rgba(20,10,60,.4)}
-.rbtn svg{width:48%;height:48%}
+/* the Play again button sits in the clear sky between the score cloud and the cannon (stage units, in #overlay) */
+#endUI{position:absolute;left:836px;top:404px;width:112px;height:112px;margin:-56px 0 0 -56px;opacity:0;pointer-events:none;transform:translateY(14px) scale(.92);transition:opacity .2s ease-in,transform .2s ease-in}
+#endUI.on{opacity:1;transform:none;pointer-events:auto;transition:opacity .4s cubic-bezier(.22,1,.36,1),transform .5s cubic-bezier(.34,1.3,.64,1)}
+.rbtn{width:100%;height:100%;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 34% 26%,#ffe1a1 0 7%,#ffb03b 26%,#ff8a0d 58%,#ef6400 100%);box-shadow:0 0 0 5px #fff,0 7px 0 5px #b84e00,0 16px 28px rgba(20,10,60,.38);transition:scale .12s ease-out}
+.rbtn:active{scale:.94}
+.rbtn svg{width:46%;height:46%}
 
-/* ---------- rotate hint + loading ---------- */
-#rotate{position:fixed;inset:0;display:none;place-items:center;text-align:center;background:rgba(20,12,60,.88);color:#fff;font-weight:700;font-size:22px;padding:30px;z-index:20}
+/* ---------- rotate hint ---------- */
+#rotate{position:fixed;inset:0;display:none;place-items:center;text-align:center;background:rgba(20,12,60,.9);color:#fff;font-size:20px;line-height:1.45;padding:30px;z-index:20}
 #rotate .ph{width:70px;height:110px;border:6px solid #fff;border-radius:16px;margin:0 auto 20px;animation:rot 2s ease-in-out infinite}
 @keyframes rot{40%,70%{transform:rotate(90deg)}}
-#rotate button{margin-top:22px;padding:10px 22px;border-radius:99px;background:#fff;color:#4a2a8a;font-weight:700;font-size:17px}
+#rotate button{margin-top:22px;padding:11px 24px 10px;border-radius:99px;background:#fff;color:#3a2280;font-size:16px;letter-spacing:.01em}
 @media (orientation:portrait) and (max-aspect-ratio:3/4){#rotate:not(.dismissed){display:grid}}
-#loading{position:fixed;inset:0;display:grid;place-items:center;background:linear-gradient(#36b3f5,#9ad9ff);color:#fff;font-weight:700;font-size:22px;text-align:center;z-index:30;transition:opacity .7s}
-#loading.hide{opacity:0;pointer-events:none}
-.spinner{width:58px;height:58px;border-radius:50%;border:7px solid rgba(255,255,255,.35);border-top-color:#ffcb3d;animation:spin 1s linear infinite;margin:0 auto 16px}
-@keyframes spin{to{transform:rotate(360deg)}}
+/* ---------- first paint: no loading screen. Until the start screen's pictures are in (usually well under a second)
+   the screen is just the sky (#viewport's gradient); then the scene fades in and the start screen plays its intro ---------- */
+html:not(.fit) #stage,html:not(.fit) #stageTop{visibility:hidden} /* (until fitStage has scaled it to the screen: no unscaled first frame) */
+#world{opacity:0}                                      /* the painted scene fades in once its pictures are in (boot) */
+#playBtn{opacity:0}                                    /* Title pops it in */
 #flash{position:fixed;inset:0;background:radial-gradient(circle at 50% 25%,rgba(255,255,240,.85),rgba(255,255,255,0) 60%);opacity:0;transition:opacity .5s;pointer-events:none}
 #flash.on{opacity:1;transition:opacity .08s}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;animation-delay:0s !important;transition-duration:.01ms !important;transition-delay:0s !important}
+  #flash{display:none}
+}
 </style>
 </head>
 <body>
 <div id="viewport">
   <div id="stage">
     <div id="world" class="title">
-      <img id="bg" src="assets/img/bg.jpg" alt="">
-      <div id="minis"></div>
-      <div id="cloud"><img class="cl" src="assets/img/cloud.png" alt=""><div id="eqBox"><div id="eq"></div></div></div>
+      <div id="bg"><img class="bl" id="bgSky" src="assets/img/bg_sky.webp" alt=""><div class="bl" id="bgSun"></div><img class="bl" id="bgMount" src="assets/img/bg_mount.webp" alt=""><div class="bl" id="bgBirds"></div><img class="bl" id="bgTrees" src="assets/img/bg_trees.webp" alt=""><div class="bl" id="bgJungle"></div><div class="bl plant" id="bgPlantL"><img src="assets/img/bg_plantL.webp" alt=""></div><div class="bl plant" id="bgPlantR"><img src="assets/img/bg_plantR.webp" alt=""></div><img class="bl" id="bgDeck" src="assets/img/bg_deck.webp" alt=""></div>
+      <div id="cloud"><img class="cl" src="assets/img/cloud.webp" alt=""><div id="qCard"><span id="qTab"></span></div><div id="eqBox"><div id="eq"></div></div></div>
       <div id="ground"></div>
       <div id="cannon">
-        <div id="cannonBody"><img id="c1" src="assets/img/cannon1.png" alt=""><img id="c2" src="assets/img/cannon2.png" alt="" style="display:none"></div>
+        <div id="cannonBody"><img id="c1" data-src="assets/img/cannon1.webp" alt=""><img id="c2" data-src="assets/img/cannon2.webp" alt="" style="display:none"></div>
         <div id="sockFx"></div>
-        <button id="fireBtn" class="off" aria-label="Fire"><img src="assets/img/fire.png" alt="FIRE"></button>
+        <button id="fireBtn" class="off" data-i18n-attr="aria-label:btnFire"><i class="fgl"></i><img data-src="assets/img/fire.webp" alt="" data-i18n-attr="alt:btnFire"><img class="gr" data-src="assets/img/fire.webp" alt=""><span class="ft" data-i18n="btnFire"></span></button>
       </div>
-      <img id="rack" class="spr" src="assets/img/rack.png" alt="">
+      <img id="rack" class="spr" data-src="assets/img/rack.webp" alt="">
       <div id="bshadows"></div>
       <div id="balls"></div>
-      <div id="cannonFront"><div id="cannonFrontBody"><img id="c1f" src="assets/img/cannon1_front.png" alt=""><img id="c2f" src="assets/img/cannon2_front.png" alt="" style="display:none"></div></div>
-      <img id="rackFront" class="spr" src="assets/img/rack_front.png" alt="">
+      <div id="cannonFront"><div id="cannonFrontBody"><img id="c1f" data-src="assets/img/cannon1_front.webp" alt=""><img id="c2f" data-src="assets/img/cannon2_front.webp" alt="" style="display:none"></div></div>
+      <img id="rackFront" class="spr" data-src="assets/img/rack_front.webp" alt="">
       <div id="hglows"></div>
-      <div id="fly"></div>
     </div>
-    <div id="thumb"><div id="sunGlow"></div><div id="rays"></div><button id="playBtn" aria-label="Play"><span class="rp"></span><img src="assets/img/playbtn.png" alt="Play"></button></div>
-    <div id="spot"></div>
+    <div id="thumb">
+      <button id="playBtn" data-i18n-attr="aria-label:btnPlay"><span class="pg"></span><span class="rp"></span><img src="assets/img/playbtn.webp" alt="" data-i18n-attr="alt:btnPlay"></button></div>
+    <div id="spot"><div class="sl"></div><div class="sl"></div></div>
     <div id="overlay">
       <div id="spotRing"></div>
-      <svg id="spotHand" viewBox="0 0 96 116" aria-hidden="true">
-        <g fill="#1b1240" stroke="#1b1240" stroke-width="7" stroke-linejoin="round"><rect x="31" y="2" width="18" height="60" rx="9"/><rect x="22" y="44" width="56" height="50" rx="20"/><circle cx="57" cy="49" r="9"/><circle cx="67" cy="57" r="9"/><circle cx="72" cy="69" r="8"/><ellipse cx="23" cy="64" rx="12" ry="8" transform="rotate(-35 23 64)"/><rect x="26" y="88" width="48" height="22" rx="7"/></g>
-        <g fill="#fff"><rect x="31" y="2" width="18" height="60" rx="9"/><rect x="22" y="44" width="56" height="50" rx="20"/><circle cx="57" cy="49" r="9"/><circle cx="67" cy="57" r="9"/><circle cx="72" cy="69" r="8"/><ellipse cx="23" cy="64" rx="12" ry="8" transform="rotate(-35 23 64)"/></g>
-        <rect x="26" y="88" width="48" height="22" rx="7" fill="#e7deff"/><path d="M29 97h42" stroke="#c4b6f0" stroke-width="3" stroke-linecap="round"/>
-        <path d="M50 50q5 5 0 10M60 59q5 4 1 10M68 70q4 3 0 8" fill="none" stroke="#1b1240" stroke-width="2.6" stroke-linecap="round"/>
-      </svg>
-      <div id="cap"><svg viewBox="0 0 24 24" fill="none" stroke="#ffd23d" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h3l5-4v14l-5-4H4z" fill="#ffd23d"/><path d="M16 8.5a5 5 0 0 1 0 7"/></svg><span class="txt"></span></div>
+      <div id="spotRing2"></div>
+      <div id="spotGhost" class="ball" aria-hidden="true"></div>
+      <img id="spotHand" data-src="assets/img/hand.webp" alt="" aria-hidden="true" draggable="false">
+      <div id="endUI"><button id="againBtn" class="rbtn" data-i18n-attr="aria-label:btnPlayAgain"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg></button></div>
     </div>
   </div>
   <canvas id="fx"></canvas>
+  <!-- the caption sits above the FX canvas (cannon smoke never covers its words), in stage units but not moved by
+       the camera; what flies (#worldTop) still passes over it -->
+  <div id="stageTop"><div id="capPos"><div id="cap"><canvas class="bg"></canvas><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h3l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7"/></svg><span class="txt"></span></div></div><div id="worldTop"><div id="fly"></div></div></div>
   <div id="flash"></div>
   <div id="hud">
-    <button id="pauseBtn" class="hbtn" aria-label="Pause"><img src="assets/img/pause.png" alt=""></button>
-    <button id="sndBtn" class="hbtn" aria-label="Sound on/off"><img src="assets/img/sound.png" alt=""></button>
+    <button id="pauseBtn" class="hbtn" data-i18n-attr="aria-label:btnPause"><img data-src="assets/img/pause.webp" alt=""></button>
+    <button id="sndBtn" class="hbtn" data-i18n-attr="aria-label:btnSound"><img data-src="assets/img/sound.webp" alt=""></button>
+    <button id="skipBtn" data-i18n-attr="aria-label:btnSkip"><span data-i18n="btnSkip"></span><svg viewBox="0 0 24 24" fill="#ffd23d" aria-hidden="true"><path d="M4 5.5v13l9-6.5zM13 5.5v13l9-6.5z"/></svg></button>
   </div>
-  <div id="credits">Music: &ldquo;Chill Wave&rdquo; by Kevin MacLeod (incompetech.com) &middot; CC BY 4.0 &nbsp;|&nbsp; Sound effects: Kenney.nl &amp; rubberduck (CC0)</div>
-  <div id="endUI"><button id="againBtn" class="rbtn" aria-label="Play again"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg></button></div>
-  <div id="rotate"><div><div class="ph"></div>Turn your device sideways<br>for the best view<br><button id="rotateOk">Play anyway</button></div></div>
-  <div id="loading"><div><div class="spinner"></div>Loading Cannon Quest&hellip;</div></div>
-</div>
-<script>
+  <div id="rotate"><div><div class="ph"></div><span data-i18n-html="rotateHint"></span><br><button id="rotateOk" data-i18n="btnPlayAnyway"></button></div></div></div>

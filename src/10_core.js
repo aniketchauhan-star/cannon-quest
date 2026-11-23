@@ -14,30 +14,16 @@ const Ease = {
   outCubic: (t) => 1 - Math.pow(1 - t, 3),
   inOutCubic: (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2),
   outBack: (t) => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); },
+  outBackSoft: (t) => { const c1 = 1.1, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); }, // a small overshoot (~4 %), then rest
   inBack: (t) => { const c1 = 1.70158, c3 = c1 + 1; return c3 * t * t * t - c1 * t * t; },
   outBounce: (t) => { const n = 7.5625, d = 2.75; if (t < 1 / d) return n * t * t; if (t < 2 / d) return n * (t -= 1.5 / d) * t + 0.75; if (t < 2.5 / d) return n * (t -= 2.25 / d) * t + 0.9375; return n * (t -= 2.625 / d) * t + 0.984375; },
   outElastic: (t) => (t === 0 ? 0 : t === 1 ? 1 : Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * (2 * Math.PI) / 3) + 1),
 };
 const rr = (a, b) => a + (b - a) * Math.random();
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
-const later = (ms) => new Promise((r) => setTimeout(r, ms));
+const later = (ms) => new Promise((r) => setTimeout(r, ms)); // boot only (not motion)
 
-// ---------- game clock + promise tweens (they freeze while paused) ----------
-const Clock = { t: 0, paused: false };
-const tweens = new Set();
-function tween(dur, onUpdate, ease = Ease.inOutCubic, delay = 0) {
-  return new Promise((res) => tweens.add({ t: -delay, dur: Math.max(dur, 1e-4), onUpdate, ease, res }));
-}
-const wait = (s) => tween(s, () => {}, Ease.linear);
-function updateTweens(dt) {
-  for (const tw of [...tweens]) {
-    tw.t += dt;
-    if (tw.t < 0) continue;
-    const k = Math.min(1, tw.t / tw.dur);
-    tw.onUpdate(tw.ease(k), k);
-    if (k >= 1) { tweens.delete(tw); tw.res(); }
-  }
-}
+// (the game clock, tween() and wait() live in 12_motion.js: GSAP-driven, time-based)
 const bez = (a, c, b, e) => { const u = 1 - e; return u * u * a + 2 * u * e * c + e * e * b; };
 
 // =====================================================================
@@ -109,7 +95,7 @@ const BALL_INK = ['#a312c0', '#d0106d', '#2f8a00', '#0089a6', '#d8352b', '#1d5fd
 const IMG = 'assets/img/';
 const symHTML = (s) => (s === '÷' ? '<span class="dv"></span>' : s);
 const labelHTML = (op) => symHTML(op.sym) + op.n;
-const cageHTML = () => `<span class="tk cage" data-key="x"><img class="cg" src="${IMG}cage_x.png" alt="x" draggable="false"></span>`;
+const cageHTML = () => `<span class="tk cage" data-key="x"><img class="cg" src="${IMG}cage_x.webp" alt="${T('altX')}" draggable="false"></span>`;
 const tk = (cls, key, inner) => `<span class="tk ${cls}" data-key="${key}">${inner}</span>`;
 function numHTML(fr) {
   const neg = fr.n < 0, a = Math.abs(fr.n);
