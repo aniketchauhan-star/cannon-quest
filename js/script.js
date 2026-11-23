@@ -792,23 +792,28 @@ const VO = {
 //  (zoom / pan / shake), particles, and the scene sprites.
 // =====================================================================
 const DW = 1672, DH = 941, CX = DW / 2, CY = DH / 2;
-// (measured on the art cut from the user's UI sheet art/sprite_sheets/ui_elements.png by tools/cut_ui_elements.py:
-// the wooden cannon with leaves, its FIRE pill a dark recess where the game's FIRE button sits; cannon 2 is the same
-// cannon with two smaller sockets, on the same canvas)
+// (measured on the user's cannon art (23 Nov), teal and gold with leaves on a wooden base: cannon 1 from
+// art/sprite_sheets/single_cannon.png by tools/cut_single_cannon.py, cannon 2 from art/sprite_sheets/double_cannon.png
+// by tools/cut_double_cannon.py. Both are cut onto one canvas with one mapping (1226×898 px, 0.84 px per art px, the
+// barrel's centre on CANNON.x, the base's bottom 4 px above the canvas's), so a round's morph swaps only the top. Each
+// one's painted FIRE pill is a dark recess where the game's FIRE button sits)
 const CANNON = { x: 836, bottom: 762, h: 360, src: { 1: [613, 449], 2: [613, 449] },
-  // centre + inner radius of each gold socket ring (the dark hole's edge): x and r as fractions of the sprite width, y of its height
-  holes: { 1: [[0.5074, 0.4095, 0.1002]], 2: [[0.3921, 0.4206, 0.0782], [0.6227, 0.4206, 0.0782]] },
+  // each socket's centre + radius: x and r as fractions of the sprite width, y of its height. r comes from where the
+  // ring's gold starts (found on 240 rays): r × seat = the ring's widest inner edge + 1.8 canvas px (see seat)
+  holes: { 1: [[0.498, 0.5057, 0.1156]], 2: [[0.3497, 0.523, 0.0885], [0.6509, 0.5234, 0.0886]] },
   // base footprint width (fraction of the sprite); the wooden base has no light strips
-  foot: { 1: { w: 0.8546, strips: [] }, 2: { w: 0.8546, strips: [] } },
-  // the dark recess inside the gold FIRE bezel, in sprite px (both cannons share it): centre + size. The art's
-  // cannon is not centred on its sprite, so the button is placed by this, never by the sprite's middle. FIRE's
-  // picture (fire.webp, 244×101) has its pill in the middle 240×97: it is sized so the pill fills the recess exactly
-  fire: { cx: 314.0, cy: 357.5, w: 240, h: 97, art: [244, 101, 240, 97] },
+  foot: { 1: { w: 0.7667, strips: [] }, 2: { w: 0.8059, strips: [] } },
+  // the dark recess inside each cannon's gold FIRE bezel, in sprite px: centre + size (Cannon.placeFire). The button
+  // is placed by this, never by the sprite's middle. Each cannon has its own pill picture (1: fire.webp, 2: fire2.webp,
+  // .p1 / .p2 in #fireBtn); `art` = the picture's size with its pill's size inside it, so the pill fills the recess exactly
+  fire: { 1: { cx: 304.6, cy: 374.1, w: 244.9, h: 92.0, art: [495, 189, 490.0, 184.0] },
+    2: { cx: 306.5, cy: 372.3, w: 254.5, h: 97.4, art: [257.0, 99.5, 254.5, 97.4] } },
   // a loaded ball fills its socket edge to edge (user, 20 Nov: "fully absorb in circle, no negative space"): its
-  // painted orb is this much of the hole's width. The gold ring (cannonN_front, drawn above the balls) is solid from
-  // 1.003 × the hole's radius (cannon 1; 1.005 on cannon 2's smaller sockets) out to ~1.44, so at 1.015 the orb's
-  // edge tucks under the ring's inner lip by about a pixel: no dark gap shows anywhere round it, and nothing of the
-  // orb shows outside the ring. (The dark lining .sbk under a loaded socket now only shows while a ball drops in)
+  // painted orb is this much of the hole's width. Each hole's r is set so that edge sits 1.8 canvas px (~0.7 game px)
+  // under the gold ring where the ring is widest (the holes are not perfect circles), and the ring layer
+  // (cannonN_front, drawn above the balls) is half there at the gold's inner edge and solid half a canvas px further
+  // out: no dark gap shows anywhere round the orb, and nothing of it shows outside the ring. (The dark lining .sbk
+  // under a loaded socket only shows while a ball drops in)
   seat: 1.015 };
 const BALL_ART = 0.96; // the orb's share of its picture (ball_*.webp: the orb is ~161 of 168 px)
 // tray art (wooden, metal corners; its plain middle stretched to hold 8 balls): ball spots along its floor (holesX,
@@ -1151,14 +1156,7 @@ const Cannon = {
     this.front = $('#cannonFront'); this.front.style.transformOrigin = this.el.style.transformOrigin; this.c1f = $('#c1f'); this.c2f = $('#c2f');
     for (const id of ['#cannonBody', '#cannonFrontBody']) Object.assign($(id).style, { left: CANNON.x + 'px', top: CANNON.bottom + 'px' });
     this.c1.style.height = this.c2.style.height = this.c1f.style.height = this.c2f.style.height = CANNON.h + 'px';
-    // FIRE fills the recess in the cannon's gold bezel, centred on it (pressed, it sinks into the dark recess)
-    const F = CANNON.fire, [sw, sh] = CANNON.src[1], sc = CANNON.h / sh, [aw, ah, pw, ph] = F.art;
-    const fcx = CANNON.x + (F.cx - sw / 2) * sc, fcy = CANNON.bottom - CANNON.h + F.cy * sc;
-    const fw = F.w * sc * (aw / pw), fh = F.h * sc * (ah / ph);
-    Object.assign(this.fire.style, { left: fcx - fw / 2 + 'px', top: fcy - fh / 2 + 'px', width: fw + 'px', height: fh + 'px' });
-    this.fireBox = { x: fcx, y: fcy, w: fw, h: fh };
-    this.fireText = this.fire.querySelector('.ft'); this.fireFont = fh * 0.62; // the word's size, from the pill's height (about the painted word's size)
-    this.fitFire();
+    this.fireText = this.fire.querySelector('.ft'); // (FIRE is placed by setN → placeFire)
     const gr = $('#ground');
     this.gShadow = groundGroup(gr, 'shadow', CANNON.x, CANNON.bottom); // planted on the plaza
     this.gLight = groundGroup(gr, 'light', CANNON.x, CANNON.bottom);   // cyan strips spilling onto the ground
@@ -1170,6 +1168,17 @@ const Cannon = {
   },
   // a loaded ball fills its socket, centred, its edge just under the gold ring (CANNON.seat)
   socketPos(i, n = this.n) { const h = this.holes(n)[i] || this.holes(n)[0]; return { x: h.x, y: h.y, s: (h.r * 2 * CANNON.seat) / (BALL_D * BALL_ART) }; },
+  // FIRE fills the recess in this cannon's gold bezel, centred on it (pressed, it sinks into the dark recess), with
+  // this cannon's own pill picture
+  placeFire(n) {
+    const F = CANNON.fire[n], [sw, sh] = CANNON.src[n], sc = CANNON.h / sh, [aw, ah, pw, ph] = F.art;
+    const fcx = CANNON.x + (F.cx - sw / 2) * sc, fcy = CANNON.bottom - CANNON.h + F.cy * sc;
+    const fw = F.w * sc * (aw / pw), fh = F.h * sc * (ah / ph);
+    Object.assign(this.fire.style, { left: fcx - fw / 2 + 'px', top: fcy - fh / 2 + 'px', width: fw + 'px', height: fh + 'px' });
+    this.fire.classList.toggle('two', n === 2); // (shows .p2, cannon 2's pill, instead of .p1)
+    this.fireBox = { x: fcx, y: fcy, w: fw, h: fh };
+    this.fireFont = fh * 0.62; // the word's size, from the pill's height (about the painted word's size)
+  },
   // the word on FIRE (T('btnFire')) at its size, shrunk if a longer word would run past the pill's straight middle
   fitFire() {
     const t = this.fireText; if (!t) return;
@@ -1179,7 +1188,7 @@ const Cannon = {
   },
   setN(n) {
     this.n = n;
-    this.fitFire(); // (each round: by now the word is in, whatever the language)
+    this.placeFire(n); this.fitFire(); // (each round: by now the word is in, whatever the language)
     this.c1.style.display = this.c1f.style.display = n === 1 ? '' : 'none'; this.c2.style.display = this.c2f.style.display = n === 2 ? '' : 'none';
     const fx = $('#sockFx'); fx.innerHTML = '';
     this.sock = []; this.tags = []; this.backs = [];
@@ -1191,9 +1200,10 @@ const Cannon = {
       const g = document.createElement('div'); g.className = 'sglow';
       const d = h.r * 2.55; Object.assign(g.style, { left: h.x - d / 2 + 'px', top: h.y - d / 2 + 'px', width: d + 'px', height: d + 'px' });
       fx.appendChild(g); this.sock.push(g);
-      if (n > 1) { // the order markers sit beside the sockets, 1 on the left, 2 on the right (above them is the barrel)
+      if (n > 1) { // the order markers sit beside the sockets on the gold side bands, 1 on the left, 2 on the right (above
+        // them is the barrel), a little above the sockets' middle, so the band's rivet never shows through the glass
         const t = document.createElement('div'); t.className = 'stag'; t.textContent = i + 1;
-        Object.assign(t.style, { left: h.x + (i === 0 ? -1 : 1) * (h.r + 38) + 'px', top: h.y + 'px' }); fx.appendChild(t); this.tags.push(t);
+        Object.assign(t.style, { left: h.x + (i === 0 ? -1 : 1) * (h.r + 36) + 'px', top: h.y - 14 + 'px' }); fx.appendChild(t); this.tags.push(t);
       }
     });
     const [sw, sh] = CANNON.src[n], w = sw * CANNON.h / sh, fw = (this.footW = w * CANNON.foot[n].w);
@@ -2719,7 +2729,7 @@ function frame(time, deltaMs) {
 // in case Play is tapped first) ----
 const Pics = {
   TITLE: ['bg_sky', 'sun_glow', 'sun_rays', 'bg_mount', 'bg_trees', 'bg_plantL', 'bg_plantR', 'bg_deck', 't_logo', 't_cannon', 'playbtn', 't_cage', 't_x', 't_cage_front'],
-  GAME: ['cloud', 'cannon1', 'cannon2', 'cannon1_front', 'cannon2_front', 'rack', 'rack_front', 'fire', 'cage_x', 'xchar', 'hand', 'pause', 'play', 'sound', 'question_board',
+  GAME: ['cloud', 'cannon1', 'cannon2', 'cannon1_front', 'cannon2_front', 'rack', 'rack_front', 'fire', 'fire2', 'cage_x', 'xchar', 'hand', 'pause', 'play', 'sound', 'question_board',
     ...[0, 1, 2, 3, 4, 5, 6, 7].map((i) => `ball_${i}`)],
   game: null, // (a promise: the play scene's pictures and the font)
   // resolves when every picture has arrived and is decoded (so it shows without a hitch), or after cap seconds,

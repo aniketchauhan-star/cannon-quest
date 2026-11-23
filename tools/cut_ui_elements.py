@@ -1,21 +1,20 @@
-# Cut the game's cannon, FIRE button, tray and 8 balls from the UI sheet art/sprite_sheets/ui_elements.png
-# (the user's art, 19 Nov): the wooden cannon with leaves (row 1, first), the 8 orbs, and the wooden tray with
-# metal corners (tray row 1, first). Each piece is upscaled 2× with EDSR first, so it stays sharp on retina screens.
+# Cut the game's tray and 8 balls from the UI sheet art/sprite_sheets/ui_elements.png (the user's art, 19 Nov): the
+# 8 orbs, and the wooden tray with metal corners (tray row 1, first). Each piece is upscaled 2× with EDSR first, so it
+# stays sharp on retina screens.
 #
-#   cannon1.png        the cannon; its FIRE pill is replaced by a dark recess (the game's FIRE button sits there)
-#   cannon1_front.png  only its gold socket ring, drawn above a loaded ball
-#   cannon2.png        the same cannon with two smaller sockets side by side (the sheet has no two-socket cannon)
-#   cannon2_front.png  its two rings
-#   fire.png           the red FIRE pill with the word erased: the game writes T('btnFire') on it
 #   rack.png           the tray, its plain middle stretched so 8 balls fit (corners, ropes and light kept as drawn)
 #   rack_front.png     its front lip, drawn above the balls
 #   ball_0..7.png      the orbs with their painted labels erased (the game draws each ball's label)
 #
+# (This tool also cut the cannons and the FIRE button from the sheet's wooden cannon until 23 Nov 2026. They now come
+# from the user's own cannon art: tools/cut_single_cannon.py → cannon1*, fire; tools/cut_double_cannon.py → cannon2*,
+# fire2. The old cannon code is in git history, at commit 8621747.)
+#
 # Usage (a Python with cv2.dnn_superres, scipy and PIL):
 #   python tools/cut_ui_elements.py art/sprite_sheets/ui_elements.png EDSR_x2.pb OUTDIR
-# then cwebp each PNG into assets/img/. Prints the geometry for CANNON / RACK in src/30_stage.js.
+# then cwebp each PNG into assets/img/. Prints the geometry for RACK in src/30_stage.js.
 import sys, json, numpy as np, cv2
-from PIL import Image, ImageDraw
+from PIL import Image
 from scipy import ndimage as nd
 
 SRC, MODEL, OUT = sys.argv[1:4]
@@ -40,121 +39,6 @@ def save(arr, name, scale=1.0):
     if scale != 1.0: im = im.resize((round(im.width * scale), round(im.height * scale)), Image.LANCZOS)
     im.save(f'{OUT}/{name}', optimize=True); return im.size
 
-
-def stadium(shape, box, ss=4):
-    """anti-aliased rounded-end pill mask (0..1)"""
-    H, W = shape; x0, y0, x1, y1 = box
-    mk = Image.new('L', (W * ss, H * ss), 0)
-    ImageDraw.Draw(mk).rounded_rectangle((x0 * ss, y0 * ss, x1 * ss, y1 * ss), radius=(y1 - y0) / 2 * ss, fill=255)
-    return np.array(mk.resize((W, H), Image.LANCZOS)).astype(np.float32) / 255
-
-
-# =====================================================================================================
-# cannon (the wooden one with leaves)
-# =====================================================================================================
-c = up((32, 7, 372, 257)); H, W = c.shape[:2]
-r, g, b, a = (c[..., i] for i in range(4)); L = lum(c)
-gold = (r > 170) & (g > 110) & (b < 110) & (r - b > 90)
-yy, xx = np.mgrid[0:H, 0:W]
-
-# the socket: the big dark hole in the upper part, then walk out over its gold ring
-dark = (L < 90) & (a > 200); dark[int(H * 0.62):] = False; dark = nd.binary_opening(dark, iterations=3)
-lab, n = nd.label(dark); hole = nd.binary_fill_holes(lab == (np.argmax(nd.sum(dark, lab, range(1, n + 1))) + 1))
-ys, xs = np.nonzero(hole); hcx, hcy, hr = xs.mean(), ys.mean(), np.sqrt(hole.sum() / np.pi)
-dist = np.hypot(xx - hcx, yy - hcy); ro = hr
-for rad in np.arange(hr, hr * 1.7, 0.5):
-    if gold[(dist >= rad) & (dist < rad + 0.5)].mean() > 0.5: ro = rad
-
-# the red FIRE pill: its bounding box gives a clean stadium
-red = (r > 190) & (g < 130) & (b < 110) & (a > 200) & ~gold; red[:H // 2] = False
-lab, n = nd.label(red); red = lab == (np.argmax(nd.sum(red, lab, range(1, n + 1))) + 1)
-pill = nd.binary_fill_holes(nd.binary_closing(red, iterations=3))
-grow = pill.copy()
-for _ in range(6): grow |= nd.binary_dilation(grow) & ~gold & (a > 200) & (L < 170)  # over its dark-red outline, up to the gold
-ys, xs = np.nonzero(nd.binary_fill_holes(grow)); pbox = (xs.min(), ys.min(), xs.max() + 1, ys.max() + 1)
-st = stadium((H, W), pbox)
-
-# fire.png: the pill, the word erased row by row (its shading runs top to bottom, so each row is filled from its own ends)
-px0, py0, px1, py1 = pbox; P = c[py0 - 2:py1 + 2, px0 - 2:px1 + 2].copy(); m = st[py0 - 2:py1 + 2, px0 - 2:px1 + 2] > 0.5
-inner = nd.binary_erosion(m, iterations=4)
-fill = nd.binary_dilation((P[..., 1] > 112) & nd.binary_erosion(m, iterations=10), iterations=5) & inner
-F = P.copy()
-for y in range(P.shape[0]):
-    f = fill[y]
-    if not f.any(): continue
-    ok = np.nonzero(inner[y] & ~f)[0]
-    for ch in range(3): F[y, f, ch] = np.interp(np.nonzero(f)[0], ok, P[y, ok, ch])
-wgt = nd.gaussian_filter(fill.astype(np.float32), 1.2)[..., None]
-F[..., :3] = F[..., :3] * (1 - wgt) + nd.gaussian_filter(F[..., :3], (1.0, 3.0, 0)) * wgt
-F[..., :3] += (nd.gaussian_filter(np.random.default_rng(1).normal(0, 1.5, m.shape), 0.8) * fill)[..., None]
-F[..., 3] = st[py0 - 2:py1 + 2, px0 - 2:px1 + 2] * 255
-
-# the cannon under the button: a dark recess inside the gold bezel (seen when the button is pressed in)
-body1 = c.copy(); sm = np.clip(nd.gaussian_filter(st, 0.6) * 1.15, 0, 1)[..., None]
-v = np.clip((yy - py0) / (py1 - py0), 0, 1)[..., None]
-recess = np.array([40, 12, 4], np.float32) * (1 - v) + np.array([92, 30, 10], np.float32) * v
-body1[..., :3] = body1[..., :3] * (1 - sm) + recess * sm
-
-# cannon 2: the old socket filled from the cannon around it (wood grain copied in), then two sockets at 0.78×
-K, GAP, DROP = 0.78, 2.0, 6.0
-disc = dist < ro + 4
-# the gold arrow on the barrel sits just above the socket: lift it out first (so the fill below is teal, not a
-# gold smear), fill, then put it back
-arrow = np.zeros((H, W), bool); ay0 = int(hcy - ro - 50)
-arrow[ay0:int(hcy - ro + 6), int(hcx - 45):int(hcx + 45)] = True
-arrow &= gold & (a > 200)
-lab, n = nd.label(arrow); arrow = lab == (np.argmax(nd.sum(arrow, lab, range(1, n + 1))) + 1)
-arrow = nd.binary_dilation(nd.binary_fill_holes(arrow), iterations=3)
-src8 = np.clip(body1[..., :3], 0, 255).astype(np.uint8)
-src8 = cv2.inpaint(src8, (arrow * 255).astype(np.uint8), 5, cv2.INPAINT_TELEA)
-base = cv2.inpaint(src8, (disc * 255).astype(np.uint8), 12, cv2.INPAINT_TELEA).astype(np.float32)
-aw = np.maximum(nd.gaussian_filter(arrow.astype(np.float32), 0.8), nd.binary_erosion(arrow))[..., None]
-base = base * (1 - aw) + body1[..., :3] * aw
-detail = c[..., :3] - nd.gaussian_filter(c[..., :3], (2.5, 2.5, 0))
-dx0 = int(hcx + ro + 4); dw = 36  # a strip of belly just right of the ring
-don = detail[yy, np.clip(dx0 + ((xx - int(hcx - ro)) % dw), 0, W - 1)]
-brown = (base[..., 0] > base[..., 1] + 35) & (base[..., 2] < 120)
-wt = nd.gaussian_filter((disc & brown).astype(np.float32), 2)[..., None]
-body2 = body1.copy(); body2[..., :3] = np.where(disc[..., None], base, body1[..., :3]) + don * wt * 0.9
-R = int(np.ceil(ro + 4)); iy, ix = int(hcy), int(hcx)
-S = c[iy - R:iy + R + 1, ix - R:ix + R + 1].copy()
-sy, sx = np.mgrid[0:S.shape[0], 0:S.shape[1]]; S[..., 3] = np.clip(ro + 1.5 - np.hypot(sx - (hcx - ix + R), sy - (hcy - iy + R)), 0, 1) * 255
-sz = round(S.shape[1] * K); Sim = Image.fromarray(S.astype(np.uint8)).resize((sz, sz), Image.LANCZOS)
-ro2, hr2, dd, cy2 = ro * K, hr * K, ro * K + GAP, hcy + DROP
-b2 = Image.fromarray(np.clip(body2, 0, 255).astype(np.uint8)); holes2 = []
-for s_ in (-1, 1):
-    ox, oy = round(hcx + s_ * dd - sz / 2), round(cy2 - sz / 2)
-    b2.alpha_composite(Sim, (ox, oy))
-    # where the pasted socket's centre really landed (the patch's centre, scaled, plus its rounded offset)
-    holes2.append((ox + (hcx - ix + R) * sz / S.shape[1], oy + (hcy - iy + R) * sz / S.shape[0]))
-body2 = np.array(b2).astype(np.float32)
-
-
-def front(body, rings):
-    """only the gold ring(s): drawn above a loaded ball so its edge tucks under the ring"""
-    f = np.zeros((H, W), np.float32)
-    for (x, y, ri, rO) in rings:
-        d = np.hypot(xx - x, yy - y); f = np.maximum(f, np.clip(np.minimum(d - (ri - 1.0), rO + 1 - d), 0, 1))
-    fr = body.copy(); fr[..., 3] *= f; return fr
-
-
-# both cannons on the same canvas: trimmed to the art, the bottom edge = where the base meets the ground
-ys, xs = np.nonzero(c[..., 3] > 128); cx0, cy0, cx1, cy1 = xs.min() - 2, ys.min() - 2, xs.max() + 3, ys.max() + 2
-CS = 0.9  # 2× art → 1.8× the sheet
-crop = lambda arr: arr[cy0:cy1, cx0:cx1]
-CW, CH = cx1 - cx0, cy1 - cy0
-fronts = {1: [(hcx, hcy, hr, ro)], 2: [(x, y, hr2, ro2) for x, y in holes2]}
-for n_, body in ((1, body1), (2, body2)):
-    save(crop(body), f'cannon{n_}.png', CS); save(crop(front(body, fronts[n_])), f'cannon{n_}_front.png', CS)
-# the base's footprint: its widest opaque run in the bottom rows (the leaves sit higher)
-low = crop(c)[-14:-4, :, 3] > 128; cols = np.nonzero(low.any(0))[0]
-geo['cannon'] = dict(
-    src=[round(CW * CS), round(CH * CS)],
-    holes={n_: [[round((x - cx0) / CW, 4), round((y - cy0) / CH, 4), round(ri / CW, 4)] for x, y, ri, _ in fronts[n_]] for n_ in (1, 2)},
-    foot_w=round((cols.max() - cols.min() + 1) / CW, 4),
-    fire=dict(w=round((px1 - px0) / CH, 4), y=round((cy1 - (py0 + py1) / 2) / CH, 4), ar=round((py1 - py0) / (px1 - px0), 4)),
-    top_rim=int(np.nonzero((crop(c)[..., 3] > 128).any(1))[0].min()))
-save(F, 'fire.png', CS)
 
 # =====================================================================================================
 # tray (wooden, metal corners, rope ends, cyan light): stretch only its plain middle

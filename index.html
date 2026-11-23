@@ -212,6 +212,7 @@ img{-webkit-user-drag:none;user-select:none}
 @keyframes tagp{50%{transform:scale(1.22)}}
 #fireBtn{position:absolute;cursor:pointer;transition:transform .12s ease-out;transform-origin:50% 60%}
 #fireBtn img{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none}
+#fireBtn.two img.p1,#fireBtn:not(.two) img.p2{display:none} /* each cannon has its own pill (Cannon.placeFire) */
 #fireBtn .gr{filter:grayscale(1) brightness(1.06) contrast(.85);opacity:0;transition:opacity .25s ease-in}#fireBtn.off .gr{opacity:1;transition-timing-function:ease-out}
 #fireBtn.off{cursor:default}
 /* the word on the button (the pill art is blank): T('btnFire'), white like the painted word; Cannon sets its size
@@ -399,7 +400,7 @@ html:not(.fit) #stage,html:not(.fit) #stageTop{visibility:hidden} /* (until fitS
       <div id="cannon">
         <div id="cannonBody"><img id="c1" data-src="assets/img/cannon1.webp" alt=""><img id="c2" data-src="assets/img/cannon2.webp" alt="" style="display:none"></div>
         <div id="sockFx"></div>
-        <button id="fireBtn" class="off" data-i18n-attr="aria-label:btnFire"><i class="fgl"></i><img data-src="assets/img/fire.webp" alt="" data-i18n-attr="alt:btnFire"><img class="gr" data-src="assets/img/fire.webp" alt=""><span class="ft" data-i18n="btnFire"></span></button>
+        <button id="fireBtn" class="off" data-i18n-attr="aria-label:btnFire"><i class="fgl"></i><img class="p1" data-src="assets/img/fire.webp" alt="" data-i18n-attr="alt:btnFire"><img class="p1 gr" data-src="assets/img/fire.webp" alt=""><img class="p2" data-src="assets/img/fire2.webp" alt="" data-i18n-attr="alt:btnFire"><img class="p2 gr" data-src="assets/img/fire2.webp" alt=""><span class="ft" data-i18n="btnFire"></span></button>
       </div>
       <img id="rack" class="spr" data-src="assets/img/rack.webp" alt="">
       <div id="bshadows"></div>

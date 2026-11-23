@@ -47,8 +47,8 @@ A purple **x** is locked in a golden cage on a cloud, inside an equation such as
 | `assets/img/bg.jpg` | Lake-side plaza background with painted clouds (2× upscale of `art/background/5.png`). One flat layer. |
 | `assets/img/cloud.png` | The equation cloud |
 | `assets/img/cage_x.png`, `cage.png`, `xchar.png` | x in its cage, the empty cage, and the free x character |
-| `assets/img/cannon1.webp`, `cannon2.webp` (+ `_front`) | 1-socket and 2-socket wooden cannons, cut from `art/sprite_sheets/ui_elements.png` by `tools/cut_ui_elements.py` (the 2-socket one is built from the 1-socket art). Only these two exist, so rounds use at most 2 sockets. |
-| `assets/img/fire.webp` | The red FIRE pill, blank: the game writes the word (`btnFire`) on it |
+| `assets/img/cannon1.webp`, `cannon2.webp` (+ `_front`) | 1-socket and 2-socket cannons from the user's own art (23 Nov): teal and gold, with leaves, on a wooden base. Cut from `art/sprite_sheets/single_cannon.png` by `tools/cut_single_cannon.py` and from `art/sprite_sheets/double_cannon.png` by `tools/cut_double_cannon.py`, onto one canvas, so the morph between them swaps only the top. `_front` = only the gold socket ring(s), drawn above a loaded ball. Only these two exist, so rounds use at most 2 sockets. |
+| `assets/img/fire.webp`, `fire2.webp` | Each cannon's own red FIRE pill, blank (the painted word erased): the game writes the word (`btnFire`) on it. `fire.webp` = the single cannon's (`tools/cut_single_cannon.py`); `fire2.webp` = the double's own pill (`tools/cut_double_cannon.py`) |
 | `assets/img/ball_0..7.png` | Ball bodies: magenta, pink, green, cyan, coral, blue, yellow, purple. The game draws the labels. |
 | `assets/img/rack.webp`, `rack_front.webp` | The wooden ball tray (metal corners, rope ends, cyan light), its plain middle stretched to hold 8 balls; the front lip is drawn over the balls |
 | `assets/img/pause.png`, `play.png`, `sound.png` | HUD buttons (orange rounded squares) |
