@@ -24,7 +24,7 @@ window.GAME_LOCALES = {
     "btnSkip": "Skip",
     "altX": "x",
     "altXFree": "x is free and dancing",
-    "altXCaged": "x is still crying in its cage",
+    "altXCaged": "x is still sad in its cage",
     "qScore": "Your score",
     "endFreed": "You freed",
     "endScore": "{freed} out of {total}!",

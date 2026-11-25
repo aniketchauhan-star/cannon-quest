@@ -1590,13 +1590,14 @@ const CloudBurst = {
 // row slides along, a frame at a time (transform only). The frames turn on the game's clock, so they freeze on pause,
 // keep their beat when the equation is redrawn (its cage is a new element each time) and need no timer of their own.
 // Under reduced motion each shows one still frame and nothing moves. d: each frame's time (s), round a loop.
-//   cry:   x crying in its cage: sad, its tears well up and roll, it squeezes its eyes shut, wails, sobs, sniffles
+//   cry:   x sad in its cage, no tears (the user, 25 Nov: "no need to make a cry"): it looks out sadly, its lip
+//          trembles, its eyelids droop with a sigh, and it looks out again. Slow, so it reads as sad, not as sobbing
 //   dance: the freed x dancing, two steps to a loop: a crouch, a hop with its fists up, a wink and a wave; a crouch, a
 //          hop with its arms out, a wave (2 beats of the music, ~81 bpm). The sheet draws its hops a little higher; here
 //          each hop rises and falls smoothly through its frame (hop: how high, of the frame's height) and each landing
 //          gives a little squash. stand: the standing body's height (px of the frame's h)
 const SPR = {
-  cry: { src: 'x_cry', n: 6, w: 382, h: 503, d: [0.5, 0.36, 0.26, 0.56, 0.32, 0.46], still: 1 },
+  cry: { src: 'x_cry', n: 3, w: 382, h: 503, d: [1.2, 0.55, 0.95], still: 0 },
   dance: { src: 'x_dance', n: 6, w: 491, h: 396, d: [0.185, 0.278, 0.278, 0.185, 0.278, 0.278], still: 1, stand: 374, hops: [1, 4], hop: 0.1 },
 };
 const Sprite = {

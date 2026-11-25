@@ -1,5 +1,6 @@
 # x's moods, from the pictures the user made in ChatGPT on 23 Nov 2026 (kept in art/sprite_sheets/x_moods/):
-#   cry_in_cage.png  6 frames, 3 × 2: x crying in its cage         → assets/img/x_cry.webp      (the 6 in one row)
+#   cry_in_cage.png  6 frames, 3 × 2: x crying in its cage         → assets/img/x_cry.webp      (x sad, no tears: 3
+#                                                                    frames in one row, see below)
 #                                                                  → assets/img/cage_empty.webp (frame 1's cage, x out)
 #                                                                  → assets/img/cage_crack.webp (frame 1's cage round x)
 #   dance.png        6 frames, 3 × 2: the freed x dancing (a loop) → assets/img/x_dance.webp    (the 6 in one row)
@@ -17,6 +18,8 @@
 #     can be shown through a window one frame wide: the game slides the row along, frame by frame
 #   • ChatGPT's alpha is never quite solid (250–254) and leaves a faint haze round the art: solid becomes solid and
 #     the haze goes
+#   • x is sad in its cage, not crying (the user, 25 Nov 2026): only the frames where its eyes are open (1, 2 and 6;
+#     in 3–5 it squeezes them shut and wails) are kept, with their tears painted out (tools/dry_tears.py)
 #   • the empty cage (its shards, when the cage breaks: CageBreak) is frame 1's cage with x taken out: x's body with
 #     its face, gloves, arms and tears go; the two front bars stay (filled in where a glove hid them); the floor under
 #     x's feet is filled in smoothly from the floor round it; the rest of x's place is see-through (the free x covers
@@ -33,6 +36,8 @@ import tempfile
 import numpy as np
 from PIL import Image
 from scipy import ndimage as nd
+
+from dry_tears import dry
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ART = os.path.join(ROOT, 'art', 'sprite_sheets', 'x_moods')
@@ -153,6 +158,7 @@ if CH < (b - t + 1) + 8:
     CH = (b - t + 1) + 8
     CW = round(CH * CAGE_U[0] / CAGE_U[1])
 cry = cut(A, fr, org, (l - (CW - (r - l + 1)) // 2, t - (CH - (b - t + 1)) // 2, CW, CH))
+cry = [dry(cry[0]), dry(cry[1]), dry(cry[5], lid=22)]  # (sad, no tears: frame 6's eyes have a lid over their top)
 size_cry = webp(np.concatenate(cry, 1), 'x_cry.webp', q=84)
 
 # ---- frame 1 measured: x's body, gloves, arms and tears; the cage's front bars and floor
@@ -278,7 +284,7 @@ if k < 1:  # (resized with its colour premultiplied, so no dark fringe)
 size_free = webp(pic, 'x_free.webp', q=86)
 
 print(json.dumps({
-    'x_cry.webp': {'frame': [CW, CH], 'kB': round(size_cry / 1024)},
+    'x_cry.webp': {'frame': [CW, CH], 'n': len(cry), 'kB': round(size_cry / 1024)},
     'cage_empty.webp': {'size': [CW, CH], 'kB': round(size_empty / 1024)},
     'cage_crack.webp': {'size': [CW, CH], 'kB': round(size_crack / 1024)},
     'CAGE (cage units %d x %d)' % CAGE_U: {
