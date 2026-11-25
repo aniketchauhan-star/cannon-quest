@@ -9,8 +9,8 @@ It is based on the *Cannon Quest* deck, the POD A stand-up brief (16 Nov 2026), 
 - Works best in landscape. On a phone held upright, a "turn your device" hint appears; tap "Play anyway" to dismiss it.
 
 **Controls**
-- Drag a ball into the cannon to load it: near the cannon the nearest empty socket glows and draws the ball in, and let go there, it drops in and fills the socket. Let go anywhere else and it flies back to the tray. On the two-socket cannon you can drop a ball straight into socket 1 or 2.
-- Tapping still works too: tap a ball to load it. Tap a loaded ball to send it back, or drag it out.
+- Drag a ball into the cannon to load it: near the cannon the nearest empty socket glows and draws the ball in, and let go there, it drops in and fills the socket. Let go anywhere else and it flies back to the tray. On the two-socket cannon you can drop a ball straight into socket 1 or 2. With the cannon full, drop a ball on a loaded socket to swap it in: the ball that was there flies back to the tray.
+- Tapping still works too: tap a ball to load it. With the cannon full, tapping another ball swaps it in for the ball loaded last, which flies back to the tray (no need to unload first). Tap a loaded ball to send it back, or drag it out. No × is drawn on a loaded ball (the user, 25 Nov 2026).
 - Tap **FIRE** to fire.
 - **Skip** (top right) appears while the tutorial or a shot is playing. It ends the tutorial, or jumps the shot straight to its result.
 - The **Pause** button freezes the game and turns into ▶. Tap it again to continue. The speaker button mutes all sound.

@@ -48,12 +48,21 @@ function onSocketsChanged() {
 }
 // a ball goes into socket i: it flies there (from the tray on a long arc, or from the hand on a short one), drops
 // into the hole and fills it, with a clunk, a burst and a ring
+let loadCount = 0; // (numbers the balls as they go in, so a new orb knows which loaded one went in last)
 function seat(b, i, dur = Motion.BEAT.TAP_FLY, arc = 230) {
-  G.sockets[i] = b; b.where = 'socket'; b.socket = i;
+  G.sockets[i] = b; b.where = 'socket'; b.socket = i; b.loadN = ++loadCount;
   Rack.balls.forEach((x) => (x.guide = false));
   flyBall(b, dur, arc); Sound.pop(1); Sound.whoosh(0.35);
   b.onLand = () => { Sound.clunk(); const p = Cannon.socketPos(b.socket); FX.burst(p.x, p.y, b.hex, 16, 300); FX.ring(p.x, p.y, '#fff1a8', 70); FX.star(p.x, p.y, '#fff1a8', 110, 0.24, { n: 6 }); Stage.hit({ trauma: 0.08, ky: 3 }); };
 }
+// a ball goes back to its cup in the tray (whoever calls this has already emptied its socket)
+function unseat(b, dur = Motion.BEAT.TAP_FLY - 0.05, arc = 180) {
+  b.where = 'rack'; b.socket = -1;
+  flyBall(b, dur, arc); Sound.unload();
+  b.onLand = () => Sound.settle();
+}
+// the socket whose ball went in last (−1: nothing loaded)
+const lastLoaded = () => G.sockets.reduce((j, s, k) => (s && (j < 0 || s.loadN > G.sockets[j].loadN) ? k : j), -1);
 function tapBall(b, tap = false) { // (tap: a press on the screen; false: a key)
   if (G.paused) return;
   Sound.resume();
@@ -61,15 +70,15 @@ function tapBall(b, tap = false) { // (tap: a press on the screen; false: a key)
   if (G.spotOnly && G.spotOnly !== b) { Sound.nope(); Spot.nudge(); return; } // guided step: only the highlighted ball
   idleReset();
   if (b.where === 'rack') {
-    const i = G.sockets.indexOf(null);
-    if (i < 0) { Sound.nope(); Cannon.pulseSockets(); tween(0.5, (e, k) => (b.hop = Math.sin(k * Math.PI) * 0.5), Ease.linear); return; }
+    // every socket already loaded: the new orb takes the place of the one loaded last, which flies back to its cup
+    // (the user, 25 Nov 2026: "if I click on other ops, they replace the loaded cannon ops automatically")
+    let i = G.sockets.indexOf(null);
+    if (i < 0) { i = lastLoaded(); if (i < 0) { Sound.nope(); return; } unseat(G.sockets[i]); }
     seat(b, i);
   } else if (b.where === 'socket') {
     G.sockets.splice(b.socket, 1); G.sockets.push(null);
     G.sockets.forEach((s, k) => { if (s && s.socket !== k) { s.socket = k; flyBall(s, 0.45, 40); } });
-    b.where = 'rack'; b.socket = -1;
-    flyBall(b, Motion.BEAT.TAP_FLY - 0.05, 180); Sound.unload();
-    b.onLand = () => Sound.settle();
+    unseat(b);
   }
   onSocketsChanged();
 }
@@ -77,7 +86,8 @@ function tapBall(b, tap = false) { // (tap: a press on the screen; false: a key)
 // ---- drag a ball into the cannon (or just tap it). A press that moves a few px becomes a drag: the ball lifts out
 // of its cup and follows the finger above everything (the tray's lip, the cannon's ring, the tutorial's dim). Near
 // the cannon the nearest empty socket glows, draws the ball in and the ball shrinks toward its size; let go there and
-// it drops in and fills the hole. Let go anywhere else and it flies home. A press that doesn't move is a tap.
+// it drops in and fills the hole. With every socket loaded, the nearest loaded one glows instead: let go there and the
+// ball takes its place (its orb flies back to the tray). Let go anywhere else and it flies home. A press that doesn't move is a tap.
 // A loaded ball can be dragged out the same way (its socket stays free until another ball goes in).
 const Drag = {
   b: null, id: -1, x0: 0, y0: 0, moved: false, touch: false, aim: -1, SLOP: 9, // (SLOP: screen px before a press is a drag)
@@ -112,13 +122,14 @@ const Drag = {
     $('#fly').appendChild(b.el); b.el.classList.add('drag'); document.body.classList.add('dragging');
     Sound.pop(1.15); Spot.hold(true);
   },
-  // the socket it would drop into: the nearest empty one, once the ball is over the cannon (near any of its sockets)
+  // the socket it would drop into, once the ball is over the cannon (near any of its sockets): the nearest empty one,
+  // or with every socket loaded, the nearest loaded one (the ball would take its place)
   aimAt(b) {
-    const d = b.drag, holes = Cannon.holes(), CATCH = Math.max(130, holes[0].r * 3);
+    const d = b.drag, holes = Cannon.holes(), CATCH = Math.max(130, holes[0].r * 3), full = G.sockets.every(Boolean);
     let near = Infinity, best = -1, bd = Infinity;
     holes.forEach((h, i) => {
       const q = Math.hypot(d.px - h.x, d.py - h.y); near = Math.min(near, q);
-      if (!G.sockets[i] && q < bd) { bd = q; best = i; }
+      if ((full || !G.sockets[i]) && q < bd) { bd = q; best = i; }
     });
     if (near > CATCH || !G.inputOn) best = -1;
     if (best !== this.aim) {
@@ -136,18 +147,18 @@ const Drag = {
     if (moved) this.drop(b); else tapBall(b, true);
   },
   drop(b) {
-    const i = this.aim, overFull = !!b.drag && i < 0 && G.sockets.every(Boolean) && this.overCannon(b);
+    const i = this.aim;
     this.release(b);
-    if (i >= 0 && G.inputOn && !G.paused && !G.sockets[i]) { seat(b, i, 0.3, 14); onSocketsChanged(); return; }
+    if (i >= 0 && G.inputOn && !G.paused && i < G.sockets.length) {
+      if (G.sockets[i]) unseat(G.sockets[i]); // (a loaded socket: its orb makes room)
+      seat(b, i, 0.3, 14); onSocketsChanged(); return;
+    }
     this.home(b);
-    if (overFull && G.inputOn) { Sound.nope(); Cannon.pulseSockets(); }
   },
-  overCannon(b) { return Cannon.holes().some((h) => Math.hypot(b.x - h.x, b.y - h.y) < Math.max(130, h.r * 3)); },
   // back to its cup (under the tray's lip again at once, so it lands into the tray)
   home(b) {
     $('#balls').appendChild(b.el); b.lifted = false;
-    flyBall(b, 0.5, 50); Sound.unload();
-    b.onLand = () => Sound.settle();
+    unseat(b, 0.5, 50);
   },
   release(b) {
     if (this.aim >= 0) Cannon.highlight(this.aim, false);
