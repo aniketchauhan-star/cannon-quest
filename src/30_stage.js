@@ -590,7 +590,7 @@ const Cloud = {
 
 // ---------- the cloud bursting: it comes apart into its own puffs ----------
 // The pieces are the cloud's own picture (cloud.webp) cut into canvases: each puff of tools/paint_cloud.py (PUFFS:
-// centre, radius, how far forward it sits; art px of the 760 × 281 picture, its OX included) less the puffs in front
+// centre, radius = the larger of its half width and height, its place back to front; art px of the 760 × 281 picture) less the puffs in front
 // of it, with a soft edge, so each piece is a soft lump of this very cloud; the flat blue base is cut into four
 // lengths. Each piece also has a blurred twin, so it can melt into mist as it goes. At the pop the pieces sit exactly
 // on the cloud and the cloud's picture lets go under them, so the swap never shows; they drift out from its middle
@@ -598,8 +598,8 @@ const Cloud = {
 // cloud is repainted, keep CLOUD_PUFFS in step with paint_cloud.py (another cloud still bursts, only not along its
 // own puffs).
 const CLOUD_ART = { w: 760, h: 281, x: -52, y: 10, base: 262, mid: [392, 186] }; // (.cl in #cloud's box; its flat underside; the burst's centre)
-const CLOUD_PUFFS = [[392, 128, 118, 0], [262, 166, 84, 22], [524, 158, 88, 22], [170, 206, 56, 40], [622, 204, 54, 40], [98, 240, 24, 52],
-  [674, 238, 22, 52], [222, 230, 44, 58], [330, 224, 52, 58], [460, 222, 54, 58], [568, 228, 46, 58]];
+const CLOUD_PUFFS = [[392, 122, 120, 0], [250, 164, 94, 1], [536, 160, 92, 2], [166, 206, 64, 3], [636, 212, 58, 4], [112, 244, 32, 5],
+  [682, 246, 28, 6], [236, 256, 56, 7], [398, 252, 78, 8], [560, 258, 58, 9]];
 const CloudBurst = {
   cl: null, wrap: null, bits: [], jobs: null, on: false,
   // The pieces are cut once, one piece at a time while the browser is idle, from when the play scene's pictures are
