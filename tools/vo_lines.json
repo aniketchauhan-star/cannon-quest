@@ -18,6 +18,8 @@
     "voFreed4",
     "voStuck1",
     "voStuck2",
+    "voRetry",
+    "voShowHow",
     "voEndAll",
     "voEndMost",
     "voEndSome"
@@ -30,6 +32,10 @@
       "tutOrbs",
       "tutTapOrb",
       "tutTapFire"
+    ],
+    "review": [
+      "voRetry",
+      "voShowHow"
     ]
   },
   "when": {
@@ -48,11 +54,13 @@
     "voFreed2": "the shot worked: x jumps out of the cage",
     "voFreed3": "the shot worked: x jumps out of the cage",
     "voFreed4": "the shot worked: x jumps out of the cage",
-    "voStuck1": "the shot missed: x is still in the cage",
-    "voStuck2": "the shot missed: x is still in the cage",
+    "voStuck1": "the shot missed: x is still in the cage (a retry comes next)",
+    "voStuck2": "the retry missed too: x is still in the cage (the game shows the way next)",
     "voEndAll": "the end: the player freed x every time",
     "voEndMost": "the end: the player freed x most times",
-    "voEndSome": "the end: the player freed x only a few times"
+    "voEndSome": "the end: the player freed x only a few times",
+    "voRetry": "the shot missed: the same equation comes back for one more try, and the orb that undoes the last step glows",
+    "voShowHow": "the second try missed too: the game shows the way, firing the right orbs itself"
   },
   "mood": {
     "voWelcome": "hype",
@@ -74,7 +82,9 @@
     "voStuck2": "soft",
     "voEndAll": "cheer",
     "voEndMost": "cheer",
-    "voEndSome": "warm"
+    "voEndSome": "warm",
+    "voRetry": "warm",
+    "voShowHow": "teach"
   },
   "spoken": {}
 }

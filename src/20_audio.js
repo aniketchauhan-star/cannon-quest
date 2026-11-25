@@ -288,7 +288,25 @@ const Music = {
 // (a CSS border-image leaves faint lines across the cream at the stage's fractional scales). SLICE: where the
 // template's rounded corners end, in WebP px (top right bottom left); EDGE: the same in art px, drawn at half the
 // WebP (0.25 of the template), the template's own proportions, so its whole thick wooden frame shows.
+// It stays on the left, halfway down (#capPos): the design review's speech bubble over x's cage was undone on
+// 25 Nov 2026 (the user: "the question template… like before, in the left corner"). It has no speaker icon, and no
+// round hear-again button waits between lines (the user, 25 Nov 2026: "remove the X and sound icon… from this
+// entire game"): the board is only the words.
 const BOARD = { SLICE: [96, 100, 81, 100], EDGE: [48, 50, 40.5, 50] };
+// paint the board (the user's question template, a 9-slice) into canvas c, the size of element el, in whole device
+// pixels (so its nine pieces meet without seams)
+function paintBoard(c, el, im, edge = BOARD.EDGE) {
+  if (!c || !im || !im.naturalWidth) return;
+  const w = el.offsetWidth, h = el.offsetHeight; if (!w || !h) return;
+  const k = ($('#stageTop').getBoundingClientRect().width / DW || 1) * (window.devicePixelRatio || 1) * (el.dataset.k ? +el.dataset.k : 1);
+  const W = Math.round(w * k), H = Math.round(h * k), iw = im.naturalWidth, ih = im.naturalHeight;
+  if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
+  const [st, sr, sb, sl] = BOARD.SLICE, [et, er, eb, ek] = edge.map((v) => Math.round(v * k));
+  const sx = [0, sl, iw - sr, iw], sy = [0, st, ih - sb, ih], dx = [0, ek, W - er, W], dy = [0, et, H - eb, H];
+  const g = c.getContext('2d'); g.clearRect(0, 0, W, H); g.imageSmoothingQuality = 'high';
+  for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++)
+    g.drawImage(im, sx[i], sy[j], sx[i + 1] - sx[i], sy[j + 1] - sy[j], dx[i], dy[j], dx[i + 1] - dx[i], dy[j + 1] - dy[j]);
+}
 const Caption = {
   el: null, bg: null, txt: null, pic: null, words: [], want: 0, shown: 0, ready: false, id: 0,
   init() {
@@ -298,19 +316,7 @@ const Caption = {
     addEventListener('resize', () => requestAnimationFrame(() => this.paint())); // (after Stage.resize has rescaled the stage)
   },
   // the 9-slice, at the board's size (its layout box) in device px: the stage's scale × the screen's pixel ratio
-  paint() {
-    const { el, bg: c, pic: im } = this;
-    if (!c || !im || !im.naturalWidth) return;
-    const w = el.offsetWidth, h = el.offsetHeight; if (!w || !h) return;
-    const k = ($('#stageTop').getBoundingClientRect().width / DW || 1) * (window.devicePixelRatio || 1);
-    const W = Math.round(w * k), H = Math.round(h * k), iw = im.naturalWidth, ih = im.naturalHeight;
-    if (c.width !== W || c.height !== H) { c.width = W; c.height = H; }
-    const [st, sr, sb, sl] = BOARD.SLICE, [et, er, eb, ek] = BOARD.EDGE.map((v) => Math.round(v * k));
-    const sx = [0, sl, iw - sr, iw], sy = [0, st, ih - sb, ih], dx = [0, ek, W - er, W], dy = [0, et, H - eb, H];
-    const g = c.getContext('2d'); g.clearRect(0, 0, W, H); g.imageSmoothingQuality = 'high';
-    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++)
-      g.drawImage(im, sx[i], sy[j], sx[i + 1] - sx[i], sy[j + 1] - sy[j], dx[i], dy[j], dx[i + 1] - dx[i], dy[j + 1] - dy[j]);
-  },
+  paint() { paintBoard(this.bg, this.el, this.pic); },
   // wrapped text would keep the board at its full max-width (empty wood at the right): measure the lines it really
   // has and make the text box that wide (in layout px: the stage and the board's own entrance are scaled)
   fit() {
@@ -394,6 +400,9 @@ const Caption = {
 // assets/VO/en/<key>.webm. VO_FILES (build.sh, from tools/vo_takes.json, the record of each cut) lists the keys
 // that have a clip; VO_WORDS, when each word of a clip starts. A line with no clip yet, or a clip the browser
 // can't play, is not voiced: no voice, so no board, and its pause stays.
+// Every clip plays a little slower than it was read (VO.RATE, the user, 25 Nov 2026: "I want slow voice… in all I
+// want in slow voice"), its pitch kept, so it is still the same natural voice, only calmer. The board's words keep
+// time with it (they follow the clip's own clock).
 // ---------- the word clock: which word of the line the voice is saying (it drives the board's words) ----------
 // A clip: the recording's own word starts (VO_WORDS, heard by tools/vo_split.py), or, without them, its play time
 // spread over the words by their weight: its letters (at least 3: "x" is said "ex"), a gap, and a breath after
@@ -433,7 +442,7 @@ const Said = {
     } else {
       const k = a && isFinite(a.duration) && a.duration > 0
         ? ((a.currentTime - 0.08) / Math.max(0.3, a.duration - 0.3)) * this.total // (a clip's lead-in and tail are quiet)
-        : this.t * this.cps;
+        : this.t * this.cps * VO.RATE;
       while (n < this.from.length && this.from[n] <= k) n++;
     }
     Caption.upTo(Math.max(1, n));
@@ -446,7 +455,9 @@ const Said = {
   stop() { gsap.ticker.remove(this.tick); this.on = false; this.done = true; this.clip = null; },
 };
 const VO = {
+  RATE: 0.82, // every line's speed (1 = as recorded): slower, the pitch kept
   token: 0, missing: new Set(), cur: null, finish: null, busy: null,
+  has(key) { return typeof VO_FILES !== 'undefined' && VO_FILES.includes(key) && !this.missing.has(key); },
   // say a line by key: its recorded clip, and the board, whose words come as they are said; resolves when it has
   // been said, or at once when stopped. No voice (sound off, no clip yet, a clip that fails): no board, the pause stays
   async say(key, hold = 0.5) {
@@ -456,14 +467,14 @@ const VO = {
     Said.begin(my, text, key);
     // the line before's board stays until this line's voice starts (then glides over to it); if none starts soon, it goes
     if (Caption.up()) wait(1.2).then(() => { if (my === this.token && !Said.heard) Caption.hide(); });
-    const clip = typeof VO_FILES !== 'undefined' && VO_FILES.includes(key) && !this.missing.has(key);
+    const clip = VO.has(key);
     if (clip) Music.duck(true);
-    const est = 0.9 + text.length * 0.058, t0 = performance.now();
+    const est = (0.9 + text.length * 0.058) / this.RATE, t0 = performance.now(); // (how long it takes to say, at RATE)
     const spoken = new Promise((resolve) => {
       let done = false;
       const finish = () => { if (!done) { done = true; if (this.finish === finish) this.finish = null; if (my === this.token) Said.end(); resolve(); } };
       this.finish = finish;
-      if (SILENT) { Said.go(); wait(est).then(finish); return; } // a test robot: no sound, but the board runs as if spoken
+      if (SILENT) { if (clip) Said.go(); wait(est).then(finish); return; } // a test robot: no sound, but a recorded line's board runs as if spoken
       if (Sound.muted || !clip) { wait(est).then(finish); return; }
       wait(est + 2.5).then(finish); // (in case a clip's 'ended' never comes)
       let a = null;
@@ -471,7 +482,7 @@ const VO = {
         this.missing.add(key); if (Said.clip === a) Said.clip = null;
         if (a && this.cur === a && !done) wait(Math.max(0, est - (performance.now() - t0) / 1000)).then(finish);
       };
-      a = I18n.say(key, { onended: finish, onerror: fail });
+      a = I18n.say(key, { onended: finish, onerror: fail, rate: this.RATE });
       a.addEventListener('playing', () => { if (this.cur === a && !done) Said.go(a); });
       this.cur = a;
     });

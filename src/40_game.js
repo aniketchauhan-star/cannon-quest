@@ -6,6 +6,9 @@ const G = {
   state: 'boot', session: 0, idx: 0, freed: 0, eq: null, sockets: [], inputOn: false, fireResolve: null, hooks: {},
   taught1: false, tutSkip: false, idle: 0, rackFor: null, firstEntry: false, paused: false, helping: false, tl: null,
   welcome: null, said: { freed: 0, stuck: 0, next: 0 },
+  results: [],          // per equation: 'ok' (x freed at the first try), 'ok2' (on the retry), 'miss' (the game showed how)
+  celebrate: false,     // x is being freed: a tap anywhere skips to the next question
+  orderShown: false,    // the 1 / 2 chips of the first two-socket round have been shown (once a visit)
 };
 // ---- the voice's lines through a session, in order: welcome → tutorial → a short intro on every other
 // round → a reaction as the cage opens (or rattles) → the end line. Variants take turns, so a line never
@@ -187,7 +190,7 @@ function tapFire() {
   if (!G.inputOn) return;
   if (G.spotOnly && G.spotOnly !== 'fire') { Sound.nope(); Spot.nudge(); return; }
   idleReset(); Cannon.pressT = 1; Sound.press();
-  if (G.sockets.some((s) => !s)) { Sound.nope(); Cannon.pulseSockets(); Cannon.wiggleFire(); return; }
+  if (G.sockets.some((s) => !s)) { Sound.nope(); Cannon.pulseSockets(); Cannon.wiggleFire(); Cannon.tip(); return; }
   G.inputOn = false; Drag.cancel(); // (a ball still in hand goes home)
   const r = G.fireResolve; G.fireResolve = null; if (r) r();
 }
@@ -195,7 +198,7 @@ function tapFire() {
 // ---- one shot: cannon → cloud → two identical tokens land on both sides ----
 function makeFlyBall(b, s) {
   const el = document.createElement('div'); el.className = 'ball'; el.style.pointerEvents = 'none';
-  el.innerHTML = `<img src="${IMG}ball_${b.i}.webp" alt=""><b>${labelHTML(b.op)}</b>`;
+  el.innerHTML = `<img src="${IMG}ball_${b.art}.webp" alt=""><b>${labelHTML(b.op)}</b>`;
   $('#fly').appendChild(el);
   const o = { el, x: MUZZLE.x, y: MUZZLE.y, s, r: 0 };
   o.apply = () => (el.style.transform = `translate(${o.x.toFixed(1)}px,${o.y.toFixed(1)}px) rotate(${o.r.toFixed(1)}deg) scale(${o.s.toFixed(3)})`);
@@ -214,31 +217,36 @@ function fizzle(b) {
 //  end, silently (tl.progress(1)). Positions measured on screen (where
 //  the new terms sit) are read once, when their step begins.
 // =====================================================================
-function roundTimeline() {
+function roundTimeline(opts = {}) {
   const tl = gsap.timeline({ paused: true });
   const balls = G.sockets.slice(), eqs = [G.eq];
   let solvedAt = -1;
   for (let i = 0; i < balls.length && solvedAt < 0; i++) {
-    const nx = balls[i] ? applyOp(eqs[i], balls[i].op) : eqs[i];
+    const nx = balls[i] ? shownAfter(applyOp(eqs[i], balls[i].op)) : eqs[i]; // (what the cloud reads after the shot)
     eqs.push(nx);
     if (balls[i] && isSolved(nx)) solvedAt = i;
   }
   let at = 0.15, first = true;
-  for (let i = 0; i < eqs.length - 1; i++) if (balls[i]) { at = addShot(tl, at, i, balls[i], eqs[i], eqs[i + 1], first); first = false; }
+  for (let i = 0; i < eqs.length - 1; i++) if (balls[i]) { at = addShot(tl, at, i, balls[i], eqs[i], applyOp(eqs[i], balls[i].op), first, i === solvedAt); first = false; }
   const solved = solvedAt >= 0;
   if (solved) {
     const rest = balls.slice(solvedAt + 1).filter(Boolean); // x is already free: the other loaded balls fizzle
     if (rest.length) tl.call(() => rest.forEach(fizzle), null, at);
-    addFreed(tl, at);
-  } else addStuck(tl, at);
+    addFreed(tl, at, opts);
+  } else addStuck(tl, at, opts.stuckLine);
   return { tl, solved };
 }
 // one shot: cannon → cloud → two identical terms land on both sides → the equation simplifies. Returns its end time.
 // The camera is directed beat by beat (docs/GAME_PROMPT.md §6.5 + §7.2): wind-up on the cannon → recoil kick and
 // shake as it fires → it follows the ball up → impact (a soft jolt, no freeze-frame) → it holds on the equation for reading.
-// Every step is its own beat from Motion.BEAT, slow enough to follow, with a pause to read between the steps.
-const SHOT_CAM = { WIND: { fx: CX, fy: 540, z: 1.06 }, FOLLOW: { fx: CX, fy: 260, z: 1.1 }, READ: { fx: CX, fy: 260, z: 1.12 } };
-function addShot(tl, t0, i, b, eq0, eq1, first = true) {
+// Every step is its own beat from Motion.BEAT, with a pause to read between the steps. The pushes are gentle now, so
+// the tray stays on screen (design review, 23 Nov 2026: "the camera pushes in and the tray drops off-screen at the
+// bottom. Keep the tray anchored"): the view always reaches down past the orbs.
+// eq1 is the equation right after the shot; when the shot added a number to a bracket, two more beats follow: the
+// bracket is multiplied out, then the numbers are joined ("3(x + 2) − 6 = 15" → "3x + 6 − 6 = 15" → "3x = 15").
+// last: the shot that frees x (no reading pause after it: the freeing starts as the equation settles)
+const SHOT_CAM = { WIND: { fx: CX, fy: 500, z: 1.05 }, FOLLOW: { fx: CX, fy: 460, z: 1.03 }, READ: { fx: CX, fy: 455, z: 1.04 } };
+function addShot(tl, t0, i, b, eq0, eq1, first = true, last = false) {
   const B = Motion.BEAT, to = { ...CLOUD_HIT };
   let p = null, inL = null, inR = null, ms = null, tg = null, tail = null, tails = null;
   // 1) aim: the loaded socket glows while the camera leans in on the cannon (for a second ball, from the equation it was reading)
@@ -317,79 +325,100 @@ function addShot(tl, t0, i, b, eq0, eq1, first = true) {
     }
   }, null, tv + B.CANCEL * 0.5);
   const ts = tv + B.CANCEL; // …and the simplified equation glides together; a twinkle on each number that changed
+  const twinkle = () => EqUI.el.querySelectorAll('.tk.pop').forEach((e) => { const w = EqUI.worldAt(e); FX.star(w.x, w.y, '#ffd84a', 80, 0.45, { n: 4, paint: true }); });
   tl.call(() => { EqUI.settle(eq1); G.eq = eq1; }, null, ts);
-  tl.call(() => {
-    EqUI.el.querySelectorAll('.tk.pop').forEach((e) => { const w = EqUI.worldAt(e); FX.star(w.x, w.y, '#ffd84a', 80, 0.45, { n: 4, paint: true }); });
-  }, null, ts + B.SETTLE * 0.7);
-  return ts + B.SETTLE + B.READ2; // reading beat: the simplified equation (the camera holds on it; the next beat moves it)
+  tl.call(twinkle, null, ts + B.SETTLE * 0.7);
+  let end = ts + B.SETTLE;
+  const ex = expandStep(eq1);
+  if (ex) { // the bracket: it lights up, is multiplied out ("3x + 6 − 6"), then its numbers are joined ("3x")
+    const nf = normalize(eq1), t1 = end + B.READ * 0.6, t2 = t1 + B.PAIR, t3 = t2 + B.EXPAND + B.READ * 0.7, t4 = t3 + B.PAIR, t5 = t4 + B.CANCEL;
+    tl.call(() => { EqUI.pair(ex); Sound.tick(); }, null, t1);
+    tl.call(() => { EqUI.rewrite(ex); Sound.ding(1); }, null, t2);
+    tl.call(twinkle, null, t2 + B.EXPAND * 0.6);
+    tl.call(() => { EqUI.pair(nf); Sound.tick(); }, null, t3);
+    tl.call(() => { EqUI.vanish(nf); Sound.sparkle(); }, null, t4);
+    tl.call(() => { EqUI.settle(nf); G.eq = nf; }, null, t5);
+    tl.call(twinkle, null, t5 + B.SETTLE * 0.7);
+    end = t5 + B.SETTLE;
+  }
+  return end + (last ? 0 : B.READ2); // reading beat: the simplified equation (the camera holds on it; the next beat moves it)
 }
-// ---- outcomes: no "wrong" label, no hints, no retry; both outcomes advance ----
-// x freed (the user, 23 Nov: "the cage is burst, like cage broken, and then x comes out… x = something, and after 5
-// seconds the cloud fades and bursts"; later that day: "extreme… cage crack, and x come out from that… slow
-// animation of cage crack and x come out… cloudburst after x compose"). One cinematic beat after another:
-// 1) the screen's edges darken and the camera closes in on the cage (centred on the cloud, so the cloud never slides
-//    sideways), with a low rumble; 2) x pushes on its bars three times and each push cracks the cage further: glowing
-//    cracks run over its gold, light leaks through them and rays wake behind it (CageBreak); it trembles; 3) it bursts
-//    along its cracks in a flash: shards tumble away, rings of light, sparks; 4) x rises out of the light, hovers with
-//    sparkles circling it and lands where the cage stood; "= 2" lights up, with the fanfare and confetti from both
-//    sides; 5) "x = 2" rests on the cloud for 5 s (twinkles, a halo of rays behind x); 6) the cloudburst
-//    (Cloud.burstTL). The camera eases back to the base framing only once the cloud has burst.
-function addFreed(tl, t0) {
-  const B = Motion.BEAT, tc = t0 + B.FOCUS * 0.45, tb = tc + B.CRACK;
-  let p = null;
-  // 1) focus: the cage starts to glow (its rays, cracks and the free x are laid in, hidden), the edges darken, a rumble
-  tl.call(() => { const c = EqUI.cage(); CageBreak.prep(c); if (c) c.classList.add('glowx'); Vignette.to(0.65, B.FOCUS); Sound.rumble(); }, null, t0);
-  // (under reduced motion the camera cuts instead of moving, so it only goes as close as before: 1.18)
-  camDrive(tl, t0, () => { const c = EqUI.cage(), w = c ? EqUI.worldAt(c) : { y: 200 }; return { fx: CLOUD_MID.x, fy: w.y + 30, z: Motion.reduced ? 1.18 : 1.68 }; }, B.FOCUS + 0.3, Ease.inOutCubic);
-  camDrive(tl, t0 + B.FOCUS + 0.3, () => ({ z: Motion.reduced ? 1.18 : 1.78 }), tb - (t0 + B.FOCUS + 0.3), Ease.inOutQuad); // a slow creep in while it cracks (the tension)
-  // 2) three pushes, each cracking it further (CageBreak.strain draws it all from the time: bulges, cracks, light)
-  drive(B.CRACK, (e, k) => CageBreak.strain(k * B.CRACK), Ease.linear, tl, tc);
-  CAGE.push.forEach((s, i) => tl.call(() => CageBreak.push(i), null, tc + s));
-  // 3) it bursts along its cracks: the shards fly (on the FX canvas, by themselves), a flash (the edges light up
-  // again), a starburst, rings of gold and light, sparks of gold, purple and white, glitter. The big moment: a shake
-  // and a zoom punch (no freeze-frame or slow-mo: on screen they read as lag)
+// ---- outcomes. x freed: the payoff happens on the deck (design review, 23 Nov 2026: "keep the caged X visible on
+// deck during play as the cannon's target… the payoff (cage cracks open) happens in the world"; "shorten the
+// correct-answer sequence to under 8 seconds, and let a tap skip the celebration"; the user then found it too fast,
+// 25 Nov: "make it slow so that user can understand", so each beat is longer again, Motion.BEAT). Every stage of
+// the user's cinematic break (23 Nov: "extreme… cage crack, and x come out from that… cloudburst"), each its own beat:
+// 0) "x = 2" lights up on the cloud, grows and twinkles, and stays a moment to be read (BEAT.SOLVED);
+// 1) a bolt of light flies from its x down to x's cage on the deck (the camera leans toward it, the edges darken a
+//    little); 2) it strikes: x pushes three times and the cage cracks, light
+//    leaking out (CageBreak); 3) it bursts along its cracks: shards, a flash, rings, sparks; 4) x rises out of the
+//    light, hovers with sparkles circling it and lands where it stood, with the fanfare and confetti, and dances there
+//    a moment (BEAT.CHEER); 5) it hops away to the right and off the screen, as the camera eases back to the whole
+//    scene; 6) with x gone, the cloud has done its job: it draws in its breath and bursts in place; then a moment of
+//    clear sky (BEAT.BREATH). Then playRound: the next question's cloud forms where this one was (the new equation,
+//    with its orbs), and only then does a new cage drop onto the deck. One after another, never two at once (the
+//    user, 25 Nov 2026: "the animation should come one by one").
+// opts.shown: the game showed the way (no "you did it")
+function addFreed(tl, t0, opts = {}) {
+  const B = Motion.BEAT, tz = t0 + B.SOLVED, tc = tz + B.BOLT, tb = tc + B.CRACK, tland = tb + B.RISE, tgo = tland + B.CHEER;
+  const cagePt = () => { const c = EqUI.cage(); return c ? EqUI.worldAt(c) : { x: DECK.x, y: DECK.foot - DECK.h / 2 }; };
+  // 0) "x = 2" lights up (CSS .win: it grows with a gold glow) with a twinkle on each side, and is read
   tl.call(() => {
-    const c = EqUI.cage(); p = c ? EqUI.worldAt(c) : { x: CLOUD_MID.x, y: 170 };
-    CageBreak.burst();
-    Vignette.to(0, 0.7); flashScreen();
+    G.celebrate = true;
+    EqUI.el.querySelectorAll('[data-key="x"],[data-key="eq"],[data-key="rhs"]').forEach((e) => e.classList.add('win'));
+    Sound.pop(1.25); Sound.chime();
+    for (const k of ['x', 'rhs']) { const e = EqUI.el.querySelector(`[data-key="${k}"]`); if (e) { const w = EqUI.worldAt(e); FX.star(w.x, w.y, '#ffd84a', 110, 0.5, { n: 6, paint: true }); } }
+  }, null, t0);
+  // 1) the cage starts to glow and a bolt of light flies from the x on the cloud down to it
+  tl.call(() => {
+    const c = EqUI.cage(), xe = EqUI.xTerm();
+    CageBreak.prep(c); if (c) c.classList.add('glowx');
+    FX.bolt(xe ? EqUI.worldAt(xe) : { ...CLOUD_HIT }, cagePt(), B.BOLT); Sound.whistle();
+    Vignette.to(0.4, B.BOLT + B.CRACK * 0.5);
+  }, null, tz);
+  camDrive(tl, tz - 0.2, { fx: 1040, fy: 470, z: Motion.reduced ? 1 : CAGE.zoom }, 0.2 + B.BOLT + B.CRACK, Ease.inOutCubic); // (the cloud and the tray stay in view)
+  // 2) it strikes the cage, and x pushes three times: it cracks further each time (the user's cracks, played at CAGE.T / CRACK)
+  tl.call(() => { const w = cagePt(); FX.star(w.x, w.y, '#efe0ff', 220, 0.3, { n: 8 }); FX.burst(w.x, w.y, '#c58bff', 18, 380, { white: 0.3 }); Sound.rumble(); Stage.hit({ trauma: 0.16, zoom: 0.012 }); }, null, tc);
+  drive(B.CRACK, (e, k) => CageBreak.strain(k * CAGE.T), Ease.linear, tl, tc);
+  CAGE.push.forEach((sp, i) => tl.call(() => CageBreak.push(i), null, tc + (sp / CAGE.T) * B.CRACK));
+  // 3) it bursts along its cracks: the shards fly, a flash, a starburst, rings of gold and light, sparks, glitter
+  tl.call(() => {
+    const p = cagePt();
+    CageBreak.burst(); DeckCage.state = 'free';
+    Vignette.to(0, 0.6); flashScreen();
     Sound.shatter(); Sound.spring();
     FX.flash(p.x, p.y, 240, 0.22, '#fffaf0'); FX.star(p.x, p.y, '#fff3c0', 300, 0.3, { n: 9 });
     FX.ring(p.x, p.y, '#ffd84a', 260, { lw: 16, life: 0.55, paint: true }); FX.ring(p.x, p.y, '#ffffff', 430, { lw: 6, life: 0.8, delay: 0.05 });
     FX.burst(p.x, p.y, '#ffc21a', 34, 640, { paint: true, size: 0.8, white: 0.15 }); FX.burst(p.x, p.y, '#b36bff', 22, 520, { paint: true, size: 0.7, white: 0.1 });
     FX.burst(p.x, p.y, '#ffffff', 16, 460); FX.glitter(p.x, p.y, 26);
-    Stage.hit({ trauma: 0.42, zoom: 0.04 }); Haptic.buzz([20, 40, 20]);
+    Stage.hit({ trauma: 0.38, zoom: 0.035 }); Haptic.buzz([20, 40, 20]);
   }, null, tb);
-  // 4) x rises out of the light, hovers (sparkles circle it), comes down and lands
+  // 4) x rises out of the light, hovers (sparkles circle it), comes down and lands: the fanfare, confetti
   drive(B.RISE, (e, k) => CageBreak.rise(k), Ease.linear, tl, tb);
-  tl.call(() => Sound.rise(), null, tb + 0.12);
+  tl.call(() => Sound.rise(), null, tb + 0.1);
   tl.call(() => CageBreak.orbit(), null, tb + B.RISE * CAGE.rise.up * 0.55);
-  tl.call(() => CageBreak.landFx(), null, tb + B.RISE * CAGE.rise.drop);
-  tl.call(() => react('freed'), null, tb + 0.3); // just after the burst, over the "x = 2" reading beat
-  camDrive(tl, tb + 0.5, { z: 1.2 }, 1.6, Ease.inOutQuad); // eases back while x lands, so "x = 2" reads with its cloud
-  // …"= 2" lights up beside it, with the fanfare, a starburst on the 2, and confetti from both sides of the cloud
-  const tw = tb + B.RISE;
   tl.call(() => {
-    EqUI.el.querySelectorAll('[data-key="eq"],[data-key="rhs"]').forEach((e) => e.classList.add('win'));
-    Sound.pop(1.25); Sound.fanfare();
-    const r = EqUI.el.querySelector('[data-key="rhs"]'), q = r ? EqUI.worldAt(r) : p;
-    if (q) { FX.star(q.x, q.y, '#ffc21a', 160, 0.45, { n: 8, paint: true }); FX.burst(q.x, q.y, '#ffd84a', 16, 320, { paint: true, size: 0.6, white: 0.3 }); }
-    FX.confetti(CLOUD_MID.x - 300, CLOUD_MID.y + 110, 70, 1000, 0.45); FX.confetti(CLOUD_MID.x + 300, CLOUD_MID.y + 110, 70, 1000, -0.45);
-  }, null, tw);
-  // 5) "x = 2" rests on the cloud for 5 s; 6) then the cloudburst; once it has popped, the camera eases back
-  drive(B.HOLD, (e, k) => CageBreak.hold(k), Ease.linear, tl, tw);
-  const tp = Cloud.burstTL(tl, tw + B.HOLD);
-  camDrive(tl, tp + 0.25, { fx: CX, fy: CY, z: 1 }, B.BURST, Ease.inOutCubic);
-  tl.to({}, { duration: B.BREATH }, tp + B.BURST); // a breath before the next round
+    CageBreak.landFx(); Sound.fanfare();
+    const w = cagePt(); FX.confetti(w.x - 70, w.y + 50, 70, 950, -0.4); FX.confetti(w.x + 70, w.y + 50, 60, 900, 0.35);
+  }, null, tb + B.RISE * CAGE.rise.drop);
+  if (!opts.shown) tl.call(() => react('freed'), null, tb + 0.2);
+  // 5) after its dance, x hops away to the right and off the screen, while the camera eases back to the whole scene
+  const toff = DeckCage.leaveTL(tl, tgo);
+  camDrive(tl, tgo - 0.1, { fx: CX, fy: CY, z: 1 }, B.HOP_OFF * 0.75, Ease.inOutCubic);
+  // 6) only then, the cloudburst; and a moment of clear sky before the next question (playRound)
+  const tp = Cloud.burstTL(tl, toff + 0.2);
+  tl.call(() => { G.celebrate = false; }, null, tp + B.BURST);
+  tl.to({}, { duration: 0.01 }, tp + B.BURST + B.BREATH);
 }
-// x still caged ("not yet", never "wrong"): the cage rattles, sparks flying off its bars at each knock, the cloud rocks,
-// then a gentler cloudburst (no shower)
-function addStuck(tl, t0) {
-  const B = Motion.BEAT, tr = t0 + 0.6;
-  camDrive(tl, t0, { fx: CX, fy: 330, z: 1.08 }, 0.8, Ease.inOutCubic); // the camera holds on the cloud
+// x still caged ("not yet", never "wrong"): the cage on the deck rattles, sparks flying off its bars at each knock, the
+// cloud rocks. The cloud stays: the same question comes back for a retry, or for the game to show the way (playRound)
+function addStuck(tl, t0, line = 'voStuck1') {
+  const B = Motion.BEAT, tr = t0 + 0.35;
+  camDrive(tl, t0, { fx: CX + 70, fy: CY, z: 1.02 }, 0.6, Ease.inOutCubic); // (the cloud and the cage both in view)
   tl.call(() => {
     const cage = EqUI.cage();
     if (cage) cage.classList.add('rattle');
-    Sound.rattle(); Sound.wobble(); Stage.hit({ trauma: 0.3, xOnly: true }); // a sideways "not yet" shake
+    Sound.rattle(); Sound.wobble(); Stage.hit({ trauma: 0.28, xOnly: true }); // a sideways "not yet" shake
     EqUI.el.classList.add('wob');
   }, null, tr);
   for (let i = 0; i < 6; i++) tl.call(() => { // (the rattle's knocks: CSS .rattle, 0.16 s each)
@@ -397,20 +426,18 @@ function addStuck(tl, t0) {
     const r = c.getBoundingClientRect(), w = Stage.s2w(i % 2 ? r.right - r.width * 0.12 : r.left + r.width * 0.12, r.top + r.height * rr(0.35, 0.7));
     FX.burst(w.x, w.y, '#ffc21a', 5, 200, { paint: true, size: 0.45, g: 700, dir: i % 2 ? -0.5 : -Math.PI + 0.5, spread: 0.8, white: 0.2 });
   }, null, tr + 0.08 + i * 0.16);
-  tl.call(() => react('stuck'), null, tr + 0.15); // gentle, never "wrong"
+  tl.call(() => { if (!Motion.skipping) VO.say(line, 0.2); }, null, tr + 0.15); // gentle, never "wrong"
   Cloud.wobbleTL(tl, tr);
-  tl.call(() => EqUI.el.classList.remove('wob'), null, tr + B.RATTLE);
-  // a beat to see it is still caged, then the cloud bursts in place, gently (it no longer sails off to the left)
-  const tp = Cloud.burstTL(tl, tr + B.RATTLE + 0.3, true);
-  camDrive(tl, tp + 0.25, { fx: CX, fy: CY, z: 1 }, B.BURST, Ease.inOutCubic); // back to the base framing once it has popped
-  tl.to({}, { duration: B.BREATH }, tp + B.BURST);
+  tl.call(() => { EqUI.el.classList.remove('wob'); const c = EqUI.cage(); if (c) c.classList.remove('rattle'); }, null, tr + B.RATTLE);
+  camDrive(tl, tr + B.RATTLE - 0.2, { fx: CX, fy: CY, z: 1 }, 0.5, Ease.inOutCubic);
+  tl.to({}, { duration: 0.01 }, tr + B.RATTLE + 0.3);
 }
-function playShots() {
-  const { tl, solved } = roundTimeline();
+function playShots(opts = {}) {
+  const { tl, solved } = roundTimeline(opts);
   G.tl = tl;
   Cannon.live = 3; // the cannon gets its own layer now (at the tap), not mid-shot
   return new Promise((res) => {
-    tl.eventCallback('onComplete', () => { if (G.tl === tl) G.tl = null; Skip.hide(); res(solved); });
+    tl.eventCallback('onComplete', () => { if (G.tl === tl) G.tl = null; G.celebrate = false; Skip.hide(); res(solved); });
     // Skip: the shot lands at its end, silently; the camera snaps to its final framing, no freeze or shake left
     Skip.show(() => { if (G.tl === tl) { VO.stop(); Motion.skip(tl); TimeFx.reset(); Cannon.settle(); Stage.snap(); } });
     tl.play();
@@ -482,51 +509,112 @@ async function firstEntry() { // the play scene has just built itself after the 
   await wait(0.2);
   if (G.welcome) { await Promise.race([G.welcome, wait(4)]); G.welcome = null; } // the welcome ends before the first lesson line
 }
+// the equation glides back to how it started (a retry, or before the game shows the way)
+async function rewindEq(start) {
+  Sound.whoosh(0.5); Cloud.squash();
+  EqUI.setEq(start, true);
+  await wait(Motion.BEAT.REWIND);
+}
+// the hint on a retry: the orb that undoes the outermost thing still done to x (after the orbs loaded so far) glows
+// in the tray (design review: "after one wrong answer, highlight the operation that 'undoes' the outermost term")
+function guideNext() {
+  let e = G.eq;
+  for (const b of G.sockets) if (b) e = shownAfter(applyOp(e, b.op));
+  const want = isSolved(e) || G.sockets.every(Boolean) ? null : undoLabel(e);
+  const pick1 = want && Rack.balls.find((b) => b.where === 'rack' && b.op.label === want);
+  Rack.balls.forEach((b) => (b.guide = b === pick1));
+}
+// x is still stuck after the first try: one more try (design review, 23 Nov 2026: "offer one retry"). The equation
+// glides back to how it started, the fired orbs drop back into their cups, and the hint glows. No "Try again!" panel
+// under the cloud (the user, 25 Nov 2026: "remove the try again screen panel"): the rewind and the glowing orb say it
+async function retry(sid, start) {
+  VO.sayAfter('voRetry', 0.3);
+  G.sockets = G.sockets.map(() => null); G.eq = start;
+  await Promise.all([rewindEq(start), Rack.restore()]);
+  if (sid !== G.session) return;
+  G.hooks.onFill = () => guideNext();
+}
+// …and still stuck after the retry: the game shows the way, step by step ("then show the correct path step by step
+// before moving on"). The equation and the orbs go back; the orbs that free x glow and fly into the cannon one by
+// one, it fires them, and every step plays as a normal shot, down to x freed (it doesn't count: its dot says so)
+async function showHow(sid, start) {
+  Note.banner(T('chipWatch'), '', 2);
+  VO.sayAfter('voShowHow', 0.3);
+  G.sockets = G.sockets.map(() => null); G.eq = start;
+  await Promise.all([rewindEq(start), Rack.restore()]);
+  const path = solvePath(start).steps;
+  for (let k = 0; k < path.length && k < G.sockets.length; k++) {
+    if (sid !== G.session) return;
+    const b = Rack.balls.find((o) => o.where === 'rack' && o.op.label === path[k]);
+    if (!b) break;
+    b.guide = true; await wait(0.5); b.guide = false;
+    seat(b, k); await wait(Motion.BEAT.TAP_FLY + 0.15);
+  }
+  if (sid !== G.session) return;
+  Cannon.pressT = 1; Sound.press(); await wait(0.25);
+  if (sid !== G.session) return;
+  await playShots({ shown: true });
+}
 async function playRound(sid, i) {
-  const R = ROUNDS[i];
+  const R = ROUNDS[i], start = { layers: initLayers(R.eq), rhs: F(R.rhs) };
   G.idx = i; G.hooks = {};
   Perf.step(); // a lower quality tier, if frames have been slow, applies here between shots (never mid-shot)
-  G.eq = { layers: initLayers(R.eq), rhs: F(R.rhs) };
+  G.eq = start;
   G.sockets = new Array(R.slots).fill(null);
   const tasks = [Cannon.morph(R.slots)];
   if (G.rackFor !== R) { tasks.push(refreshBalls(R.balls)); G.rackFor = R; }
   EqUI.setEq(G.eq, false);
+  const next = !G.firstEntry; // (the first question's cage fell onto the deck as the scene built itself: onPlay)
   if (G.firstEntry) { G.firstEntry = false; tasks.push(firstEntry()); }
-  else tasks.push(Cloud.enter()); // the next question's cloud gathers where the last one burst
+  else tasks.push(Cloud.enter()); // the next question: its cloud forms where the last one burst, with the new equation (and its orbs come in)
+  // (no level banner between rounds: the user, 25 Nov 2026: "remove the level 2, no need of this type of things")
   await Promise.all(tasks);
   if (sid !== G.session) return;
+  // …and only then does x's new cage drop onto the deck; play starts once it has landed (the user, 25 Nov 2026:
+  // "cloud is burst, equation will change. And again x cage come")
+  if (next && DeckCage.state !== 'caged') { await DeckCage.drop(); if (sid !== G.session) return; }
+  if (R.slots === 2 && !G.orderShown) { G.orderShown = true; Cannon.showOrder(); } // (1 and 2 on the sockets, this once)
   let after = null;
   if (i === 0 && !G.taught1) after = await tutorialLoad(); // (the only tutorial: the first −5 shot, first game only)
   else VO.sayAfter(introLine(i), 0.4); // a short intro, once the reaction before it has finished (play starts at once)
   if (sid !== G.session) return;
-  const fired = new Promise((res) => (G.fireResolve = res));
-  G.inputOn = true; idleReset(); onSocketsChanged();
-  if (after) after();
-  await fired;
+  let result = 'miss';
+  for (let attempt = 1; ; attempt++) {
+    const fired = new Promise((res) => (G.fireResolve = res));
+    G.inputOn = true; idleReset(); onSocketsChanged();
+    if (after) { after(); after = null; }
+    await fired;
+    if (sid !== G.session) return;
+    G.spotOnly = null; Spot.hide(); Cannon.hideOrder();
+    G.inputOn = false; G.hooks = {}; Cannon.setFireActive(false);
+    Rack.balls.forEach((b) => (b.guide = false));
+    VO.stop();
+    const solved = await playShots({ stuckLine: attempt === 1 ? 'voStuck1' : 'voStuck2' }); // the shots and their outcome: one timeline, skippable
+    if (sid !== G.session) return;
+    if (solved) { result = attempt === 1 ? 'ok' : 'ok2'; break; }
+    if (attempt === 1) { await retry(sid, start); if (sid !== G.session) return; continue; }
+    await showHow(sid, start);
+    break;
+  }
   if (sid !== G.session) return;
-  G.spotOnly = null; Spot.hide();
-  G.inputOn = false; G.hooks = {}; Cannon.setFireActive(false);
-  Rack.balls.forEach((b) => (b.guide = false));
-  VO.stop();
-  const solved = await playShots(); // the shots and their outcome: one timeline, skippable
-  if (sid !== G.session) return;
-  if (solved) G.freed++;
+  G.results[i] = result;
+  if (result !== 'miss') G.freed++;
 }
 async function runSession() {
   const sid = ++G.session;
-  G.freed = 0; G.state = 'play'; G.said = { freed: 0, stuck: 0, next: 0 };
+  G.freed = 0; G.state = 'play'; G.said = { freed: 0, stuck: 0, next: 0 }; G.results = [];
   for (let i = 0; i < ROUNDS.length; i++) {
     if (sid !== G.session) return;
     await playRound(sid, i);
   }
   if (sid !== G.session) return;
-  await showEnd();
+  await showEnd(sid);
 }
-// ---- fireworks over the end card: rockets climb from behind the deck with a trail of sparks and burst in the open
-// sky either side of the score cloud (never over the white cloud, where light doesn't show), one after another ----
+// ---- fireworks over the end screen: rockets climb from behind the deck with a trail of sparks and burst in the open
+// sky either side of the title and of x (never over the title's letters or over x), one after another ----
 const Fireworks = {
   calls: [],
-  SPOTS: [[330, 200], [1340, 185], [500, 110], [1180, 105], [240, 320], [1450, 300], [660, 70], [1010, 65]],
+  SPOTS: [[300, 205], [1390, 195], [180, 330], [1500, 320], [330, 75], [1350, 70], [1210, 330], [470, 320]],
   COLS: [['#ffd84a', '#ff9f1c', '#ffffff'], ['#b36bff', '#ff8ad8', '#ffffff'], ['#22d3ee', '#7cf4ff', '#ffffff'], ['#36d97a', '#c3ff6b', '#ffffff'], ['#ff4f8b', '#ffd23f', '#ffffff']],
   show(n) {
     if (Motion.still()) return;
@@ -555,35 +643,126 @@ const Fireworks = {
   },
   stop() { for (const c of this.calls) c.kill(); this.calls = []; },
 };
-async function showEnd() {
+// ---- the end screen (the user, 25 Nov 2026: "no need of this amazing panel… Quest complete, I want in a good text,
+// in upper side, and in between I want X should be dancing in the between, and the cage behind of the X. And cage is
+// in broken"; it replaced the design review's results card, with its stars, score line and missed equations). The
+// last cloud has burst, so the sky is clear. One after another: x's broken cage drops into the middle of the deck
+// (EndX); "Quest complete!" drops in at the top word by word, lettered like the game's logo, with a twinkle as each
+// word lands, then floats gently; x jumps out of its cage and dances; only once x has danced a while does Play again
+// pop up under x (the user, 25 Nov 2026: "add a play again in last after x dancing, do this nicely"), Home just after
+// it, and then Play again asks for the tap with a soft ripple and a gleam now and then. The end line is still said, on
+// the caption board at the left. GSAP, transform + opacity only; under reduced motion it is all simply there ----
+const END_DANCE = 2; // dance loops x gets before Play again comes up (SPR.dance: one loop ≈ 1.5 s)
+const EndCard = {
+  tl: null, float: null, loops: [],
+  // btnAt: when the buttons come up, in s from now (EndX.show tells when x starts dancing: they come END_DANCE loops after)
+  show(btnAt = 2.4) {
+    const t = $('#endTitle'), b = $('#endBtns'), line = T('endTitle');
+    this.hide();
+    t.setAttribute('aria-label', line);
+    t.replaceChildren(...line.split(/\s+/).filter(Boolean).map((word) => { // (its words: each drops in on its own)
+      const w = document.createElement('span'), f = document.createElement('span');
+      w.className = 'w'; w.setAttribute('aria-hidden', 'true');
+      f.className = 'f'; f.dataset.t = word; f.textContent = word;
+      w.appendChild(f); return w;
+    }));
+    const words = [...t.children];
+    if (Motion.still()) { gsap.set([t, b], { opacity: 1 }); b.classList.add('on'); Sound.fanfare(); return; }
+    const tl = this.tl = gsap.timeline(), D = 0.75, GAP = 0.16, T0 = 0.75; // (after x's broken cage has landed: EndX)
+    tl.set(t, { opacity: 1 }, 0)
+      .fromTo(words, { opacity: 0, y: -120, scale: 0.55, rotation: (i) => (i % 2 ? 7 : -7) },
+        { opacity: 1, y: 0, scale: 1, rotation: 0, duration: D, ease: 'back.out(1.6)', stagger: GAP }, T0)
+      .call(() => Sound.fanfare(), null, T0 + 0.4);
+    words.forEach((w, i) => tl.call(() => this.twinkle(w), null, T0 + i * GAP + D * 0.62));
+    tl.call(() => { this.float = gsap.to(t, { y: -6, duration: 1.7, ease: 'sine.inOut', yoyo: true, repeat: -1 }); }, null, T0 + words.length * GAP + D);
+    // the buttons, one after the other: each pops up out of the deck (from small, overshooting a little) and settles;
+    // Play again with the start screen's Play sound and a puff of glitter off its ends, Home softer just after it
+    const again = $('#againBtn'), home = $('#homeBtn'), B = Math.max(btnAt, T0 + words.length * GAP + D);
+    gsap.set([again, home], { opacity: 0, transition: 'none' }); // (no CSS hover transition while GSAP moves them)
+    tl.set(b, { opacity: 1 }, B)
+      .call(() => b.classList.add('on'), null, B)
+      .fromTo(again, { opacity: 0, y: 70, scale: 0.4 }, { opacity: 1, y: 0, scale: 1, duration: 0.6, ease: 'back.out(1.9)', clearProps: 'transform,transition' }, B)
+      .call(() => Sound.cork(), null, B + 0.04)
+      .call(() => this.puff(again), null, B + 0.3)
+      .fromTo(home, { opacity: 0, y: 60, scale: 0.5 }, { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: 'back.out(1.7)', clearProps: 'transform,transition' }, B + 0.38)
+      .call(() => Sound.pop(0.85), null, B + 0.42)
+      .call(() => this.invite(again), null, B + 1.2); // (after puff's own ripple has run out)
+  },
+  // Play again has popped up: glitter off both its ends (not over its word), and a first, stronger ripple
+  puff(el) {
+    const r = el.getBoundingClientRect(), y = r.top + r.height / 2;
+    for (const sx of [r.left + r.height * 0.3, r.right - r.height * 0.3]) { const p = Stage.s2w(sx, y); FX.uiMode = false; FX.glitter(p.x, p.y, 9, 0.75); }
+    gsap.fromTo(el.querySelector('.rip'), { opacity: 1, scaleX: 1, scaleY: 1 }, { opacity: 0, scaleX: 1.16, scaleY: 1.6, duration: 0.7, ease: 'power2.out' });
+  },
+  // …then, until it is tapped, it asks for the tap: a soft ripple runs out from it, and a gleam crosses it now and
+  // then (its own elements, transform + opacity; they stop with the game's pause, as GSAP does)
+  invite(el) {
+    const rip = el.querySelector('.rip'), gl = el.querySelector('.gleam i'), w = el.offsetWidth;
+    this.loops.push(
+      gsap.fromTo(rip, { opacity: 0.85, scaleX: 1, scaleY: 1 }, { opacity: 0, scaleX: 1.1, scaleY: 1.42, duration: 1.2, ease: 'power1.out', repeat: -1, repeatDelay: 0.9 }),
+      gsap.fromTo(gl, { x: 0, skewX: -20 }, { x: w * 1.6, skewX: -20, duration: 0.75, ease: 'power2.inOut', repeat: -1, repeatDelay: 2.4, delay: 0.4 })); // (from just off its left end to just off its right)
+  },
+  // a word has landed: a starburst and some glitter on it (in the sky: light shows on blue)
+  twinkle(w) {
+    const r = w.getBoundingClientRect(), p = Stage.s2w(r.left + r.width / 2, r.top + r.height * 0.45);
+    FX.uiMode = false; FX.star(p.x, p.y, '#fff3b0', Math.min(240, r.width * 0.8), 0.4, { n: 8 }); FX.glitter(p.x, p.y, 12, 0.7);
+  },
+  // Play again: it all goes at once
+  hide() {
+    if (this.tl) { this.tl.kill(); this.tl = null; }
+    if (this.float) { this.float.kill(); this.float = null; }
+    for (const l of this.loops) l.kill(); this.loops = [];
+    const t = $('#endTitle'), b = $('#endBtns'), parts = [...b.querySelectorAll('.pill, .rip, .gleam i')];
+    gsap.killTweensOf([t, b, ...t.children, ...parts]);
+    gsap.set([t, b], { opacity: 0, y: 0 }); b.classList.remove('on');
+    gsap.set(parts, { clearProps: 'all' }); // (the buttons, their ripple and gleam: back to their CSS)
+    t.replaceChildren();
+  },
+};
+async function showEnd(sid) {
   G.state = 'end';
-  EqUI.render(msgHTML(T('endFreed'), T('endScore', { freed: G.freed, total: ROUNDS.length })), false);
-  QCard.label('qScore'); // the label on the cloud now reads "Your score"
+  Note.hide(); Cannon.hideOrder(true);
+  $('#fireBtn').classList.add('gone');
+  Cannon.leave(); // (the cannon has done its work: it shrinks away, x takes the middle of the deck)
   refreshBalls([]); G.rackFor = null;
-  Stage.camTo({ fx: CX, fy: 300, z: 1.05 }, Motion.BEAT.CLOUD_IN, Ease.inOutCubic); // the end card is framed a little closer
-  await Cloud.enter();
-  Sound.fanfare();
-  if (G.freed) { FX.confetti(CLOUD_MID.x, CLOUD_MID.y + 40, 100 + G.freed * 30, 1100); Fireworks.show(2 + G.freed); } // (the more x freed, the more fireworks)
-  EndX.show(G.freed); // x on the deck: free and dancing, or (none freed) still crying in its cage
-  $('#endUI').classList.add('on');
+  tween(0.7, (e) => (Rack.enterY = 340 * e), Ease.inCubic, 0.35); // the empty tray slides away down the deck
+  QCard.label(null);
+  Stage.camTo({ fx: CX, fy: CY, z: 1 }, Motion.BEAT.CLOUD_IN, Ease.inOutCubic);
+  await DeckCage.away(); // (x has already hopped off to the right in the last round's timeline; this only waits if it hasn't…)
+  if (sid !== G.session) return;
+  const danceAt = EndX.show(G.freed); // (…its broken cage drops into the middle of the deck, and x jumps out of it and dances; none freed: x still in its cage)
+  EndCard.show(G.freed ? danceAt + END_DANCE * SPR.dance.d.reduce((a, d) => a + d, 0) : 2.4); // (Play again once x has danced)
+  if (G.freed) { FX.confetti(END.x, 175, 100 + G.freed * 30, 1100); Fireworks.show(2 + G.freed); } // (the more x freed, the more fireworks)
   VO.sayAfter(endLine(), 0.8);
 }
 async function restartGame() {
   G.session++;
   if (G.tl) { G.tl.kill(); G.tl = null; } // the running round's timeline is torn down with everything else in flight
-  Motion.killAll(); Skip.hide();
-  VO.stop(); G.inputOn = false; G.fireResolve = null; G.hooks = {}; G.helping = false; G.spotOnly = null; Drag.cancel(); Spot.hide();
-  $('#endUI').classList.remove('on');
+  Motion.killAll(); Skip.hide(true);
+  VO.stop(); G.inputOn = false; G.fireResolve = null; G.hooks = {}; G.helping = false; G.spotOnly = null; G.celebrate = false; Drag.cancel(); Spot.hide();
+  EndCard.hide(); Note.hide(); Cannon.hideOrder(true);
+  $('#fireBtn').classList.remove('gone');
+  Cannon.back();
   Cannon.setFireActive(false); for (let i = 0; i < 2; i++) Cannon.highlight(i, false);
   $('#fly').innerHTML = '';
   Object.assign(Stage.cam, { fx: CX, fy: CY, z: 1 }); Stage.snap(); TimeFx.reset(); Cannon.settle(); FX.clear(); CageBreak.kill(); EndX.hide(); Fireworks.stop(); Vignette.to(0, 0);
+  DeckCage.hide();
   Cloud.a = 1; Cloud.s = 1; Cloud.blur = 0; Cloud.rot = 0; Cloud.sq.reset(); CloudBurst.reset();
   QCard.label(null); // back to no label during play
+  if (Rack.enterY) { const y0 = Rack.enterY; tween(0.6, (e) => (Rack.enterY = y0 * (1 - e)), Ease.outBackSoft); } // (the tray comes back up)
   G.rackFor = null;
   runSession();
 }
+// Home: back to the start screen (the page starts again; the tutorial isn't shown again in this visit)
+function goHome() {
+  Sound.click();
+  try { sessionStorage.setItem('cq.home', '1'); } catch (e) { /* (no storage: the tutorial shows again) */ }
+  location.reload();
+}
 
 // ---- pause ----
+// No panel: the game freezes as it is and the pause button turns into play (the user, 25 Nov 2026: "remove this panel
+// of paused, no need of this panel"; the design review's pause menu and its music / voice / sounds switches are gone)
 function setPaused(p) {
   if (G.state === 'title' || G.state === 'boot' || G.paused === p) return;
   G.paused = p; Clock.paused = p; Scenery.pause(p);
@@ -597,6 +776,7 @@ function setPaused(p) {
 async function onPlay() {
   if (G.state !== 'title') return;
   G.state = 'starting';
+  $('#hud').classList.remove('ttl');
   Sound.init(); Sound.resume(); Music.start(); Sound.startAmbient();
   G.welcome = VO.say('voWelcome', 0.15); // said while the scene builds itself
   flashScreen();
@@ -605,6 +785,7 @@ async function onPlay() {
   await Title.exit();
   EqUI.setEq({ layers: initLayers(ROUNDS[0].eq), rhs: F(ROUNDS[0].rhs) }, false);
   Cloud.y = -470; Cannon.morphS = 0.001; Rack.enterY = 330;
+  gsap.delayedCall(0.55, () => DeckCage.drop()); // x's cage falls onto the deck as the scene builds itself, after the cannon
   QCard.hide();
   $('#world').classList.remove('title');
   // …and the play scene eases out from that close framing while it builds itself: the cloud with the question
@@ -629,6 +810,10 @@ function wireInput() {
   $('#playBtn').addEventListener('click', onPlay);
   $('#pauseBtn').addEventListener('click', () => { const p = !G.paused; if (!p) setPaused(false); Sound.click(); if (p) setPaused(true); });
   $('#againBtn').addEventListener('click', () => { Sound.click(); restartGame(); });
+  $('#homeBtn').addEventListener('click', goHome);
+  // a tap anywhere on the scene while x is being freed skips to the next question (design review: "let a tap skip
+  // the celebration")
+  $('#viewport').addEventListener('pointerdown', (e) => { if (G.celebrate && G.tl && !G.paused && !e.target.closest('button')) Skip.now(); });
   $('#sndBtn').addEventListener('click', () => { Sound.init(); Sound.click(); Sound.setMuted(!Sound.muted); $('#sndBtn').classList.toggle('muted', Sound.muted); });
   $('#rotateOk').addEventListener('click', () => $('#rotate').classList.add('dismissed'));
   addEventListener('keydown', (e) => {
@@ -669,10 +854,10 @@ function frame(time, deltaMs) {
 // preloads them); the play scene's arrive while the player is on the start screen (Title.exit waits for them,
 // in case Play is tapped first) ----
 const Pics = {
-  TITLE: ['bg_sky', 'sun_glow', 'sun_rays', 'bg_mount', 'bg_trees', 'bg_plantL', 'bg_plantR', 'bg_deck', 't_logo', 't_cannon', 'playbtn', 't_cage', 't_x', 't_cage_front'],
-  GAME: ['cloud', 'cannon1', 'cannon2', 'cannon1_front', 'cannon2_front', 'rack', 'rack_front', 'fire', 'fire2', 'x_cry', 'cage_empty', 'cage_crack', 'hand', 'pause', 'play', 'sound', 'question_board',
-    ...[0, 1, 2, 3, 4, 5, 6, 7].map((i) => `ball_${i}`)],
-  LATER: ['x_dance', 'x_free'], // (wanted only once x is first freed, and at the end: fetched after the rest)
+  TITLE: ['bg_sky', 'sun_glow', 'sun_rays', 'bg_mount', 'bg_trees', 'bg_plantL', 'bg_plantR', 'bg_deck', 't_logo', 't_cannon', 'playbtn', 'x_cry', 'sound'],
+  GAME: ['cloud', 'cloud_rim', 'cannon1', 'cannon2', 'cannon1_front', 'cannon2_front', 'rack', 'rack_front', 'fire', 'fire2', 'cage_empty', 'cage_crack', 'hand', 'pause', 'play', 'question_board',
+    ...[...new Set(Object.values(OP_ART))].map((i) => `ball_${i}`)], // (the orbs' four colours: OP_ART)
+  LATER: ['x_dance', 'cage_broken'], // (wanted only once x is first freed, and at the end: fetched after the rest)
   game: null, // (a promise: the play scene's pictures and the font)
   // resolves when every picture has arrived and is decoded (so it shows without a hitch), or after cap seconds,
   // so a picture that never comes never holds the game up
@@ -686,6 +871,7 @@ const Pics = {
 };
 async function boot() {
   Motion.init();
+  try { if (sessionStorage.getItem('cq.home')) { sessionStorage.removeItem('cq.home'); G.taught1 = true; } } catch (e) { /* (no storage) */ } // (back from Home: no tutorial again)
   // the sound, now, so the start screen can be heard (its own few effects came with the page: js/sfx_title.js).
   // Where the browser still holds the page silent, it wakes on the first tap or key (Sound.listen)
   Sound.init(); Sound.listen();
@@ -695,13 +881,14 @@ async function boot() {
   Object.assign(Stage.cam, { fx: CX, fy: CY, z: 1.05 }); Stage.snap(); Stage.update(0);
   await Pics.load(Pics.TITLE, 8); // usually in already: they have been downloading since the page's <head>
   if (Sound.live()) await Promise.race([Sound.ready(), later(1000)]); // (sound allowed at once: the entrance's sounds are decoded first)
-  Cloud.init(); Cannon.init(); Rack.init(); EqUI.init(); Title.init(); Spot.init(); Skip.init();
+  Cloud.init(); Cannon.init(); Rack.init(); EqUI.init(); DeckCage.init(); Title.init(); Spot.init(); Skip.init(); Caption.init();
   wireInput();
   gsap.ticker.add(frame);
-  window.__cqBooted = true; window.__cq = { G, Clock, Rack, Drag, Sound, Music, Stage, EqUI, VO, Motion, Skip, Spot, Title, Cloud, Cannon, TimeFx, Perf, FX, Pics, CageBreak, CloudBurst, Fracture, Vignette, Fireworks, Sprite, EndX };
+  window.__cqBooted = true; window.__cq = { G, Clock, Rack, Drag, Sound, Music, Stage, EqUI, VO, Motion, Skip, Spot, Title, Cloud, Cannon, TimeFx, Perf, FX, Pics, CageBreak, CloudBurst, Fracture, Vignette, Fireworks, Sprite, EndX, DeckCage, Caption, EndCard, Note };
   // the start screen: the scene fades in while the title plays its intro, and the Play button pops in
   G.state = 'title';
   Title.start();
+  $('#hud').classList.add('ttl'); // (only the sound button, on the start screen)
   Motion.to($('#world'), { opacity: 1, duration: Motion.DUR.SLOW, ease: Motion.EASE.OUT });
   // …and the rest comes while the player looks at it (nothing of it was asked for before, so it never slowed the
   // start screen): the play scene's pictures (the markup's data-src ones, the tray's balls) + the font, then the sound effects

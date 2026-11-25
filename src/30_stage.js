@@ -335,6 +335,28 @@ const FX = {
       this.add({ k: 'spark', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, g: 900, drag: 2.6, life: rr(0.35, 0.8), max: 0.8, size: rr(7, 14), color: pick(['#ffd34d', '#ffb02e', '#ff7a1a', '#fff1b0']) });
     }
   },
+  // a bolt of light (an FX layer): a bright orb flies from a to b on an arc in dur s, with a comet's tail and sparks of
+  // its colours behind it. It starts on the white cloud, so its glow is laid on (violet), with a white-hot core
+  bolt(a, b, dur, col = '#b36bff') {
+    if (Motion.still()) return;
+    const tail = this.ribbon(col, 30), cx = (a.x + b.x) / 2, cy = Math.min(a.y, b.y) - 110, self = this;
+    let t = 0, x = a.x, y = a.y;
+    this.layers.push({
+      update(dt) {
+        t += dt; const e = Ease.inOutQuad(Math.min(1, t / dur));
+        x = bez(a.x, cx, b.x, e); y = bez(a.y, cy, b.y, e); tail.push(x, y);
+        if (Math.random() < 0.8) self.trail(x, y, Math.random() < 0.5 ? col : '#fff3b0');
+        if (t >= dur) { tail.end(); return false; }
+        return true;
+      },
+      kill() { t = dur; tail.end(); },
+      draw(c, M) {
+        c.setTransform(M.a, M.b, M.c, M.d, M.e, M.f);
+        c.globalCompositeOperation = 'source-over'; c.globalAlpha = 0.9; c.drawImage(self.dot(col), x - 34, y - 34, 68, 68);
+        c.globalCompositeOperation = 'lighter'; c.globalAlpha = 1; c.drawImage(self.dot('#ffffff'), x - 16, y - 16, 32, 32);
+      },
+    });
+  },
   // a shock ring (o.lw: its stroke, o.life, o.paint: laid on so it shows on the cloud, o.delay)
   ring(x, y, color = '#ffffff', size = 200, o = {}) { const l = o.life ?? 0.5; this.add({ k: 'ring', x, y, life: l, max: l, size, color, lw: o.lw, paint: !!o.paint, delay: o.delay }); },
   update(dt) {
@@ -497,9 +519,10 @@ const Cloud = {
   init() { this.el = $('#cloud'); this.core = document.createElement('i'); this.core.className = 'ccore'; this.el.insertBefore(this.core, $('#qCard')); },
   squash() { this.sq.kick(1); }, // a ball hits it: wide-and-flat, then it springs back
   apply(t, dt = 0) {
-    // a calm, far-off drift: a slow rise and fall (~11 s) and a slower sideways sway (~23 s); still with reduced motion.
-    // jx / jy: a tremble, just before it bursts
-    const calm = !Motion.reduced, by = calm ? Math.sin(t * 0.55) * 4 : 0, bx = calm ? Math.sin(t * 0.27 + 1) * 5 : 0, q = this.sq.update(dt);
+    // a calm, far-off float (design review, 23 Nov 2026: "slow idle bob (3–4 px), slight drift"): it rises and falls
+    // 3.5 px every ~5 s and drifts 7 px each way over ~30 s; still with reduced motion. (Its sun-side rim light and the
+    // haze where it meets the sky are pictures in #cloud.) jx / jy: a tremble, just before it bursts
+    const calm = !Motion.reduced, by = calm ? Math.sin(t * 1.25) * 3.5 : 0, bx = calm ? Math.sin(t * 0.21 + 1) * 7 : 0, q = this.sq.update(dt);
     const s = this.s * CLOUD_FAR, sx = s * (1 + 0.05 * q), sy = s * (1 - 0.05 * q);
     const tr = `translate(${(this.x + bx + this.jx).toFixed(1)}px,${(this.y + by + this.jy).toFixed(1)}px) rotate(${this.rot.toFixed(2)}deg) scale(${sx.toFixed(4)},${sy.toFixed(4)})`, op = this.a.toFixed(3);
     if (tr !== this.lastTr) { this.el.style.transform = tr; this.lastTr = tr; }
@@ -669,6 +692,11 @@ const CloudBurst = {
     if (this.ready()) idle(next); else img.addEventListener('load', () => idle(next), { once: true });
   },
   ready() { return !!(this.cl && this.cl.complete && this.cl.naturalWidth); },
+  // the cloud's picture shows (v: an opacity, '' = as it is), and its rim light and haze with it
+  clOp(v) {
+    if (!this.look) this.look = Cloud.el ? [...Cloud.el.querySelectorAll('.cl,.clr,.chz')] : [];
+    for (const el of this.look) el.style.opacity = v;
+  },
   // at a burst: any pieces not cut yet are cut now (if the picture is in; if not, the cloud only fades)
   make() { this.prepare(); if (this.ready()) while (this.jobs.length) this.jobs.shift()(); },
   // the pop: the pieces show, exactly on the cloud, and each is given its throw (p = how hard: 1, or 0.6 for the
@@ -691,7 +719,7 @@ const CloudBurst = {
   fly(k) {
     if (!this.on) return;
     const T = Motion.BEAT.BURST, t = k * T;
-    if (this.cl) this.cl.style.opacity = (this.bits.length ? 1 - Ease.inQuad(Math.min(1, t / 0.2)) : 1 - Ease.inQuad(k)).toFixed(3);
+    this.clOp((this.bits.length ? 1 - Ease.inQuad(Math.min(1, t / 0.2)) : 1 - Ease.inQuad(k)).toFixed(3));
     for (const b of this.bits) {
       const u = clamp((t - b.dl) / (T - b.dl), 0, 1), e = 1 - Math.pow(1 - u, 4), s = 1 + (b.s1 - 1) * Ease.outCubic(u);
       b.el.style.transform = `translate(${(b.dx * b.f * e).toFixed(2)}px,${(b.dy * b.f * e - b.up * u).toFixed(2)}px) rotate(${(b.r1 * e).toFixed(2)}deg) scale(${s.toFixed(4)})`;
@@ -711,14 +739,14 @@ const CloudBurst = {
       b.gx = b.ux * D; b.gy = b.uy * D * 0.8 + rr(-8, 8); b.gs = rr(1.22, 1.42); b.gr = rr(-9, 9); b.gd = 0.14 * Math.min(1, b.len / 320);
       Object.assign(b.el.style, { visibility: 'visible', willChange: 'transform' });
     }
-    if (this.cl) this.cl.style.opacity = '0';
+    this.clOp('0');
     this.gather(0);
   },
   // k = 0…1 of Motion.BEAT.CLOUD_IN
   gather(k) {
     if (!this.on) return;
     const T = Motion.BEAT.CLOUD_IN, t = k * T, end = T * 0.8;
-    if (this.cl) this.cl.style.opacity = Ease.inOutQuad(clamp((k - 0.62) / 0.3, 0, 1)).toFixed(3); // the picture comes in under them
+    this.clOp(Ease.inOutQuad(clamp((k - 0.62) / 0.3, 0, 1)).toFixed(3)); // the picture comes in under them
     const out = Ease.inQuad(clamp((k - 0.84) / 0.16, 0, 1)); // …and they hand over to it
     for (const b of this.bits) {
       const u = clamp((t - b.gd) / (end - b.gd), 0, 1), e = Ease.outCubic(u), q = 1 - e, show = Ease.outQuad(Math.min(1, u / 0.35)) * (1 - out);
@@ -736,7 +764,7 @@ const CloudBurst = {
   reset() {
     this.on = false;
     for (const b of this.bits) Object.assign(b.el.style, { visibility: 'hidden', willChange: '', transform: 'none' });
-    if (this.cl) this.cl.style.opacity = '';
+    this.clOp('');
     const box = $('#eqBox'); if (box) Object.assign(box.style, { opacity: '', transform: '', willChange: '' });
     if (Cloud.core) Object.assign(Cloud.core.style, { opacity: '0', transform: '', willChange: '' });
     Cloud.jx = Cloud.jy = 0;
@@ -809,13 +837,15 @@ const Sprite = {
 // and flown on the FX canvas (a layer), over the scene. The free x (the dance's frames), its white twin and the rays
 // live in the cage's box in the equation, so they ride the cloud. Measured in cage units: the cage's box is 199 × 262
 // (its pictures are 382 × 503 px).
-const CAGE = { w: 199, h: 262, x: { cx: 99.6, feet: 229.7, h: 134.4 }, rest: 0.75, shift: -0.17 / 1.72,
+const CAGE = { w: 199, h: 262, x: { cx: 99.6, feet: 229.7, h: 134.4 }, rest: 0.75, shift: 0,
   core: [100, 164], hands: [[51.4, 186.7], [149.6, 186.8]], // x's chest (the fracture's centre) and its gloves on the front bars (where the pushes land)
-  push: [0.15, 1.0, 1.85],                           // the three pushes, s into Motion.BEAT.CRACK (the break comes at its end)
+  // the three pushes, in s of the crack as it was first made (T = 2.6 s: the fracture's crack speeds are set for it);
+  // it plays in Motion.BEAT.CRACK, so the whole crack runs at T / CRACK speed (the break comes at its end)
+  push: [0.15, 1.0, 1.85], T: 2.6,
+  zoom: 1.1,                                         // the camera's zoom while it cracks (the crack canvas has as many px as the cage has on screen then)
   rise: { up: 0.47, hover: 0.72, drop: 0.86, top: -0.07 } }; // x's rise, as fractions of Motion.BEAT.RISE: up out of the light, hover, drop, land (top: its feet at the hover, of the cage's height from its middle)
-// (x in its cage: centre, feet, height. The free x stands 75 % of the cage's height tall where it stood (its feet on the
-// cage's floor), 0.17 em left of the cage's middle: the "x = 2" spacing it always had, kept without moving the
-// equation's layout)
+// (x in its cage: centre, feet, height. The free x stands 75 % of the cage's height tall, where it stood: its feet on
+// the cage's floor, in the middle)
 
 // The fracture: seeds in rings round x's chest (a fixed seed, so it is the same each time), each seed's Voronoi cell
 // cut out of the cage's box by half-planes; every shared edge made jagged once and used by both its cells, so the
@@ -903,7 +933,7 @@ const CageBreak = {
     this.rays = document.createElement('i'); this.rays.className = 'crays'; cage.prepend(this.rays);
     // the cracks' canvas, with as many px as the cage will have on screen in the close-up (the zoom then, the screen's px)
     const cv = this.cv = document.createElement('canvas'), r = cage.getBoundingClientRect(), w = cage.offsetWidth || 1, h = cage.offsetHeight || 1;
-    const k = ((r.width / w) || 1) * (CAM.ZMAX / (Stage.z || 1)) * Math.min(2, devicePixelRatio || 1);
+    const k = ((r.width / w) || 1) * (Math.max(CAGE.zoom, Stage.z || 1) / (Stage.z || 1)) * Math.min(2, devicePixelRatio || 1);
     cv.className = 'ccrk'; cv.width = Math.max(64, Math.round(w * k)); cv.height = Math.max(84, Math.round(h * k));
     cage.appendChild(cv); this.g = cv.getContext('2d');
     // the free x: the dance's frames, holding frame 2 (its fists up) until it lands. Its box is taller than x (room
@@ -920,7 +950,7 @@ const CageBreak = {
   // rays and the glow behind. All from the time, so a Skip or a pause lands it exactly
   strain(t) {
     if (!this.img) return;
-    const P = CAGE.push, T = Motion.BEAT.CRACK;
+    const P = CAGE.push, T = CAGE.T; // (t is in the crack's own seconds: see CAGE.T)
     const bump = (t0, len, amp) => { const u = (t - t0) / len; return u > 0 && u < 1 ? amp * Math.sin(Math.PI * u) * (1 - 0.35 * u) : 0; };
     let p = bump(P[0], 0.42, 0.05) + bump(P[1], 0.42, 0.07);
     if (t > P[2]) p += 0.07 * Ease.outCubic(Math.min(1, (t - P[2]) / 0.3)) + 0.05 * Ease.inQuad(clamp((t - P[2] - 0.3) / Math.max(0.01, T - P[2] - 0.3), 0, 1));
@@ -1109,69 +1139,212 @@ const CageBreak = {
   kill() { if (this.layer) { this.layer.kill(); this.layer = null; } },
 };
 
-// ---------- the end card: x on the deck, right of the cannon (the user's art, 23 Nov) ----------
-// x freed at least once: x free and dancing by its broken cage (x_free.webp); never: x still crying in its cage (its
-// crying frames: "Play again to free them all!"). It stands on the deck right of the cannon, clear of the caption on
-// the left: it jumps up from behind the railing, lands on the boards with a squash, a puff of dust and its shadow,
-// and then the free x keeps hopping to the music's beat (2 hops, ~81 bpm, swaying left and right); the caged one just
-// cries. Transform + opacity only, on GSAP, so it freezes on pause; under reduced motion it simply stands there.
-// XEND: where its feet are (art px), and how tall it is, free or caged; FREE_PIC: x_free.webp's size, and what
-// touches the ground in it (each: its middle, as a fraction of the width; how far up from the picture's foot, as a
-// fraction of the height; its width, as a fraction of the width): the cage's base, the bars and bolt in front of it,
-// and x's foot
-const XEND = { x: 1330, foot: 732, free: 300, cage: 262 };
-const FREE_PIC = { w: 900, h: 762, touch: [[0.171, 0.118, 0.33], [0.175, 0.012, 0.3], [0.42, 0.012, 0.1]] };
+// ---------- the end screen: x dancing in the middle of the deck, in front of its broken cage ----------
+// (the user, 25 Nov 2026: "no need of this amazing panel… in between I want X should be dancing in the between, and
+// the cage behind of the X. And cage is in broken"; before, x stood by its cage on the right, beside a results card.)
+// x freed at least once: its cage stands just behind it, a little to the left so its broken front shows (bars bent
+// and snapped, loose bars and a bolt on the boards: cage_broken.webp, cut from the user's own picture of x free by
+// tools/cut_broken_cage.py), and x dances in front of it (its dance frames, SPR.dance, with their hops). The cage
+// drops onto the deck first (a clang, dust); then x jumps out from behind it in an arc and lands in the middle with a
+// squash, and dances. None freed: x still sad in its cage, in the middle (its crying frames: "Play again to free them
+// all!"). Transform + opacity only, on GSAP and the game clock, so it freezes on pause; under reduced motion it all
+// simply stands there.
+// XEND: where x stands on the deck during play (right of the cannon: DeckCage). END: x's feet (art px) and its
+// frame's height, in the middle of the deck; the broken cage's foot (its base ring's bottom, a little further back on
+// the deck than x), its middle (the dome's ball) and the picture's height. BROKEN: cage_broken.webp's size, and its
+// base ring's bottom and its middle in it (printed by the tool)
+const XEND = { x: 1330, foot: 732, free: 300, cage: 300 };
+const END = { x: 846, foot: 762, h: 300, cage: { x: 672, foot: 742, h: 450 } };
+const BROKEN = { w: 418, h: 744, foot: 704, mid: 208.5 };
 const EndX = {
-  el: null, sh: null, tl: null, loop: null,
+  els: [], tl: null, drops: [],
+  // returns when x starts dancing (none freed: when its cage has landed), in s from now
   show(freed) {
     this.hide();
-    const free = freed > 0, h = free ? XEND.free : XEND.cage;
-    const w = free ? (h * FREE_PIC.w) / FREE_PIC.h : (h * SPR.cry.w) / SPR.cry.h;
-    const el = this.el = document.createElement('div');
-    el.id = 'xEnd';
-    el.innerHTML = free ? `<img src="${IMG}x_free.webp" alt="${T('altXFree')}" draggable="false">` : Sprite.html('cry', '', T('altXCaged'));
-    // (the caged one's frames keep a little clear space under the cage's base: its base sits on the boards)
-    const lift = free ? 0 : h * (11 / SPR.cry.h);
-    Object.assign(el.style, { left: (XEND.x - w / 2).toFixed(1) + 'px', top: (XEND.foot - h + lift).toFixed(1) + 'px', width: w.toFixed(1) + 'px', height: h + 'px' });
-    $('#world').insertBefore(el, $('#cannon'));
-    if (!free) Sprite.play(el.firstChild);
-    // its shadow on the deck: one soft pool under all of it, and a darker contact under what touches the boards
-    const sh = this.sh = groundGroup($('#ground'), 'shadow', XEND.x, XEND.foot);
-    groundBlob(sh, 'soft', w * 0.04, 2, w * 0.92, 30);
-    if (free) for (const [fx, fy, fw] of FREE_PIC.touch) groundBlob(sh, 'contact', (fx - 0.5) * w, -fy * h, fw * w, 14);
-    else groundBlob(sh, 'contact', 0, 0, w * 0.86, 16);
-    if (Motion.still()) return;
-    // the jump up onto the deck: up from behind the railing (stretched), down, a squash on the boards, settle
-    gsap.set(el, { opacity: 0, y: 80, scaleX: 0.9, scaleY: 1.1 });
-    gsap.set(sh, { opacity: 0, scale: 0.5 });
-    const tl = this.tl = gsap.timeline({ delay: 0.35 });
-    tl.to(el, { opacity: 1, duration: 0.12, ease: 'none' }, 0)
-      .to(el, { y: -54, scaleX: 0.96, scaleY: 1.06, duration: 0.34, ease: 'power2.out' }, 0)
-      .to(sh, { opacity: 0.55, scale: 0.7, duration: 0.34, ease: 'power2.out' }, 0)
-      .to(el, { y: 0, scaleX: 1, scaleY: 1, duration: 0.26, ease: 'power2.in' })
-      .to(sh, { opacity: 1, scale: 1, duration: 0.26, ease: 'power2.in' }, '<')
-      .call(() => { Sound.land(); FX.dust(XEND.x - w * 0.25, XEND.foot, -1, 7); FX.dust(XEND.x + w * 0.25, XEND.foot, 1, 7); })
-      .to(el, { scaleX: 1.08, scaleY: 0.9, duration: 0.08, ease: 'power2.out' })
-      .to(el, { scaleX: 1, scaleY: 1, duration: 0.36, ease: 'back.out(2)' });
-    if (!free) return;
-    // then it dances: a hop on each beat, leaning one way, then the other
-    tl.call(() => {
-      const L = this.loop = gsap.timeline({ repeat: -1 });
-      for (const lean of [-2.5, 2.5]) {
-        L.to(el, { y: -16, rotation: lean, duration: 0.26, ease: 'power2.out' })
-          .to(sh, { scale: 0.86, opacity: 0.75, duration: 0.26, ease: 'power2.out' }, '<')
-          .to(el, { y: 0, rotation: 0, duration: 0.2, ease: 'power2.in' })
-          .to(sh, { scale: 1, opacity: 1, duration: 0.2, ease: 'power2.in' }, '<')
-          .to(el, { scaleX: 1.05, scaleY: 0.94, duration: 0.07, ease: 'power2.out' })
-          .to(el, { scaleX: 1, scaleY: 1, duration: 0.211, ease: 'power2.out' });
-      }
-    });
+    const free = freed > 0, h = END.h, cg = END.cage;
+    const add = (html, x, top, w, ht, cls = '') => {
+      const el = document.createElement('div');
+      el.className = 'xEnd ' + cls; el.innerHTML = html;
+      Object.assign(el.style, { left: x.toFixed(1) + 'px', top: top.toFixed(1) + 'px', width: w.toFixed(1) + 'px', height: ht.toFixed(1) + 'px' });
+      $('#world').insertBefore(el, $('#cannon')); this.els.push(el);
+      return el;
+    };
+    const shadow = (x, foot, blobs) => { const g = groundGroup($('#ground'), 'shadow', x, foot); for (const b of blobs) groundBlob(g, ...b); this.els.push(g); return g; };
+    if (!free) { // x still in its cage, in the middle (its frames keep a little clear space under the cage's base)
+      const w = (h * SPR.cry.w) / SPR.cry.h, lift = h * (11 / SPR.cry.h);
+      const el = add(Sprite.html('cry', '', T('altXCaged')), END.x - w / 2, END.foot - h + lift, w, h);
+      Sprite.play(el.firstChild);
+      const sh = shadow(END.x, END.foot, [['soft', w * 0.04, 2, w * 0.92, 30], ['contact', 0, 0, w * 0.86, 16]]);
+      this.drop(el, sh, END.x, END.foot, w, 0.1);
+      return 0.65; // (it has landed)
+    }
+    // the broken cage: its picture, placed by its base ring's foot and its dome's middle
+    const s = cg.h / BROKEN.h, cw = BROKEN.w * s;
+    const cage = add(`<img src="${IMG}cage_broken.webp" alt="" draggable="false">`, cg.x - BROKEN.mid * s, cg.foot - BROKEN.foot * s, cw, cg.h, 'brk');
+    const csh = shadow(cg.x, cg.foot, [['soft', 0, 4, cw * 1.02, 34], ['contact', 0, 0, cw * 0.86, 14], ['contact', -0.05 * cw, (736 - BROKEN.foot) * s - 3, cw * 0.2, 9]]); // (the base ring; the bolt in front)
+    // x: its dance frames, its feet on the boards in the middle
+    const w = (h * SPR.dance.w) / SPR.dance.h;
+    const x = add(Sprite.html('dance', '', T('altXFree')), END.x - w / 2, END.foot - h, w, h, 'dnc');
+    const xsh = shadow(END.x, END.foot, [['soft', 0, 3, w * 0.72, 28], ['contact', 0, 0, w * 0.5, 12]]);
+    Sprite.hold(x.firstChild, 0);
+    this.drop(cage, csh, cg.x, cg.foot, cw, 0.1); // (it lands at 0.65 s, before the title comes: it never falls across it)
+    if (Motion.still()) { Sprite.play(x.firstChild, 'dance', Clock.t); return 0; }
+    // x jumps out from behind its cage (fists up), in an arc over to the middle, lands with a squash and dances
+    const dx = cg.x - END.x;
+    gsap.set(x, { opacity: 0, x: dx * 0.8, y: -40, scale: 0.82 }); gsap.set(xsh, { opacity: 0, x: dx * 0.6, scale: 0.4 });
+    const tl = this.tl = gsap.timeline({ delay: 1.15 });
+    tl.call(() => { Sprite.hold(x.firstChild, 1); Sound.spring(); })
+      .to(x, { opacity: 1, duration: 0.15, ease: 'none' }, 0)
+      .to(x, { x: dx * 0.4, y: -150, scale: 0.96, duration: 0.38, ease: 'power2.out' }, 0)
+      .to(x, { x: 0, y: 0, scale: 1, duration: 0.36, ease: 'power2.in' })
+      .to(xsh, { opacity: 1, x: 0, scale: 1, duration: 0.74, ease: 'power1.inOut' }, 0)
+      .call(() => { Sound.land(); FX.dust(END.x - w * 0.22, END.foot, -1, 7); FX.dust(END.x + w * 0.22, END.foot, 1, 7); })
+      .to(x, { scaleX: 1.08, scaleY: 0.9, duration: 0.08, ease: 'power2.out' })
+      .to(x, { scaleX: 1, scaleY: 1, duration: 0.36, ease: 'back.out(2)' })
+      .addLabel('dance', '-=0.3')
+      .call(() => Sprite.play(x.firstChild, 'dance', Clock.t), null, 'dance');
+    return tl.delay() + tl.labels.dance; // (when x starts dancing, in s from now: the end card's Play again waits for it)
   },
-  // the end card goes (Play again): its timelines are killed, x and its shadow taken away
+  // the cage drops onto the deck (as a new cage does in play: DeckCage.drop), after `at` s: a clang, dust, a rebound
+  drop(el, sh, x, foot, w, at) {
+    if (Motion.still()) return;
+    gsap.set(el, { opacity: 0, y: -620 }); gsap.set(sh, { opacity: 0, scale: 0.4 });
+    const tl = gsap.timeline({ delay: at }), D = 0.55;
+    this.drops.push(tl);
+    tl.set(el, { opacity: 1 })
+      .call(() => Sound.swish(0.3, 1.1, -0.1))
+      .to(el, { y: 0, duration: D, ease: 'power2.in' }, 0)
+      .to(sh, { opacity: 1, scale: 1, duration: D, ease: 'power2.in' }, 0)
+      .call(() => { Sound.cageLand(0); FX.dust(x - w * 0.42, foot, -1, 6); FX.dust(x + w * 0.42, foot, 1, 6); Stage.hit({ trauma: 0.07, ky: 3 }); })
+      .to(el, { scaleX: 1.06, scaleY: 0.93, duration: 0.07, ease: 'power2.out' })
+      .to(el, { y: -14, scaleX: 0.98, scaleY: 1.02, duration: 0.12, ease: 'power2.out' })
+      .to(el, { y: 0, scaleX: 1, scaleY: 1, duration: 0.12, ease: 'power2.in' })
+      .call(() => Sound.cageLand(1))
+      .to(el, { scaleX: 1.025, scaleY: 0.975, duration: 0.05, ease: 'power2.out' })
+      .to(el, { scaleX: 1, scaleY: 1, duration: 0.16, ease: 'power2.out' });
+  },
+  // the end screen goes (Play again): its timelines are killed, x, its cage and their shadows taken away
   hide() {
-    for (const k of ['tl', 'loop']) if (this[k]) { this[k].kill(); this[k] = null; }
-    if (this.el) { gsap.killTweensOf(this.el); this.el.remove(); this.el = null; }
-    if (this.sh) { gsap.killTweensOf(this.sh); this.sh.remove(); this.sh = null; }
+    if (this.tl) { this.tl.kill(); this.tl = null; }
+    for (const t of this.drops) t.kill(); this.drops = [];
+    for (const el of this.els) { gsap.killTweensOf(el); el.remove(); }
+    this.els = [];
+  },
+};
+
+// ---------- x in its cage on the deck: the cannon's target (design review, 23 Nov 2026) ----------
+// "Keep the caged X visible on deck during play as the cannon's target… the payoff (cage cracks open) happens in the
+// world, and the empty space is used." x cries in its cage on the deck right of the cannon, where the end card's x
+// stands (XEND), wearing an "x" tag ("show a small 'x' label on the cage, so the link to written algebra is
+// explicit"). When the equation is solved, a bolt of light flies from
+// the x on the cloud to the cage and it cracks open (CageBreak: its cracks, shards and x rising out of the light, all
+// in this cage's box); x dances there a moment and hops away to the right, off the screen; only then does the cloud
+// burst, the next question's cloud form, and the next cage fall onto the deck: one after another (the user, 25 Nov
+// 2026). The box is the crying frames' (382 × 503), DECK.h art px tall; its font-size makes the cage 1.72 em tall, as
+// the CSS for .cage (made for the equation) expects.
+const DECK = { x: XEND.x, foot: XEND.foot, h: XEND.cage };
+// x hopping off to the right when it is free (DeckCage.leaveTL), in s of a LEAVE.T-long leave (it plays in
+// Motion.BEAT.HOP_OFF): the crouch, then each hop's take-off, touch-down, from and to (shares of the whole way, which
+// ends past the screen's right edge) and height (art px). The last, longest leap carries it off the screen
+const LEAVE = { T: 1.6, crouch: [0, 0.14], hops: [[0.14, 0.5, 0, 0.17, 70], [0.6, 0.96, 0.17, 0.36, 80], [1.1, 1.6, 0.36, 1, 130]] };
+const DeckCage = {
+  el: null, cage: null, sh: null, tw: null, state: 'none', w: 0, // state: 'none', 'caged' (x crying in it), 'free' (x dancing where it stood)
+  init() {
+    const el = this.el = document.createElement('div'), h = DECK.h, w = this.w = (h * SPR.cry.w) / SPR.cry.h, lift = h * (11 / SPR.cry.h);
+    el.id = 'deckCage';
+    Object.assign(el.style, { left: (DECK.x - w / 2).toFixed(1) + 'px', top: (DECK.foot - h + lift).toFixed(1) + 'px', width: w.toFixed(1) + 'px', height: h + 'px', fontSize: (h / 1.72).toFixed(2) + 'px', opacity: '0' });
+    $('#world').insertBefore(el, $('#cannon'));
+    const sh = this.sh = groundGroup($('#ground'), 'shadow', DECK.x, DECK.foot);
+    groundBlob(sh, 'soft', w * 0.04, 2, w * 0.92, 30); groundBlob(sh, 'contact', 0, 0, w * 0.86, 16);
+    sh.style.opacity = '0';
+  },
+  // a fresh cage with x crying in it (no "x" tag on it: the user, 25 Nov 2026, "remove the X… from this entire game")
+  fill() {
+    CageBreak.kill();
+    this.el.innerHTML = `<span class="cage" data-key="x">${Sprite.html('cry', 'cg', T('altXCaged'))}</span>`;
+    this.cage = this.el.firstChild; Sprite.play(this.cage.firstChild);
+    gsap.set(this.el, { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, transformOrigin: '50% 100%' });
+  },
+  // a new cage falls onto the deck (under the new cloud): a swish, the clang as it lands with a puff of dust, one
+  // small rebound, a softer clink. Like the start screen's cage, it stands still after that; only x moves inside
+  drop() {
+    this.fill(); this.state = 'caged';
+    const el = this.el, sh = this.sh, D = Motion.BEAT.CAGE_IN;
+    if (this.tw) this.tw.kill();
+    gsap.killTweensOf([el, sh]);
+    if (Motion.still()) { gsap.set(el, { opacity: 1 }); gsap.set(sh, { opacity: 1, scale: 1 }); return Promise.resolve(); }
+    gsap.set(el, { opacity: 1, y: -640 }); gsap.set(sh, { opacity: 0, x: 0, scale: 0.4 });
+    Sound.swish(0.3, 1.1, 0.4);
+    const tl = this.tw = gsap.timeline();
+    tl.to(el, { y: 0, duration: D, ease: 'power2.in' }, 0)
+      .to(sh, { opacity: 1, scale: 1, duration: D, ease: 'power2.in' }, 0)
+      .call(() => { Sound.cageLand(0); FX.dust(DECK.x - this.w * 0.42, DECK.foot, -1, 6); FX.dust(DECK.x + this.w * 0.42, DECK.foot, 1, 6); Stage.hit({ trauma: 0.07, ky: 3 }); })
+      .to(el, { scaleX: 1.06, scaleY: 0.93, duration: 0.07, ease: 'power2.out' })
+      .to(el, { y: -14, scaleX: 0.98, scaleY: 1.02, duration: 0.12, ease: 'power2.out' })
+      .to(el, { y: 0, scaleX: 1, scaleY: 1, duration: 0.12, ease: 'power2.in' })
+      .call(() => Sound.cageLand(1))
+      .to(el, { scaleX: 1.025, scaleY: 0.975, duration: 0.05, ease: 'power2.out' })
+      .to(el, { scaleX: 1, scaleY: 1, duration: 0.16, ease: 'power2.out' });
+    return new Promise((res) => tl.eventCallback('onComplete', res));
+  },
+  // the freed x leaves, in the round's timeline, after it has danced a moment where its cage stood (the user, 25 Nov
+  // 2026: "then the x come out from them, and then go to the right side, and then cloud is burst"): it crouches and
+  // hops away to the right along the boards, two hops and a long leap that carries it off the screen (LEAVE), its
+  // shadow keeping to the deck under it, the halo behind it fading. All from the timeline's time, so a Skip or a pause
+  // lands it exactly. Returns the time it is gone
+  leaveTL(tl, pos) {
+    const D = Motion.BEAT.HOP_OFF, k = D / LEAVE.T, el = this.el, sh = this.sh;
+    let far = 0; // how far it goes (art px): until its box is past the right edge of the screen, once the camera is back on the whole scene
+    const reach = () => far || (far = CX + Stage.W / Stage.S / 2 - (DECK.x - this.w / 2) + 40);
+    tl.call(() => { Sprite.hold(CageBreak.xs, 1); el.style.willChange = 'transform'; }, null, pos); // (its fists up, all the way)
+    drive(D, (e, u) => this.hop(u * LEAVE.T, reach()), Ease.linear, tl, pos);
+    LEAVE.hops.forEach(([a, b, , x1], i) => {
+      const last = i === LEAVE.hops.length - 1;
+      tl.call(() => (last ? Sound.spring() : Sound.swish(0.25, 1.3, 0.5)), null, pos + a * k);
+      if (!last) tl.call(() => { Sound.land(); const x = DECK.x + reach() * x1; FX.dust(x - 36, DECK.foot, -1, 4); FX.dust(x + 36, DECK.foot, 1, 4); }, null, pos + b * k);
+    });
+    tl.call(() => {
+      this.state = 'none'; el.style.willChange = '';
+      gsap.set(el, { opacity: 0 }); gsap.set(sh, { opacity: 0, x: 0, scale: 1 }); CageBreak.kill();
+    }, null, pos + D);
+    return pos + D;
+  },
+  // x at t s into LEAVE (nominal), far = the whole way (art px): on the boards (a crouch, the squash of each landing
+  // that is also the crouch for the next hop) or in the air (a parabola: a stretch as it takes off, leaning into the
+  // hop); its shadow under it, smaller and fainter the higher it is
+  hop(t, far) {
+    const H = LEAVE.hops, [c0, c1] = LEAVE.crouch;
+    let i = 0; while (i < H.length - 1 && t >= H[i][1]) i++;
+    const [a, b, x0, x1, h] = H[i];
+    let px = 0, py = 0, r = 0, sx = 1, sy = 1, air = 0;
+    if (t < a) {
+      if (i === 0) { const e = Ease.outQuad(clamp((t - c0) / (c1 - c0), 0, 1)); sx = 1 + 0.07 * e; sy = 1 - 0.1 * e; } // (the crouch before the first hop)
+      else { const p = H[i - 1], w = Math.sin(Math.PI * clamp((t - p[1]) / (a - p[1]), 0, 1)); px = p[3] * far; sx = 1 + 0.08 * w; sy = 1 - 0.11 * w; }
+    } else {
+      const u = Math.min(1, (t - a) / (b - a)), s = Math.max(0, 1 - u / 0.35);
+      px = lerp(x0, x1, u) * far; air = 4 * u * (1 - u); py = -h * air;
+      r = 9 * Math.sin(Math.PI * u); sx = 1 - 0.06 * s; sy = 1 + 0.09 * s;
+    }
+    gsap.set(this.el, { x: px, y: py, rotation: r, scaleX: sx, scaleY: sy });
+    gsap.set(this.sh, { x: px, scale: lerp(1, 0.8, clamp(t / c1, 0, 1)) * (1 - 0.4 * air), opacity: 1 - 0.5 * air });
+    CageBreak.setRays(0.55 * (1 - clamp(t / 0.3, 0, 1)), 1.3); // (the halo behind it fades as it crouches)
+  },
+  // the same leave on its own (the end card, if x is still standing where its cage was): resolves once x has gone. In
+  // play the round's timeline has already taken it off (leaveTL), so this just resolves
+  away() {
+    if (this.state !== 'free') return Promise.resolve();
+    if (this.tw) this.tw.kill();
+    gsap.killTweensOf([this.el, this.sh]);
+    const tl = this.tw = gsap.timeline({ paused: true });
+    this.leaveTL(tl, 0);
+    return new Promise((res) => { tl.eventCallback('onComplete', res); tl.play(); });
+  },
+  // gone at once (Play again, the end card)
+  hide() {
+    if (this.tw) { this.tw.kill(); this.tw = null; }
+    gsap.killTweensOf([this.el, this.sh]);
+    gsap.set([this.el, this.sh], { opacity: 0 });
+    this.state = 'none'; CageBreak.kill();
   },
 };
 
@@ -1232,6 +1405,7 @@ const Cannon = {
     this.c1.style.display = this.c1f.style.display = n === 1 ? '' : 'none'; this.c2.style.display = this.c2f.style.display = n === 2 ? '' : 'none';
     const fx = $('#sockFx'); fx.innerHTML = '';
     this.sock = []; this.backs = []; // (no 1/2 order markers beside the sockets: the user had them removed, 23 Nov)
+    // (no × on a loaded orb: the user had it removed, 25 Nov. Tapping another orb takes its place instead, tapBall)
     this.holes(n).forEach((h) => {
       // the socket's dark lining, shown while a ball sits in it (the ring's inner edge, so the ring covers its rim)
       const k = document.createElement('i'); k.className = 'sbk'; const kd = h.r * 2 + 1;
@@ -1255,11 +1429,27 @@ const Cannon = {
   },
   async morph(n) {
     if (n === this.n) return;
+    if (this.morphS < 0.99) { this.setN(n); return; } // (it is growing in: Cannon.back)
     Sound.whoosh(0.4);
     const M = Motion.BEAT.MORPH;
     await tween(M * 0.4, (e) => (this.morphS = 1 - 0.18 * e), Ease.inQuad);
     this.setN(n); FX.smoke(CANNON.x, CANNON.bottom - 140, 14, 260); this.groundDust(false); Sound.clunk(); Stage.hit({ trauma: 0.1, ky: 4 });
     await tween(M * 0.6, (e) => (this.morphS = 0.82 + 0.18 * e), Ease.outBackSoft);
+  },
+  // the end screen: the cannon has done its work and shrinks away into a puff of smoke (design review: "FIRE is still
+  // visible" on the end screen); a new game grows it back
+  async leave() {
+    Sound.whoosh(0.45);
+    await tween(0.18, (e) => (this.morphS = 1 + 0.06 * e), Ease.outQuad);
+    FX.smoke(CANNON.x, CANNON.bottom - 160, 16, 260); this.groundDust(true);
+    await tween(0.4, (e) => (this.morphS = Math.max(0.001, 1.06 * (1 - e))), Ease.inBack);
+    this.el.style.visibility = this.front.style.visibility = 'hidden'; this.gShadow.style.visibility = 'hidden';
+  },
+  async back() {
+    this.el.style.visibility = this.front.style.visibility = this.gShadow.style.visibility = '';
+    if (this.morphS >= 1) return;
+    await tween(0.6, (e) => (this.morphS = Math.max(0.001, e)), Ease.outBack);
+    Sound.clunk(); this.groundDust(true);
   },
   setFireActive(on) {
     if (on === this.active) return;
@@ -1268,6 +1458,32 @@ const Cannon = {
     if (on) { this.fire.classList.remove('glow'); void this.fire.offsetWidth; this.fire.classList.add('glow'); Sound.ready(); }
   },
   hint() { this.fire.classList.remove('hint'); void this.fire.offsetWidth; this.fire.classList.add('hint'); },
+  // which socket fires first, shown in the first two-socket round only (design review, 23 Nov 2026: "nothing explains
+  // the order; add '1' and '2' labels or number the chambers in the first two-step round"). The user had the markers
+  // removed for good on 23 Nov, so these come for that one round and go when it fires. Skip's look: dark glass, gold edge
+  showOrder() {
+    this.hideOrder(true);
+    const fx = $('#sockFx');
+    this.tags = this.holes().map((h, i) => {
+      const t = document.createElement('span'); t.className = 'stag'; t.textContent = String(i + 1);
+      Object.assign(t.style, { left: h.x + 'px', top: h.y - h.r - 30 + 'px' });
+      fx.appendChild(t);
+      if (Motion.still()) t.style.opacity = '1';
+      else gsap.fromTo(t, { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 0.35, ease: 'back.out(1.7)', delay: 0.2 + i * 0.15 });
+      return t;
+    });
+  },
+  hideOrder(now = false) {
+    for (const t of this.tags) { gsap.killTweensOf(t); if (now || Motion.still()) t.remove(); else gsap.to(t, { opacity: 0, scale: 0.6, duration: 0.25, ease: 'power2.in', onComplete: () => t.remove() }); }
+    this.tags = [];
+  },
+  // FIRE tapped before every socket is full: besides its shake and the empty sockets' pulse, a hint above it says what
+  // is missing (design review: "tapping it early does nothing; add a small shake and a hint ('Load 2 balls')")
+  tip() {
+    const n = G.sockets.length, empty = G.sockets.filter((s) => !s).length;
+    const key = empty < n ? 'hintLoadMore' : n === 1 ? 'hintLoadOne' : 'hintLoadAll';
+    const f = this.fireBox; Note.tip(T(key, { n: empty }), f.x, f.y + f.h / 2 + 12); // (under FIRE: the sockets above stay in view)
+  },
   highlight(i, on) { if (this.sock[i]) this.sock[i].classList.toggle('on', on); },
   pulseSockets() {
     this.sock.forEach((g, i) => { tween(0.9, (e, k) => (g.style.opacity = Math.sin(k * Math.PI).toFixed(2)), Ease.linear, i * 0.25).then(() => (g.style.opacity = '')); });
@@ -1344,6 +1560,25 @@ const Rack = {
     });
     const box = $('#hglows');
     this.glows = this.holes.map((h) => { const g = document.createElement('div'); g.className = 'hglow'; Object.assign(g.style, { left: h.x + 'px', top: h.y + 'px' }); box.appendChild(g); return g; });
+    // a faint ghost of the orb in its cup while the orb is away (in the cannon, in a hand, fired), so the tray never
+    // shows a hole (design review, 23 Nov 2026: "a loaded ball leaves an empty hole in the tray… show a faint ghost
+    // in the slot"); the orbs keep their places (and their keys 1–8)
+    this.ghosts = this.holes.map((h, i) => {
+      const g = document.createElement('i'); g.className = 'bghost'; const r = this.restPos(i);
+      Object.assign(g.style, { left: r.x + 'px', top: r.y + 'px' }); g.innerHTML = '<img alt="" draggable="false">';
+      sh.appendChild(g); g.on = false; g.art = -1; return g;
+    });
+  },
+  // a retry: the fired orbs come back into their cups (they drop in again, one after another) and any still in the
+  // cannon fly home
+  restore() {
+    const back = [];
+    for (const b of this.balls) {
+      if (b.where === 'gone') { Object.assign(b, { where: 'rack', socket: -1, flight: null, scale: 0.001, drop: 300 }); b.el.classList.remove('gone'); back.push(b); }
+      else if (b.where === 'socket' || b.where === 'loading') { b.where = 'rack'; b.socket = -1; flyBall(b, 0.5, 120); b.onLand = () => Sound.settle(); }
+    }
+    return Promise.all(back.map((b, i) => tween(Motion.BEAT.BALL_DROP, (e, k) => { b.scale = Math.max(0.001, Math.min(1, k * 2.5)); b.drop = 300 * (1 - e); }, Ease.outBackSoft, 0.05 + i * 0.08)
+      .then(() => { b.land = 1; Sound.pop(0.8 + i * 0.06); })));
   },
   restPos(i) { const h = this.holes[i]; return { x: h.x, y: h.y + RACK.seat, s: 1 }; }, // seated: the bottom dips into the cup
   glowWave() {
@@ -1361,13 +1596,15 @@ const Rack = {
   },
 };
 function createBall(opStr, i) {
-  const op = parseOp(opStr), el = document.createElement('div');
+  const op = parseOp(opStr), art = OP_ART[op.k], el = document.createElement('div'); // (its colour = its operation: OP_ART)
   el.className = 'ball';
-  el.innerHTML = `<i class="gl"></i><img src="${IMG}ball_${i}.webp" alt="" draggable="false"><i class="ao"></i><b>${labelHTML(op)}</b>`; // gl = guide halo, ao = shade where it sinks into the cup
+  // gl = guide halo, ao = shade where it sinks into the cup
+  el.innerHTML = `<i class="gl"></i><img src="${IMG}ball_${art}.webp" alt="" draggable="false"><i class="ao"></i><b>${labelHTML(op)}</b>`;
+  el.setAttribute('aria-label', op.label);
   $('#balls').appendChild(el);
   const r = Rack.restPos(i);
   el.style.transform = `translate(${r.x.toFixed(1)}px,${r.y.toFixed(1)}px) scale(0.001)`; // in its cup, too small to see or tap, until the next frame places it
-  const b = { op, i, hex: BALL_HEX[i], ink: BALL_INK[i], el, holder: i, where: 'rack', socket: -1, x: r.x, y: r.y, s: 1, r: 0, flight: null, hop: 0, guide: false, drop: 0, land: 0, hover: 0, hoverT: 0, scale: 1 };
+  const b = { op, i, art, hex: BALL_HEX[art], ink: BALL_INK[art], el, holder: i, where: 'rack', socket: -1, x: r.x, y: r.y, s: 1, r: 0, flight: null, hop: 0, guide: false, drop: 0, land: 0, hover: 0, hoverT: 0, scale: 1 };
   el.addEventListener('pointerdown', (e) => { e.preventDefault(); Drag.down(b, e); }); // a press that moves is a drag, one that doesn't is a tap (Drag, src/40_game.js)
   el.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') b.hoverT = 1; });
   el.addEventListener('pointerleave', () => (b.hoverT = 0));
@@ -1386,8 +1623,9 @@ function flyBall(b, dur = Motion.BEAT.TAP_FLY, arc = 230) {
   b.flight = { fx: b.x, fy: b.y, fs: b.s, t: 0, dur, arc, r0: b.r, r1: turn };
 }
 function updateBalls(dt, t) {
-  const seated = new Array(8).fill(false), lift = new Array(8).fill(0), full = [];
+  const seated = new Array(8).fill(false), lift = new Array(8).fill(0), full = [], away = new Array(8).fill(-1);
   for (const b of Rack.balls) {
+    if (b.where !== 'rack' || b.drag) away[b.holder] = b.art; // (its cup shows a ghost of it)
     if (b.where === 'gone') { b.el.classList.add('gone'); continue; }
     const h = ballHome(b);
     b.hover = lerp(b.hover, G.inputOn && !b.drag ? b.hoverT : 0, 1 - Math.exp(-14 * dt));
@@ -1444,6 +1682,11 @@ function updateBalls(dt, t) {
     if (l !== d.lift) { d.lift = l; d.cast.style.transform = l ? `translateY(${-l}px)` : ''; d.pool.style.opacity = Math.max(0, 1 - l / 16).toFixed(2); }
   });
   if (Cannon.backs) Cannon.backs.forEach((k, i) => k.classList.toggle('on', !!full[i]));
+  if (Rack.ghosts) Rack.ghosts.forEach((g, i) => {
+    const a = away[i], on = a >= 0;
+    if (on && a !== g.art) { g.art = a; g.firstChild.src = `${IMG}ball_${a}.webp`; }
+    if (on !== g.on) { g.on = on; g.classList.toggle('on', on); }
+  });
 }
 
 // =====================================================================
@@ -1480,7 +1723,14 @@ const EqUI = {
     });
   },
   setEq(eq, flip = true) { this.render(eqHTML(eq), flip); },
-  cage() { return this.el.querySelector('[data-key="x"]'); },
+  cage() { return DeckCage.cage; }, // (x's cage stands on the deck: DeckCage)
+  xTerm() { return this.el.querySelector('[data-key="x"]'); }, // the x on the cloud
+  // the line rewritten in place ("3(x + 2) − 6" → "3x + 6 − 6"): what stays glides, what is new pops in
+  rewrite(eq) {
+    const before = new Set([...this.el.querySelectorAll('[data-key]')].map((e) => e.dataset.key));
+    this.render(eqHTML(eq), true);
+    this.el.querySelectorAll('[data-key]').forEach((e) => { if (!before.has(e.dataset.key) && !e.closest('.pop')) e.classList.add('pop'); });
+  },
   showImpact(eq, op, color) {
     this.render(impactHTML(eq, op, color), true);
     return [this.el.querySelector('[data-key="inL"]'), this.el.querySelector('[data-key="inR"]')];
@@ -1555,6 +1805,32 @@ const QCard = {
   },
 };
 
+// ---------- short labels with no voice: a hint over FIRE ("Load 2 orbs first!") and a banner under the cloud ("Watch
+// how!": the "Try again!" one was taken out, the user, 25 Nov 2026), in Skip's look. They come and go by CSS transitions (transform + opacity); placed in stage units ----------
+const Note = {
+  tipT: null, banT: null,
+  // a hint over a point of the scene (art px), for a moment
+  tip(text, wx, wy, hold = 1.8) {
+    const el = $('#tip'), p = Stage.w2st(wx, wy);
+    el.textContent = text; Object.assign(el.style, { left: p.x.toFixed(1) + 'px', top: p.y.toFixed(1) + 'px' });
+    el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
+    if (this.tipT) this.tipT.kill();
+    this.tipT = gsap.delayedCall(hold, () => el.classList.remove('on'));
+  },
+  banner(title, sub = '', hold = 2) {
+    const el = $('#banner');
+    el.innerHTML = ''; const b = document.createElement('b'); b.textContent = title; el.appendChild(b);
+    if (sub) { const s = document.createElement('span'); s.textContent = sub; el.appendChild(s); }
+    el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
+    if (this.banT) this.banT.kill();
+    this.banT = gsap.delayedCall(hold, () => el.classList.remove('on'));
+  },
+  hide() {
+    for (const k of ['tipT', 'banT']) if (this[k]) { this[k].kill(); this[k] = null; }
+    $('#tip').classList.remove('on'); $('#banner').classList.remove('on');
+  },
+};
+
 // =====================================================================
 //  SPOTLIGHT: first-time tutorial focus. Everything is dimmed, never
 //  blurred (user, 23 Nov: the equation must stay readable), except one
@@ -1614,7 +1890,7 @@ const Spot = {
   dress(b) {
     if (this.ghostOf === b) return;
     this.ghostOf = b;
-    this.ghost.innerHTML = `<img src="${IMG}ball_${b.i}.webp" alt="" draggable="false"><b>${labelHTML(b.op)}</b>`;
+    this.ghost.innerHTML = `<img src="${IMG}ball_${b.art}.webp" alt="" draggable="false"><b>${labelHTML(b.op)}</b>`;
   },
   hole(q, sx, sy, pad) { return { rx: (q.w / 2) * sx + pad, ry: (q.h / 2) * sy + pad }; },
   place(animate) {

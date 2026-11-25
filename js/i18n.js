@@ -14,7 +14,8 @@
  *   T('key')                    the line as text
  *   T('key', { freed: 3 })      {freed} in it filled in
  *   I18n.voice('key')           its clip: assets/VO/<lang>/<key>.webm
- *   I18n.say('key', { onended, onerror })   plays that clip, returns the <audio>
+ *   I18n.say('key', { onended, onerror, rate })   plays that clip (rate: its
+ *                               speed, pitch kept), returns the <audio>
  *
  * Static markup is filled by I18n.applyStatic():
  *     data-i18n="key"                       textContent
@@ -87,6 +88,10 @@ var I18n = (function () {
     opts = opts || {};
     var a = new Audio(voice(key));
     a.preload = 'auto';
+    if (opts.rate && opts.rate !== 1) { /* slower (or faster), the voice's pitch kept as recorded */
+      a.preservesPitch = a.mozPreservesPitch = a.webkitPreservesPitch = true;
+      a.defaultPlaybackRate = a.playbackRate = opts.rate;
+    }
     if (opts.onended) a.addEventListener('ended', opts.onended, { once: true });
     if (opts.onerror) a.addEventListener('error', opts.onerror, { once: true });
     var p = a.play();

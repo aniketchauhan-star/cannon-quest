@@ -1,5 +1,5 @@
 CANNON QUEST: THE VOICE SCRIPT
-20 lines, about 1 minute to read
+22 lines, about 2 minutes to read
 
 Every line in the game is said in one real person's voice: yours, or a teammate's. No AI voice.
 
@@ -65,18 +65,24 @@ THE LINES
     (the shot worked: x jumps out of the cage; big and happy: celebrate!)
 
 16. Oh no! x is still stuck.
-    (the shot missed: x is still in the cage; gentle and kind, never like "wrong")
+    (the shot missed: x is still in the cage (a retry comes next); gentle and kind, never like "wrong")
 
 17. Not this time. x is still locked in!
-    (the shot missed: x is still in the cage; gentle and kind, never like "wrong")
+    (the retry missed too: x is still in the cage (the game shows the way next); gentle and kind, never like "wrong")
 
-18. Amazing! You freed x every single time!
+18. Try again! Look for the glowing orb.
+    (the shot missed: the same equation comes back for one more try, and the orb that undoes the last step glows; warm and encouraging)
+
+19. Watch how it's done!
+    (the second try missed too: the game shows the way, firing the right orbs itself; calm and clear, like showing a friend)
+
+20. Amazing! You freed x every single time!
     (the end: the player freed x every time; big and happy: celebrate!)
 
-19. Great job! You freed most of them!
+21. Great job! You freed most of them!
     (the end: the player freed x most times; big and happy: celebrate!)
 
-20. Good try! Play again to free them all!
+22. Good try! Play again to free them all!
     (the end: the player freed x only a few times; warm and encouraging)
 
 (Made by: python3 tools/vo_split.py --script, from tools/vo_lines.json and locales/locales.json.)

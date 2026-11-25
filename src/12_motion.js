@@ -15,37 +15,48 @@ const Motion = {
   DUR: { INSTANT: 0.08, FAST: 0.18, NORMAL: 0.3, SLOW: 0.45, REVEAL: 0.7 },
   EASE: { OUT: 'power2.out', IN: 'power2.in', INOUT: 'power2.inOut', POP: 'back.out(1.25)' },
   STAGGER: 0.1,
-  // THE LESSON'S PACE (seconds). On 19 Nov 2026 the user asked for slower, smoother motion "so that I can
-  // understand easily": each idea in a shot is its own beat, played at the slow end of the concept-reveal
-  // range (0.6–0.8 s), with a pause to read between beats. No freeze-frames (they read as lag), gentle eases,
-  // no fast spins. Scene moves (a cloud gathering or bursting) may take up to 1.2 s. Tune the whole game here.
+  // THE LESSON'S PACE (seconds). Each idea in a shot is its own beat with a pause to read (the user, 19 Nov: "so that
+  // I can understand easily"). The design review (23 Nov 2026) had it squeezed to ~8 s from FIRE to the next
+  // equation; the user found that too fast (25 Nov 2026: "the animation of the shoot and the x = something is coming,
+  // and then cage is broke. That is too fast, so please make it slow so that user can understand"). So every beat
+  // of the shot and the freeing is slower again (about 1.6× the review's), and "x = 2" now gets a beat of its own to
+  // be read before the bolt flies: the shot ~6.5 s, "x = 2" 1.4 s, the cage ~4 s until x lands. A tap anywhere
+  // still skips the celebration. No freeze-frames (they read as lag), gentle eases, no fast spins. Tune it all here.
   BEAT: {
-    AIM: 0.5,        // a shot: the socket glows and the camera leans in on the cannon
-    LOAD: 0.5,       //   the ball drops into the barrel while the cannon squats (anticipation)
-    FLIGHT: 0.8,     //   cannon → cloud
-    SPLIT: 0.8,      //   the hit term splits into two copies that fly to BOTH sides of the equation
-    READ: 1.5,       //   time to read "x + 5 − 5 = 7 − 5"
-    PAIR: 0.75,      //   the terms that cancel light up together…
+    AIM: 0.55,       // a shot: the socket glows and the camera leans in on the cannon
+    LOAD: 0.6,       //   the ball drops into the barrel while the cannon squats (anticipation)
+    FLIGHT: 1.0,     //   cannon → cloud
+    SPLIT: 0.85,     //   the hit term splits into two copies that fly to BOTH sides of the equation
+    READ: 1.4,       //   time to read "x + 5 − 5 = 7 − 5"
+    PAIR: 0.7,       //   the terms that cancel light up together…
     CANCEL: 0.7,     //   …and fade away
-    SETTLE: 0.8,     //   the simplified equation glides together
-    READ2: 1.4,      //   time to read the simplified equation
-    // freed (the user, 23 Nov: "extreme… slow animation of cage crack and x come out from them… cloudburst after x
-    // compose"): a slow, cinematic beat for each stage, so every one of them can be seen
-    FOCUS: 0.9,      // the screen's edges darken and the camera closes in on the cage, which starts to glow…
-    CRACK: 2.6,      //   …x pushes three times (CAGE.push): each push cracks it further, light leaks out; it trembles…
-    SHATTER: 1.8,    //   …and bursts along its cracks: the shards tumble away, hang in the air and fade
+    SETTLE: 0.75,    //   the simplified equation glides together
+    READ2: 1.3,      //   time to read the simplified equation (before a second shot)
+    EXPAND: 0.85,    //   a bracket multiplied out ("3(x + 2) − 6" → "3x + 6 − 6"), on the way to the simplified line
+    // freed: x's cage stands on the deck (design review, 23 Nov: "keep the caged X visible on deck as the cannon's
+    // target… the payoff happens in the world"). Every stage of the user's cinematic break (23 Nov: cracks, shards,
+    // x rising out of the light, a cloudburst) has its own beat, slow enough to follow, and they come ONE AFTER
+    // ANOTHER, never two at once (the user, 25 Nov 2026: "the animation should come one by one… cage broken, then the
+    // x come out… then go to the right side, and then cloud is burst, equation will change. And again x cage come")
+    SOLVED: 1.4,     // "x = 2" lights up on the cloud and grows, and stays a moment to be read…
+    BOLT: 0.8,       //   …then a bolt of light flies from the x on the cloud down to x's cage…
+    CRACK: 1.6,      //   …x pushes three times (CAGE.push, played at CAGE.T / CRACK speed): the cage cracks, light leaks out
+    SHATTER: 1.7,    //   …and bursts along its cracks: the shards tumble away and fade
     RISE: 1.6,       //   x rises out of the light, hovers (sparkles circle it), comes down and lands where the cage stood
-    HOLD: 5.0,       //   "x = 2" rests on the cloud (the user, 23 Nov: "after 5 seconds the cloud is fade and burst")
-    INHALE: 0.7,     // the cloudburst: the cloud draws in its breath (it squeezes, trembles, glows; "x = 2" is drawn in)…
-    BURST: 1.6,      //   …and bursts in place: its puffs blast apart, a flash, rings, a shower (it never sails off sideways)
-    BREATH: 0.5,     //   a breath before the next question
-    RATTLE: 1.3,     // stuck: the cage rattles, the cloud wobbles (then the cloud bursts too, gently)
-    CLOUD_IN: 1.3,   // a new question's cloud forms in the same place, out of puffs that drift together
-    BALLS_OUT: 0.45, // the tray's balls shrink away…
-    BALL_DROP: 0.8,  //   …and the new ones drop in, one after another
-    BALL_GAP: 0.1,
-    TAP_FLY: 0.75,   // a tapped ball flies into its socket (or back to the tray)
-    MORPH: 0.75,     // the cannon changes to 1 or 2 sockets
+    CHEER: 1.0,      //   x dances there a moment: it is free…
+    HOP_OFF: 1.6,    //   …then it hops away to the right along the boards and off the screen (DeckCage.leaveTL)
+    INHALE: 0.45,    // then the cloudburst, with x gone: the cloud draws in its breath (it squeezes, trembles, glows; "x = 2" is drawn in)…
+    BURST: 0.85,     //   …and bursts in place: its puffs blast apart, a flash, rings, a shower
+    BREATH: 0.3,     //   a moment of clear sky; then the next question's cloud forms, and only then does its cage drop in
+    RATTLE: 1.1,     // stuck: the cage rattles, the cloud wobbles; then the same question again (one retry)
+    REWIND: 0.7,     // a retry: the equation glides back to how it started, the fired orbs come back
+    CLOUD_IN: 0.8,   // a new question's cloud forms in the same place, out of puffs that drift together
+    BALLS_OUT: 0.3,  // the tray's balls shrink away…
+    BALL_DROP: 0.55, //   …and the new ones drop in, one after another
+    BALL_GAP: 0.05,
+    TAP_FLY: 0.6,    // a tapped ball flies into its socket (or back to the tray)
+    MORPH: 0.6,      // the cannon changes to 1 or 2 sockets
+    CAGE_IN: 0.55,   // a new cage falls onto the deck (once the next cloud has formed; play starts when it has landed)
   },
   reduced: false, skipping: false, live: new Set(),
   init() {
@@ -179,27 +190,36 @@ const Perf = {
   },
 };
 
-// ---------- the Skip button (top-right): shown while a tutorial or a shot is playing ----------
+// ---------- the Skip button (top-right, level with Pause and Sound): shown while a tutorial or a shot is playing ----------
+// It always sits in the same place and only fades (design review, 23 Nov 2026: "Skip appears and disappears between
+// states, which makes the top-right corner flicker. Keep it in a fixed place and fade it in and out"). A hide waits a
+// moment, so a shot that follows the tutorial (or the next shot) keeps it up instead of blinking it off and on.
 const Skip = {
-  el: null, fn: null, on: false,
+  el: null, fn: null, on: false, later: null,
   init() {
     this.el = $('#skipBtn');
-    this.el.addEventListener('click', () => {
-      if (!this.on || G.paused) return;
-      Sound.click();
-      const f = this.fn; this.hide(); if (f) f();
-    });
+    this.el.addEventListener('click', () => this.now());
+  },
+  // skip what is playing (the button, or a tap on the scene during a celebration)
+  now() {
+    if (!this.on || G.paused) return;
+    Sound.click();
+    const f = this.fn; this.hide(true); if (f) f();
   },
   show(fn) {
     this.fn = fn;
+    if (this.later) { this.later.kill(); this.later = null; }
     if (this.on) return;
     this.on = true; this.el.classList.add('on');
-    Motion.enter(this.el, { duration: Motion.DUR.NORMAL });
+    gsap.killTweensOf(this.el);
+    Motion.to(this.el, { opacity: 1, duration: Motion.DUR.FAST, ease: Motion.EASE.OUT });
   },
-  hide() {
+  hide(soon = false) {
     this.fn = null;
     if (!this.on) return;
-    this.on = false; this.el.classList.remove('on');
-    Motion.exit(this.el);
+    this.on = false; this.el.classList.remove('on'); // (it stops taking taps at once)
+    if (this.later) this.later.kill();
+    const go = () => { this.later = null; if (!this.on) { gsap.killTweensOf(this.el); Motion.to(this.el, { opacity: 0, duration: Motion.DUR.FAST, ease: Motion.EASE.IN }); } };
+    if (soon) go(); else this.later = gsap.delayedCall(0.4, go);
   },
 };

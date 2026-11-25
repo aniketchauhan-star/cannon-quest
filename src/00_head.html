@@ -30,9 +30,7 @@
 <link rel="preload" as="image" href="assets/img/t_logo.webp" fetchpriority="high">
 <link rel="preload" as="image" href="assets/img/t_cannon.webp" fetchpriority="high">
 <link rel="preload" as="image" href="assets/img/playbtn.webp" fetchpriority="high">
-<link rel="preload" as="image" href="assets/img/t_cage.webp" fetchpriority="high">
-<link rel="preload" as="image" href="assets/img/t_x.webp" fetchpriority="high">
-<link rel="preload" as="image" href="assets/img/t_cage_front.webp" fetchpriority="high">
+<link rel="preload" as="image" href="assets/img/x_cry.webp" fetchpriority="high">
 <!--FONTS-->
 <style>
 :root{--ink:#1a1740;--gold:#ffcb3d;--orange:#ff9418;--plum:#2a1c5c;--glass:rgba(28,19,78,.88);--glass-hi:rgba(48,34,120,.94)}
@@ -117,6 +115,11 @@ img{-webkit-user-drag:none;user-select:none}
 /* the cloud art (tools/paint_cloud.py): painted like the clouds of the deck picture, so it belongs to that sky: a big
    dome, puffs stepping down, a flat blue base whose wisps run out 62 px past the box on each side; lit by the sun */
 #cloud .cl{position:absolute;left:-52px;top:10px;width:760px;height:281px}
+/* its warm rim light on the sun's side (tools/cloud_rim.py: a picture laid exactly over it) and a soft haze where it
+   meets the sky (design review, 23 Nov 2026: "a warm rim light on the sun side (top right), and a soft haze where it
+   meets the sky"); both come and go with the cloud's picture (CloudBurst.clOp) */
+#cloud .clr{position:absolute;left:-52px;top:10px;width:760px;height:281px;pointer-events:none}
+#cloud .chz{position:absolute;left:-90px;top:132px;width:836px;height:230px;border-radius:50%;pointer-events:none;background:radial-gradient(closest-side,rgba(242,251,255,.62),rgba(242,251,255,.3) 52%,rgba(242,251,255,0))}
 /* No box: the question sits right on the cloud (the user asked to remove the card on 19 Nov). During play there is no
    label, only the equation (the user removed "Find the value of x" on 19 Nov); at the end a small dark label
    (the same dark glass + gold ring as Skip and the caption) reads "Your score", under the cloud's top bump. The equation
@@ -130,10 +133,12 @@ img{-webkit-user-drag:none;user-select:none}
 /* the equation, the orbs' numbers and the caption's words (on the user's question template): Trig Text (the user's
    font, 19 Nov), its one weight (400) */
 #eq,.ball b,#cap .txt{font-family:'Trig Text','Poppins',system-ui,sans-serif;font-weight:400}
-#eq{position:absolute;left:0;top:0;transform:translate(-50%,-50%);display:flex;align-items:center;white-space:nowrap;font-size:70px;line-height:1;letter-spacing:-.01em;font-variant-numeric:lining-nums;color:var(--ink);transform-origin:0 0}
+#eq{position:absolute;left:0;top:0;transform:translate(-50%,-50%);display:flex;align-items:center;white-space:nowrap;font-size:84px;line-height:1;letter-spacing:-.01em;font-variant-numeric:lining-nums;color:var(--ink);transform-origin:0 0}
 #eq.wob{animation:eqwob .45s ease-in-out 3}
 @keyframes eqwob{25%{rotate:-3deg}75%{rotate:3deg}}
 .tk{display:inline-flex;align-items:center;justify-content:center;position:relative;flex:none}
+/* x: the letter, in x's own violet (its cage stands on the deck) */
+.xv{color:#7a22d6;margin:0 .02em}
 .op{margin:0 .17em}
 .eqs{margin:0 .24em}
 .paren{transform:scaleY(1.12);margin:0 .02em}
@@ -178,7 +183,7 @@ img{-webkit-user-drag:none;user-select:none}
 .cage .cg{transform-origin:50% 90%}
 .cage.push .cg{animation:cpush 1.2s ease-in-out 2}
 @keyframes cpush{0%,100%{transform:none}20%{transform:translateX(-4%) rotate(-5deg)}35%{transform:translateX(-5%) scaleX(.96)}55%{transform:translateX(4%) rotate(5deg)}70%{transform:translateX(5%) scaleX(.96)}}
-.cage.rattle .cg{animation:rattle .16s ease-in-out 8} /* (a rocking "not yet", ~6 per second: 11 per second read as jitter) */
+.cage.rattle .cg{animation:rattle .16s ease-in-out 7} /* (a rocking "not yet", ~6 per second: 11 per second read as jitter) */
 @keyframes rattle{25%{transform:translateX(-6%) rotate(-6deg)}75%{transform:translateX(6%) rotate(6deg)}}
 .cage.glowx .cg{filter:drop-shadow(0 0 10px #fff) drop-shadow(0 0 24px #c58bff)}
 .cage.open .cg{animation:copen .5s ease-out}
@@ -201,14 +206,19 @@ img{-webkit-user-drag:none;user-select:none}
   filter:drop-shadow(0 0 8px #fff) drop-shadow(0 0 18px rgba(197,139,255,.85))}
 .cage .xfree .mood{width:100%;transform-origin:50% 100%}
 .cage .xfree.xwhite{filter:brightness(0) invert(1) drop-shadow(0 0 10px #fff) drop-shadow(0 0 22px #ffe9a0)}
-/* the end card's x (EndX): on the deck, right of the cannon; placed and sized by EndX, moved about its feet */
-#xEnd{position:absolute;pointer-events:none;transform-origin:50% 100%}
-#xEnd>img{display:block;width:100%;height:100%}
-/* "= 2" lights up as x lands, growing 18 %; it steps aside to keep "x = 2" apart (translate, not margins: the
-   equation's layout never changes, so nothing jumps) */
-.tk.eqs.win{translate:.06em 0}
-.tk.num.win{translate:.22em 0}
-.tk.win{color:#7a22d6;text-shadow:0 0 16px rgba(255,214,70,.85),0 0 32px rgba(255,180,30,.5);transition:translate .6s cubic-bezier(.22,1,.36,1);animation:winpop .8s cubic-bezier(.22,1,.36,1) both,winglow 1.4s .85s ease-in-out infinite}
+/* x's cage on the deck (DeckCage), right of the cannon: the crying frames, 262 px tall; its font-size (set by
+   DeckCage) makes the cage 1.72 em, as the .cage rules above expect */
+#deckCage{position:absolute;pointer-events:none;transform-origin:50% 100%}
+#deckCage>.cage{display:block;position:relative;width:100%;height:100%;margin:0}
+/* (no "x" tag on the cage: the user, 25 Nov 2026, "remove the X and sound icon… from this entire game") */
+#world.title #deckCage{visibility:hidden}
+/* the end screen's x and its broken cage (EndX): in the middle of the deck; placed and sized by EndX, moved about
+   their feet */
+.xEnd{position:absolute;pointer-events:none;transform-origin:50% 100%}
+.xEnd>img{display:block;width:100%;height:100%}
+.xEnd>.mood{transform-origin:50% 100%}
+/* "x = 2" lights up as the equation is solved, growing 18 % with a gold glow */
+.tk.win{color:#7a22d6;text-shadow:0 0 16px rgba(255,214,70,.85),0 0 32px rgba(255,180,30,.5);animation:winpop .8s cubic-bezier(.22,1,.36,1) both,winglow 1.4s .85s ease-in-out infinite}
 @keyframes winpop{0%{transform:scale(1)}45%{transform:scale(1.3)}100%{transform:scale(1.18)}}
 @keyframes winglow{0%,100%{transform:scale(1.18)}50%{transform:scale(1.26)}}
 /* the cloud bursting (CloudBurst): the pieces of its own picture, laid exactly over it, each with its blurred twin */
@@ -232,6 +242,8 @@ img{-webkit-user-drag:none;user-select:none}
 .sbk{position:absolute;display:block;border-radius:50%;pointer-events:none;opacity:0;transition:opacity .2s ease-out;
   background:radial-gradient(circle at 50% 46%,#2b1306 0,#1a0903 58%,#0d0401 100%);box-shadow:inset 0 5px 7px rgba(0,0,0,.65)}
 .sbk.on{opacity:1}
+/* the order the two sockets fire in, only in the first two-socket round (Cannon.showOrder): Skip's dark glass + gold */
+.stag{position:absolute;translate:-50% -50%;min-width:46px;height:46px;padding:2px 12px 0;border-radius:99px;display:grid;place-items:center;background:var(--glass);color:#fff;font-size:28px;line-height:1;box-shadow:0 0 0 2.5px rgba(255,210,61,.92),0 5px 12px rgba(20,10,60,.3);pointer-events:none}
 .sglow{position:absolute;border-radius:50%;pointer-events:none;opacity:0;box-shadow:0 0 0 7px rgba(255,236,120,.95),0 0 34px 16px rgba(255,196,40,.9),inset 0 0 26px 8px rgba(255,220,90,.7);transition:opacity .2s}
 .sglow.on{opacity:1;animation:sg .5s ease-in-out infinite alternate}
 @keyframes sg{to{transform:scale(1.08)}}
@@ -257,6 +269,8 @@ img{-webkit-user-drag:none;user-select:none}
 @keyframes fhint{50%{transform:scale(1.1)}}
 @keyframes fhintL{50%{opacity:.8}}
 #fireBtn.press{transform:scale(.9)}
+#fireBtn::before{content:'';position:absolute;inset:-32% -6%} /* (a taller tap area: the pill is short on a phone) */
+#fireBtn.gone{opacity:0;pointer-events:none;transition:opacity .35s ease-in} /* (the end card) */
 
 /* ---------- rack + balls ---------- */
 .hglow{position:absolute;width:126px;height:58px;margin:-29px 0 0 -63px;border-radius:50%;pointer-events:none;opacity:0;box-shadow:0 0 0 5px #ffe46b,0 0 28px 12px rgba(255,205,50,.85)}
@@ -276,6 +290,12 @@ body.dragging,body.dragging *{cursor:grabbing !important}
 @keyframes guide{from{opacity:.55;transform:scale(.9)}to{opacity:1;transform:scale(1.06)}}
 .ball.hov img{filter:brightness(1.12)}
 .ball.gone{display:none}
+/* the orbs' tap area reaches a little past each orb (not into the next one), so it stays 44 px or more on a small phone */
+.ball::before{content:'';position:absolute;inset:-7%;border-radius:50%}
+/* the faint ghost of an orb in its cup while it is away (Rack.ghosts) */
+.bghost{position:absolute;width:122px;height:122px;margin:-61px 0 0 -61px;opacity:0;transition:opacity .25s ease-out;pointer-events:none}
+.bghost img{display:block;width:100%;height:100%;filter:saturate(.3) brightness(1.2)}
+.bghost.on{opacity:.24}
 .ball .ao{position:absolute;inset:3%;border-radius:50%;background:radial-gradient(ellipse 70% 32% at 50% 90%,rgba(66,26,4,.5),rgba(66,26,4,.2) 58%,rgba(66,26,4,0) 100%);opacity:0;transition:opacity .25s;pointer-events:none}
 .ball.seated .ao{opacity:1}
 /* in the cannon's socket the orb fills the hole edge to edge: only a soft shade where the ring's top lip overhangs
@@ -306,22 +326,25 @@ body.dragging,body.dragging *{cursor:grabbing !important}
    (half the WebP, so it stays sharp on a 2× screen) into the canvas .bg by Caption.paint (src/20_audio.js), in whole
    device pixels so the pieces meet without seams. That is the template's own proportions: the whole thick wooden
    frame and its grain show; the corners stay as drawn and only straight frame and cream stretch to the words. The
-   words (36px) sit in the cream panel, whose inset at 0.25 is 24 / 19 / 19.5 / 18.5 px (top right bottom left), with
-   the speaker icon on the first line. Dark-brown words on the cream, so they always read. It hugs its words
+   words (36px) sit in the cream panel, whose inset at 0.25 is 24 / 19 / 19.5 / 18.5 px (top right bottom left), as
+   far from its left edge as from its right (no speaker icon: the user, 25 Nov 2026). Dark-brown words on the cream, so they always read. It hugs its words
    (Caption.fit: as wide as its longest line), is at most 560 wide (its right edge stays clear of the cannon at
    x ~595) and stays centred on y 470 (#capPos, in #stageTop: above the FX canvas, so cannon smoke never hides the
    words). It shows only while a voice line is being said: it rises in as the voice starts, each word pops in as it
    is said, it glides between lines and sinks away after the line (transform + opacity) */
 #overlay{position:absolute;inset:0;pointer-events:none}
+/* (25 Nov 2026, the user: "the question template… like before, in the left corner": the design review's speech
+   bubble over x's cage, with its tail, is undone; the board is back on the left, halfway down) */
 #capPos{position:absolute;left:30px;top:470px;height:0;display:flex;align-items:center;pointer-events:none}
-#cap{position:relative;flex:none;max-width:560px;padding:40px 42px 35px 82px;color:#4a2508;font-size:36px;line-height:1.3;letter-spacing:.005em;opacity:0;transform-origin:0 50%}
+#cap{position:relative;flex:none;max-width:560px;padding:40px 42px 35px 42px;color:#4a2508;font-size:36px;line-height:1.3;letter-spacing:.005em;opacity:0;transform-origin:0 50%}
 #cap .bg{position:absolute;left:0;top:0;width:100%;height:100%;display:block;transform-origin:0 0;filter:drop-shadow(0 7px 9px rgba(40,18,4,.3))}
+body:has(#endBtns.on) #cap{max-width:450px} /* (the end screen is up: the end line wraps clear of x's cage) */
 #cap .txt{display:block;position:relative;text-wrap:balance}
 /* its words come one by one with the voice (Caption.upTo): each is its own box so it can pop in (transform +
    opacity); a one-letter word (x) and the word after it share a .nw group, so x never ends a row */
 #cap .w{display:inline-block;opacity:0}
 #cap .nw{white-space:nowrap}
-#cap svg{position:absolute;left:34px;top:47px;width:33px;height:33px;color:#c2621a}
+
 
 /* ---------- HUD (from the art: pause, sound) ---------- */
 #hud{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .3s ease-out}
@@ -348,7 +371,15 @@ body.spot #hud.on{opacity:.5}
 .hbtn:active{transform:scale(.9)}
 #pauseBtn{left:max(10px,2vw)}
 #sndBtn{left:calc(max(10px,2vw) + clamp(46px,5.3vw,96px) + max(8px,1vw))}
+/* on the start screen only the sound button shows, in the first place (design review: "put the sound toggle here so a
+   classroom can mute before starting"); it glides to its place beside Pause when the game starts */
+#hud.ttl{opacity:1}
+#hud.ttl>*:not(#sndBtn){visibility:hidden}
+#hud.ttl #sndBtn{translate:calc(-1 * (clamp(46px,5.3vw,96px) + max(8px,1vw))) 0}
+#sndBtn{transition:transform .12s,translate .45s cubic-bezier(.22,1,.36,1)}
 #sndBtn.muted::after{content:'';position:absolute;left:14%;right:14%;top:47%;height:9%;background:#e8132b;border-radius:9px;transform:rotate(-40deg);box-shadow:0 0 0 3px #fff}
+/* Skip: always in the same place, top right, level with Pause and Sound; it only fades (Skip in src/12_motion.js). (No
+   progress dots: the user took them out of the game, 25 Nov 2026) */
 #skipBtn{position:absolute;top:max(10px,2.4vh);right:max(10px,2vw);height:clamp(40px,4.4vw,58px);padding:0 clamp(14px,1.5vw,22px) 0 clamp(16px,1.7vw,24px);display:flex;align-items:center;gap:.4em;border-radius:99px;background:var(--glass);color:#fff;font-size:clamp(16px,1.7vw,23px);line-height:1;letter-spacing:.01em;box-shadow:0 0 0 2px rgba(255,210,61,.85),0 6px 16px rgba(20,10,60,.24);opacity:0;pointer-events:none;transition:background-color .15s ease-out,scale .12s ease-out}
 #skipBtn.on{pointer-events:auto}
 #skipBtn:hover{background:var(--glass-hi)}
@@ -369,7 +400,7 @@ body.spot #hud.on{opacity:.5}
 #thumb{position:absolute;inset:0;pointer-events:none}
 #thumb.gone{display:none}
 .tp{position:absolute;display:block;transform-origin:50% 50%;pointer-events:none}
-#thumb.live .tp,#thumb.live #playBtn,#thumb.live .tx{will-change:transform,opacity}
+#thumb.live .tp,#thumb.live #playBtn{will-change:transform,opacity}
 .tp.lit{filter:brightness(1.2) drop-shadow(0 0 16px rgba(255,236,150,.9))}
 /* the cannon group: its picture + a glint; the cage group: its whole picture, x's shadow on the floor, x, its front
    bars (x is inside, between them), a glint */
@@ -379,8 +410,7 @@ body.spot #hud.on{opacity:.5}
   -webkit-mask-image:linear-gradient(90deg,transparent,#000 30%,#000 70%,transparent);mask-image:linear-gradient(90deg,transparent,#000 30%,#000 70%,transparent)}
 .gband img{left:0;top:0;transform-origin:0 0}
 #thumb.live .gband,#thumb.live .gband img{will-change:transform,opacity}
-.tcage .tx{transform-origin:50% 92%}
-.tcage .xsh{position:absolute;display:block;border-radius:50%;transform-origin:50% 50%;background:radial-gradient(closest-side,rgba(120,56,0,.6),rgba(120,56,0,.28) 55%,rgba(120,56,0,0))}
+.tcage .tcry{position:absolute;display:block} /* x crying in its cage (the game's own art: Sprite 'cry') */
 #playBtn{position:absolute;pointer-events:auto;cursor:pointer;transform-origin:50% 50%}
 #playBtn img{position:relative;width:100%;height:100%;display:block;pointer-events:none;filter:drop-shadow(0 6px 10px rgba(80,20,0,.35))}
 #playBtn .pg{position:absolute;inset:-16%;border-radius:50%;pointer-events:none;opacity:0;background:radial-gradient(closest-side,rgba(255,226,120,.95),rgba(255,214,90,.55) 55%,rgba(255,214,90,0))}
@@ -389,12 +419,44 @@ body.spot #hud.on{opacity:.5}
 @keyframes ripple{0%{transform:scale(.95);opacity:.8}100%{transform:scale(1.45);opacity:0}}
 
 /* ---------- end ---------- */
-/* the Play again button sits in the clear sky between the score cloud and the cannon (stage units, in #overlay) */
-#endUI{position:absolute;left:836px;top:404px;width:112px;height:112px;margin:-56px 0 0 -56px;opacity:0;pointer-events:none;transform:translateY(14px) scale(.92);transition:opacity .2s ease-in,transform .2s ease-in}
-#endUI.on{opacity:1;transform:none;pointer-events:auto;transition:opacity .4s cubic-bezier(.22,1,.36,1),transform .5s cubic-bezier(.34,1.3,.64,1)}
-.rbtn{width:100%;height:100%;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 34% 26%,#ffe1a1 0 7%,#ffb03b 26%,#ff8a0d 58%,#ef6400 100%);box-shadow:0 0 0 5px #fff,0 7px 0 5px #b84e00,0 16px 28px rgba(20,10,60,.38);transition:scale .12s ease-out}
-.rbtn:active{scale:.94}
-.rbtn svg{width:46%;height:46%}
+/* the end screen (the user, 25 Nov 2026: "no need of this amazing panel… Quest complete, I want in a good text, in
+   upper side, and in between I want X should be dancing… and the cage behind of the X"; it replaced the design
+   review's results card): the title at the top, x dancing in the middle in front of its broken cage (EndX, in the
+   world), and Play again + Home under it. In stage units (in #overlay); EndCard in src/40_game.js moves them,
+   transform + opacity only.
+   The title is lettered like the game's own logo (t_logo): chunky letters (Trig Text) with a glossy yellow-to-orange
+   face, an orange edge under it, a thick dark-teal outline and a soft shadow. Each word is three layers of the same
+   text: its face (.f, the gradient clipped to the letters) over its orange edge (::after) over the teal outline
+   (::before, a text stroke), so no stroke ever crosses the face */
+#endTitle{position:absolute;left:0;top:52px;width:1672px;display:flex;justify-content:center;gap:.24em;white-space:nowrap;pointer-events:none;font-family:'Trig Text','Poppins',system-ui,sans-serif;font-weight:400;font-size:116px;line-height:1.12;letter-spacing:.012em;opacity:0}
+#endTitle .w{display:inline-block;position:relative;isolation:isolate;transform-origin:50% 85%} /* (isolated: its layers stack inside it) */
+#endTitle .f{position:relative;display:block;color:transparent;background:linear-gradient(180deg,#fffbd6 4%,#ffe86a 26%,#ffd21c 50%,#ffae14 76%,#ff8c0a 96%);-webkit-background-clip:text;background-clip:text}
+#endTitle .f::before,#endTitle .f::after{content:attr(data-t);position:absolute;left:0;top:0;z-index:-1;pointer-events:none}
+#endTitle .f::after{color:#e8700a;transform:translateY(.05em)}
+#endTitle .f::before{color:#0e5a62;-webkit-text-stroke:.15em #0e5a62;transform:translateY(.05em);filter:drop-shadow(0 .05em 0 #08424a) drop-shadow(0 .1em .09em rgba(8,28,48,.38))}
+/* Play again + Home, under x (they only take taps once they're up). The title and the buttons are rows as wide as
+   the stage, their content centred (GSAP moves them, so no CSS translate to centre them: it would be folded in) */
+#endBtns{position:absolute;left:0;top:808px;width:1672px;display:flex;justify-content:center;align-items:center;gap:26px;opacity:0;pointer-events:none}
+#endBtns.on .pill{pointer-events:auto}
+.pill{display:flex;align-items:center;gap:10px;height:72px;padding:0 30px 0 22px;border-radius:99px;font-size:28px;line-height:1;color:#fff;background:linear-gradient(#ffb03b,#ff8a0d 55%,#ef6400);box-shadow:0 0 0 4px #fff,0 6px 0 4px #b84e00,0 12px 20px rgba(20,10,60,.3);transition:transform .15s ease-out,filter .15s ease-out}
+.pill.alt{background:linear-gradient(#6b5bd6,#4b3aa8 55%,#3a2b8c);box-shadow:0 0 0 4px #fff,0 6px 0 4px #241868,0 12px 20px rgba(20,10,60,.3)}
+.pill svg{width:34px;height:34px;flex:none}
+.pill:hover{transform:translateY(-2px);filter:brightness(1.07)}
+.pill:active{transform:translateY(2px) scale(.97)}
+/* Play again leads, a size up from Home; once it is up, its white ring ripples out (cream: gold was lost on the wood)
+   and a gleam crosses it now and then, asking for the tap (EndCard.invite: GSAP moves .rip and .gleam i, transform +
+   opacity only) */
+#againBtn{position:relative;height:80px;padding:0 34px 0 26px;font-size:31px}
+#againBtn svg{width:37px;height:37px}
+#againBtn .rip{position:absolute;inset:-4px;border-radius:inherit;border:4px solid #fff6d2;opacity:0;pointer-events:none}
+#againBtn .gleam{position:absolute;inset:0;border-radius:inherit;overflow:hidden;pointer-events:none}
+#againBtn .gleam i{position:absolute;top:-12%;bottom:-12%;left:-45%;width:30%;background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.5),rgba(255,255,255,0))}
+/* short labels with no voice: a hint over FIRE, and a banner under the cloud ("Watch how!"). Skip's look */
+.note{position:absolute;left:0;top:0;translate:-50% 0;padding:10px 24px 9px;border-radius:99px;background:var(--glass);color:#fff;font-size:26px;line-height:1.15;white-space:nowrap;text-align:center;box-shadow:0 0 0 2.5px rgba(255,210,61,.9),0 8px 18px rgba(20,10,60,.28);opacity:0;transform:translateY(10px) scale(.94);transition:opacity .2s ease-in,transform .2s ease-in;pointer-events:none}
+.note.on{opacity:1;transform:none;transition:opacity .28s ease-out,transform .45s cubic-bezier(.34,1.45,.64,1)}
+#banner{left:560px;top:272px;translate:-50% 0;padding:12px 36px 11px;border-radius:26px}
+#banner b{display:block;font-weight:600;font-size:34px}
+#banner span{display:block;font-size:22px;color:#ffe08a;margin-top:2px}
 
 /* ---------- rotate hint ---------- */
 #rotate{position:fixed;inset:0;display:none;place-items:center;text-align:center;background:rgba(20,12,60,.9);color:#fff;font-size:20px;line-height:1.45;padding:30px;z-index:20}
@@ -420,7 +482,7 @@ html:not(.fit) #stage,html:not(.fit) #stageTop{visibility:hidden} /* (until fitS
   <div id="stage">
     <div id="world" class="title">
       <div id="bg"><img class="bl" id="bgSky" src="assets/img/bg_sky.webp" alt=""><div class="bl" id="bgSun"></div><img class="bl" id="bgMount" src="assets/img/bg_mount.webp" alt=""><div class="bl" id="bgBirds"></div><img class="bl" id="bgTrees" src="assets/img/bg_trees.webp" alt=""><div class="bl" id="bgJungle"></div><div class="bl plant" id="bgPlantL"><img src="assets/img/bg_plantL.webp" alt=""></div><div class="bl plant" id="bgPlantR"><img src="assets/img/bg_plantR.webp" alt=""></div><img class="bl" id="bgDeck" src="assets/img/bg_deck.webp" alt=""></div>
-      <div id="cloud"><img class="cl" src="assets/img/cloud.webp" alt=""><div id="qCard"><span id="qTab"></span></div><div id="eqBox"><div id="eq"></div></div></div>
+      <div id="cloud"><i class="chz"></i><img class="cl" src="assets/img/cloud.webp" alt=""><img class="clr" data-src="assets/img/cloud_rim.webp" alt=""><div id="qCard"><span id="qTab"></span></div><div id="eqBox"><div id="eq"></div></div></div>
       <div id="ground"></div>
       <div id="cannon">
         <div id="cannonBody"><img id="c1" data-src="assets/img/cannon1.webp" alt=""><img id="c2" data-src="assets/img/cannon2.webp" alt="" style="display:none"></div>
@@ -442,14 +504,20 @@ html:not(.fit) #stage,html:not(.fit) #stageTop{visibility:hidden} /* (until fitS
       <div id="spotRing2"></div>
       <div id="spotGhost" class="ball" aria-hidden="true"></div>
       <img id="spotHand" data-src="assets/img/hand.webp" alt="" aria-hidden="true" draggable="false">
-      <div id="endUI"><button id="againBtn" class="rbtn" data-i18n-attr="aria-label:btnPlayAgain"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg></button></div>
+      <div id="banner" class="note" aria-live="polite"></div>
+      <div id="tip" class="note" aria-live="polite"></div>
+      <div id="endTitle" role="heading" aria-level="1" aria-live="polite"></div>
+      <div id="endBtns">
+        <button id="againBtn" class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg><span data-i18n="btnPlayAgain"></span><i class="rip" aria-hidden="true"></i><i class="gleam" aria-hidden="true"><i></i></i></button>
+        <button id="homeBtn" class="pill alt"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11 12 4l8.5 7"/><path d="M6 9.5V20h4.5v-5.5h3V20H18V9.5"/></svg><span data-i18n="btnHome"></span></button>
+      </div>
     </div>
   </div>
   <div id="vig"></div>
   <canvas id="fx"></canvas>
   <!-- the caption sits above the FX canvas (cannon smoke never covers its words), in stage units but not moved by
        the camera; what flies (#worldTop) still passes over it -->
-  <div id="stageTop"><div id="capPos"><div id="cap"><canvas class="bg"></canvas><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h3l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7"/></svg><span class="txt"></span></div></div><div id="worldTop"><div id="fly"></div></div></div>
+  <div id="stageTop"><div id="capPos"><div id="cap"><canvas class="bg"></canvas><span class="txt"></span></div></div><div id="worldTop"><div id="fly"></div></div></div>
   <div id="flash"></div>
   <div id="hud">
     <button id="pauseBtn" class="hbtn" data-i18n-attr="aria-label:btnPause"><img data-src="assets/img/pause.webp" alt=""></button>

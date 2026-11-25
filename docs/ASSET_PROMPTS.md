@@ -239,3 +239,24 @@ Put the PNGs in a folder such as `new art/`, named like the files above. Then th
 - trimmed and resized to the current layout (art-space 1672 × 941), so nothing moves on screen;
 - re-fitted for the cannon sockets, so loaded balls still tuck under the gold rings;
 - given game-drawn labels: ball numbers (already done today), the FIRE text and the ribbon tagline.
+
+---
+
+## Design review of 23 Nov 2026: optional new art
+
+These are for the two review points that code can't fix. The glossy style of the game's current art is kept, so attach the named files from `assets/img/` as references. Paste each prompt into ChatGPT together with its references.
+
+### A. A tray that shares the cannon's viewing angle
+Review: "The cannon is front-on while the tray is in perspective; align their angles." Attach `cannon1.webp` and `rack.webp`.
+
+```
+Redraw the attached wooden ball tray so it is seen from the same viewing angle as the attached cannon: straight from the front, at the cannon's eye level, not from above. Keep the tray's design: an orange-brown wooden trough with metal corner brackets and rope wraps at both ends, long and low, with room for 8 round orbs in one row. Empty: no orbs, no glowing slot, no text. The same glossy 2D cartoon style, colours and outline weight as the cannon. Transparent background, a wide 1600 x 260 px canvas, sharp edges.
+```
+Then the tray is recut with `tools/cut_ui_elements.py`, and `RACK` is measured again.
+
+### B. x alone, sad, without its cage (to bring back x's struggle on the start screen)
+The start screen now uses x crying in its cage, the same art as in the game. If x should push and rattle the bars again, as it did before, the game needs x without the cage, so the cage's bars can stay in front of it. Attach `x_cry.webp` and `x_dance.webp`.
+
+```
+The same character as the attached images (a chubby purple letter x with white cartoon gloves, big round eyes and a small mouth), alone with no cage, full body, front view, standing. Sad and teary: worried eyebrows, tears welling in its eyes, a small frown. Both gloves up at shoulder height, open, as if gripping bars. The same art style, colours and outline weight as the attached images. Transparent background, square 1024 x 1024 px, the character filling about 80% of the height.
+```
