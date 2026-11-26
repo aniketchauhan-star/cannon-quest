@@ -954,13 +954,13 @@ const BALL_ART = 0.96; // the orb's share of its picture (ball_*.webp: the orb i
 const RACK = { left: 233, top: 795, w: 1206, srcW: 1618, holesX: [212.3, 382.4, 552.5, 722.7, 892.8, 1063.0, 1233.1, 1403.2], holeY: 59.5, bot: 185.4, edges: [2, 1616], seat: 11 }; // (11: each ball rests on the trough's floor, its bottom ~16 px behind the front rail, so it sits in the tray instead of hovering on the rail)
 const BALL_D = 110, MUZZLE = { x: CANNON.x, y: CANNON.bottom - CANNON.h + 14 }; // (BALL_D = the .ball size in the CSS)
 // the equation cloud, far off in the sky and well clear of the cannon: Cloud.apply draws #cloud (card included) at
-// CLOUD_FAR of its size, about its transform-origin (world 828, 277). Where a shot hits (on the card), and its middle.
+// CLOUD_FAR of its size, about its transform-origin (world 828, 276). Where a shot hits (on the card), and its middle.
 // The cannon, the tray and its orbs are 10 % smaller and the cloud smaller too (the user, 26 Nov 2026: "cloud, cannon
 // and ops and its stands should slightly small"), so the question board fits above the cloud at the top of the
-// screen: the cloud's top is at y 160 (the board ends at 132) and its round belly at 339, floating over a band of
-// clear sky above the far hills (their ridge is at 345–348 under its lowest bump). (26 Nov 2026, later: "clouds
-// slightly big": 0.72 → 0.78, the equation's font 84 → 78 px, so the words stay the size they were in a bigger cloud)
-const CLOUD_FAR = 0.78, CLOUD_HIT = { x: 828, y: 283 }, CLOUD_MID = { x: 828, y: 250 };
+// screen: the cloud's top is at y 150 (the board ends at 132) and its round belly at 343, floating just above the far
+// hills (their ridge is at 345–348 under its lowest bump). (26 Nov 2026, later, twice: "clouds slightly big": 0.72 →
+// 0.78 → 0.84, the equation's font 84 → 72 px, so the words stay the size they were, with more cloud round them)
+const CLOUD_FAR = 0.84, CLOUD_HIT = { x: 828, y: 283 }, CLOUD_MID = { x: 828, y: 247 };
 // background layers cut from the user's deck picture (tools/cut_deck_bg.py): how much each follows the camera (1 =
 // the deck, with its railing and plants, where the cannon stands; less = farther away, so it drifts less). Moved by
 // transform only, when the camera moves. Each layer holds ~25 bg px of picture under the edge of the one in front
@@ -3048,7 +3048,7 @@ const BIRD_SVG = '<span class="bb"><svg viewBox="0 0 44 30"><path class="w" d="M
 // Birds keep to the open sky either side of the cloud and never cross it (the user, 26 Nov 2026: "the birds should
 // not overlap with the cloud"): a flock glides in from one side of the screen and comes down into the trees on that
 // side, or rises out of them and flies off that side. They meet the treetops at BIRD_SKY (art px), well clear of the
-// cloud (x 617–1039, y 160–339) and of the question board at the top, also with the camera leaning in (their layer
+// cloud (x 601–1055, y 150–343) and of the question board at the top, also with the camera leaning in (their layer
 // drifts at most ~40 px against the cloud's). The birds of a flock follow one another along the same line, a moment
 // apart, each a little above or below it.
 const BIRD_SKY = { left: [370, 490], right: [1180, 1300], edgeY: [185, 255], treeY: [440, 470] };
@@ -3579,7 +3579,7 @@ function roundTimeline(opts = {}) {
 // eq1 is the equation right after the shot; when the shot added a number to a bracket, two more beats follow: the
 // bracket is multiplied out, then the numbers are joined ("3(x + 2) − 6 = 15" → "3x + 6 − 6 = 15" → "3x = 15").
 // last: the shot that frees x (no reading pause after it: the freeing starts as the equation settles)
-const SHOT_CAM = { WIND: { fx: CX, fy: 465, z: 1.04 }, FOLLOW: { fx: CX, fy: 460, z: 1.03 }, READ: { fx: CX, fy: 455, z: 1.04 } };
+const SHOT_CAM = { WIND: { fx: CX, fy: 455, z: 1.04 }, FOLLOW: { fx: CX, fy: 460, z: 1.03 }, READ: { fx: CX, fy: 455, z: 1.04 } };
 function addShot(tl, t0, i, b, eq0, eq1, first = true, last = false) {
   const B = Motion.BEAT, to = { ...CLOUD_HIT };
   let p = null, inL = null, inR = null, ms = null, tg = null, tail = null, tails = null;
@@ -3710,7 +3710,7 @@ function addFreed(tl, t0, opts = {}) {
     FX.bolt(xe ? EqUI.worldAt(xe) : { ...CLOUD_HIT }, cagePt(), B.BOLT); Sound.whistle();
     Vignette.to(0.4, B.BOLT + B.CRACK * 0.5);
   }, null, tz);
-  camDrive(tl, tz - 0.2, { fx: 1040, fy: 450, z: Motion.reduced ? 1 : CAGE.zoom }, 0.2 + B.BOLT + B.CRACK, Ease.inOutCubic); // (the cloud and the tray stay in view; the cloud's top stays under the question board)
+  camDrive(tl, tz - 0.2, { fx: 1040, fy: 440, z: Motion.reduced ? 1 : CAGE.zoom }, 0.2 + B.BOLT + B.CRACK, Ease.inOutCubic); // (the cloud and the tray stay in view; the cloud's top stays under the question board)
   // 2) it strikes the cage, and x pushes three times: it cracks further each time (the user's cracks, played at CAGE.T / CRACK)
   tl.call(() => { const w = cagePt(); FX.star(w.x, w.y, '#efe0ff', 220, 0.3, { n: 8 }); FX.burst(w.x, w.y, '#c58bff', 18, 380, { white: 0.3 }); Sound.rumble(); Stage.hit({ trauma: 0.16, zoom: 0.012 }); }, null, tc);
   drive(B.CRACK, (e, k) => CageBreak.strain(k * CAGE.T), Ease.linear, tl, tc);

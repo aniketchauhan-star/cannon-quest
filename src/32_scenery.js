@@ -112,7 +112,7 @@ const BIRD_SVG = '<span class="bb"><svg viewBox="0 0 44 30"><path class="w" d="M
 // Birds keep to the open sky either side of the cloud and never cross it (the user, 26 Nov 2026: "the birds should
 // not overlap with the cloud"): a flock glides in from one side of the screen and comes down into the trees on that
 // side, or rises out of them and flies off that side. They meet the treetops at BIRD_SKY (art px), well clear of the
-// cloud (x 617–1039, y 160–339) and of the question board at the top, also with the camera leaning in (their layer
+// cloud (x 601–1055, y 150–343) and of the question board at the top, also with the camera leaning in (their layer
 // drifts at most ~40 px against the cloud's). The birds of a flock follow one another along the same line, a moment
 // apart, each a little above or below it.
 const BIRD_SKY = { left: [370, 490], right: [1180, 1300], edgeY: [185, 255], treeY: [440, 470] };

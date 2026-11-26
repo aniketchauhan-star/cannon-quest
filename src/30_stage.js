@@ -33,13 +33,13 @@ const BALL_ART = 0.96; // the orb's share of its picture (ball_*.webp: the orb i
 const RACK = { left: 233, top: 795, w: 1206, srcW: 1618, holesX: [212.3, 382.4, 552.5, 722.7, 892.8, 1063.0, 1233.1, 1403.2], holeY: 59.5, bot: 185.4, edges: [2, 1616], seat: 11 }; // (11: each ball rests on the trough's floor, its bottom ~16 px behind the front rail, so it sits in the tray instead of hovering on the rail)
 const BALL_D = 110, MUZZLE = { x: CANNON.x, y: CANNON.bottom - CANNON.h + 14 }; // (BALL_D = the .ball size in the CSS)
 // the equation cloud, far off in the sky and well clear of the cannon: Cloud.apply draws #cloud (card included) at
-// CLOUD_FAR of its size, about its transform-origin (world 828, 277). Where a shot hits (on the card), and its middle.
+// CLOUD_FAR of its size, about its transform-origin (world 828, 276). Where a shot hits (on the card), and its middle.
 // The cannon, the tray and its orbs are 10 % smaller and the cloud smaller too (the user, 26 Nov 2026: "cloud, cannon
 // and ops and its stands should slightly small"), so the question board fits above the cloud at the top of the
-// screen: the cloud's top is at y 160 (the board ends at 132) and its round belly at 339, floating over a band of
-// clear sky above the far hills (their ridge is at 345–348 under its lowest bump). (26 Nov 2026, later: "clouds
-// slightly big": 0.72 → 0.78, the equation's font 84 → 78 px, so the words stay the size they were in a bigger cloud)
-const CLOUD_FAR = 0.78, CLOUD_HIT = { x: 828, y: 283 }, CLOUD_MID = { x: 828, y: 250 };
+// screen: the cloud's top is at y 150 (the board ends at 132) and its round belly at 343, floating just above the far
+// hills (their ridge is at 345–348 under its lowest bump). (26 Nov 2026, later, twice: "clouds slightly big": 0.72 →
+// 0.78 → 0.84, the equation's font 84 → 72 px, so the words stay the size they were, with more cloud round them)
+const CLOUD_FAR = 0.84, CLOUD_HIT = { x: 828, y: 283 }, CLOUD_MID = { x: 828, y: 247 };
 // background layers cut from the user's deck picture (tools/cut_deck_bg.py): how much each follows the camera (1 =
 // the deck, with its railing and plants, where the cannon stands; less = farther away, so it drifts less). Moved by
 // transform only, when the camera moves. Each layer holds ~25 bg px of picture under the edge of the one in front
