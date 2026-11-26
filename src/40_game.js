@@ -462,7 +462,8 @@ const sockSpot = (i = 0) => () => { const h = Cannon.holes()[i]; return Spot.wor
 const eqSpot = () => Spot.boxOf(EqUI.el);
 const cannonSpot = () => Spot.boxOf([$('#c1'), $('#c2'), $('#fireBtn')]); // (the hidden body has no box, so only the one showing counts)
 const orbsSpot = () => Spot.boxOf(Rack.balls.filter((b) => b.where === 'rack').map((b) => b.el));
-const ballSpot = (b) => () => { const r = Rack.restPos(b.holder); return Spot.worldBox(r.x, r.y - 11, BALL_D, BALL_D + 22); }; // (room for its hop above the cup)
+// (a circle, front on like the orb, as the tray's hint rings are: the user, 26 Nov 2026; room for its hop above the cup)
+const ballSpot = (b) => () => { const r = Rack.restPos(b.holder); return Spot.worldBox(r.x, r.y - 11, BALL_D + 22, BALL_D + 22); };
 const fireSpot = () => Spot.boxOf($('#fireBtn'));
 async function tutorialLoad() {
   G.taught1 = true; G.tutSkip = false;
@@ -487,7 +488,7 @@ async function tutorialLoad() {
     const guide = ROUNDS[G.idx].guide || [];
     Rack.balls.forEach((b) => (b.guide = guide.some((g) => parseOp(g).label === b.op.label)));
     const gb = Rack.balls.find((b) => b.guide);
-    if (gb) { G.spotOnly = gb; Spot.show(ballSpot(gb), { hand: true, sx: 1.2, sy: 1.2, pad: 26, also: sockSpot(0), sx2: 1.25, sy2: 1.25, pad2: 26 }); }
+    if (gb) { G.spotOnly = gb; Spot.show(ballSpot(gb), { hand: true, sx: 1.15, sy: 1.15, pad: 18, also: sockSpot(0), sx2: 1.25, sy2: 1.25, pad2: 26 }); }
     else Rack.glowWave();
     VO.say('tutTapOrb', 0.5);
     // 5) it flies into the cannon; once it has landed in its socket, the spotlight moves to FIRE (the loaded socket

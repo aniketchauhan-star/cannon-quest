@@ -1528,12 +1528,12 @@ const Cannon = {
 
 // ---------- rack with 8 holders + the physical operation balls ----------
 const Rack = {
-  holes: [], glows: [], balls: [], enterY: 0,
+  holes: [], balls: [], enterY: 0,
   applyEnter() {
     const tr = this.enterY ? `translateY(${this.enterY.toFixed(1)}px)` : '';
     if (tr === this.lastTr) return; // only when it moves
     this.lastTr = tr;
-    for (const id of ['#rack', '#rackFront', '#bshadows', '#hglows', '#rackShadow']) $(id).style.transform = tr;
+    for (const id of ['#rack', '#rackFront', '#bshadows', '#rackShadow']) $(id).style.transform = tr;
   },
   init() {
     const sc = RACK.w / RACK.srcW, img = $('#rack');
@@ -1558,8 +1558,6 @@ const Rack = {
       d.innerHTML = '<i class="cast"></i><i class="pool"></i>';
       sh.appendChild(d); d.cast = d.firstChild; d.pool = d.lastChild; d.lift = 0; return d;
     });
-    const box = $('#hglows');
-    this.glows = this.holes.map((h) => { const g = document.createElement('div'); g.className = 'hglow'; Object.assign(g.style, { left: h.x + 'px', top: h.y + 'px' }); box.appendChild(g); return g; });
     // a faint ghost of the orb in its cup while the orb is away (in the cannon, in a hand, fired), so the tray never
     // shows a hole (design review, 23 Nov 2026: "a loaded ball leaves an empty hole in the tray… show a faint ghost
     // in the slot"); the orbs keep their places (and their keys 1–8)
@@ -1581,9 +1579,15 @@ const Rack = {
       .then(() => { b.land = 1; Sound.pop(0.8 + i * 0.06); })));
   },
   restPos(i) { const h = this.holes[i]; return { x: h.x, y: h.y + RACK.seat, s: 1 }; }, // seated: the bottom dips into the cup
+  // the orbs light up one after another, left to right, each with a gold ring round its own rim (front on, a circle:
+  // the user, 26 Nov 2026, "in the corner of the circle in front view, not horizontal"), and hop in their cups
   glowWave() {
-    this.glows.forEach((g, i) => { g.classList.remove('on'); void g.offsetWidth; g.style.animationDelay = i * 0.08 + 's'; g.classList.add('on'); });
-    this.balls.forEach((b, i) => { if (b.where === 'rack') tween(0.5, (e, k) => (b.hop = Math.sin(k * Math.PI)), Ease.linear, i * 0.08); });
+    this.balls.forEach((b) => {
+      if (b.where !== 'rack') return;
+      const d = b.holder * 0.08, r = b.ring;
+      r.classList.remove('on'); void r.offsetWidth; r.style.animationDelay = d + 's'; r.classList.add('on');
+      tween(0.5, (e, k) => (b.hop = Math.sin(k * Math.PI)), Ease.linear, d);
+    });
   },
   // the cannon's blast shakes the tray: each ball hops 3–5 px in its cup, outward from the centre
   ripple() {
@@ -1598,13 +1602,13 @@ const Rack = {
 function createBall(opStr, i) {
   const op = parseOp(opStr), art = OP_ART[op.k], el = document.createElement('div'); // (its colour = its operation: OP_ART)
   el.className = 'ball';
-  // gl = guide halo, ao = shade where it sinks into the cup
-  el.innerHTML = `<i class="gl"></i><img src="${IMG}ball_${art}.webp" alt="" draggable="false"><i class="ao"></i><b>${labelHTML(op)}</b>`;
+  // gl = guide halo, ao = shade where it sinks into the cup, hr = the hint ring round its rim (Rack.glowWave)
+  el.innerHTML = `<i class="gl"></i><img src="${IMG}ball_${art}.webp" alt="" draggable="false"><i class="ao"></i><i class="hr"></i><b>${labelHTML(op)}</b>`;
   el.setAttribute('aria-label', op.label);
   $('#balls').appendChild(el);
   const r = Rack.restPos(i);
   el.style.transform = `translate(${r.x.toFixed(1)}px,${r.y.toFixed(1)}px) scale(0.001)`; // in its cup, too small to see or tap, until the next frame places it
-  const b = { op, i, art, hex: BALL_HEX[art], ink: BALL_INK[art], el, holder: i, where: 'rack', socket: -1, x: r.x, y: r.y, s: 1, r: 0, flight: null, hop: 0, guide: false, drop: 0, land: 0, hover: 0, hoverT: 0, scale: 1 };
+  const b = { ring: el.querySelector('.hr'), op, i, art, hex: BALL_HEX[art], ink: BALL_INK[art], el, holder: i, where: 'rack', socket: -1, x: r.x, y: r.y, s: 1, r: 0, flight: null, hop: 0, guide: false, drop: 0, land: 0, hover: 0, hoverT: 0, scale: 1 };
   el.addEventListener('pointerdown', (e) => { e.preventDefault(); Drag.down(b, e); }); // a press that moves is a drag, one that doesn't is a tap (Drag, src/40_game.js)
   el.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') b.hoverT = 1; });
   el.addEventListener('pointerleave', () => (b.hoverT = 0));

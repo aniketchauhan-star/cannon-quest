@@ -273,9 +273,6 @@ img{-webkit-user-drag:none;user-select:none}
 #fireBtn.gone{opacity:0;pointer-events:none;transition:opacity .35s ease-in} /* (the end card) */
 
 /* ---------- rack + balls ---------- */
-.hglow{position:absolute;width:126px;height:58px;margin:-29px 0 0 -63px;border-radius:50%;pointer-events:none;opacity:0;box-shadow:0 0 0 5px #ffe46b,0 0 28px 12px rgba(255,205,50,.85)}
-.hglow.on{animation:hg 1s ease-out 1}
-@keyframes hg{25%{opacity:1}100%{opacity:0}}
 .ball{position:absolute;left:0;top:0;width:122px;height:122px;margin:-61px 0 0 -61px;cursor:grab;touch-action:none} /* = BALL_D */
 /* a ball in the player's hand (Drag): it rides in #fly, above everything, with a soft shadow dropped below it */
 .ball.drag img{filter:drop-shadow(0 16px 10px rgba(40,18,4,.34))}
@@ -289,6 +286,12 @@ body.dragging,body.dragging *{cursor:grabbing !important}
 .ball.guide .gl{animation:guide .9s ease-in-out infinite alternate}
 @keyframes guide{from{opacity:.55;transform:scale(.9)}to{opacity:1;transform:scale(1.06)}}
 .ball.hov img{filter:brightness(1.12)}
+/* the hint ring (Rack.glowWave): a gold circle hugging the orb's rim, front on (inset 2% = the orb's edge in its
+   picture, BALL_ART), with a soft glow kept short so it never spills onto the next orb. It rides in the orb, so it hops
+   with it and its bottom goes behind the tray's front rail as the orb's does */
+.ball .hr{position:absolute;inset:2%;border-radius:50%;pointer-events:none;opacity:0;box-shadow:0 0 0 5px #ffe46b,0 0 12px 5px rgba(255,200,40,.8),inset 0 0 10px 2px rgba(255,240,160,.75)}
+.ball .hr.on{animation:hg 1s ease-out 1 both}
+@keyframes hg{0%{opacity:0;transform:scale(.94)}25%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.03)}}
 .ball.gone{display:none}
 /* the orbs' tap area reaches a little past each orb (not into the next one), so it stays 44 px or more on a small phone */
 .ball::before{content:'';position:absolute;inset:-7%;border-radius:50%}
@@ -396,7 +399,7 @@ body.spot #hud.on{opacity:.5}
 #thumb.live .gsh{will-change:transform,opacity}
 
 /* ---------- start screen: the user's mockup (art/start_screen/start_mockup.png), see src/35_title.js ---------- */
-#world.title #cloud,#world.title #cannon,#world.title #rack,#world.title #rackFront,#world.title #balls,#world.title #bshadows,#world.title #hglows,#world.title #ground,#world.title #cannonFront{visibility:hidden}
+#world.title #cloud,#world.title #cannon,#world.title #rack,#world.title #rackFront,#world.title #balls,#world.title #bshadows,#world.title #ground,#world.title #cannonFront{visibility:hidden}
 #thumb{position:absolute;inset:0;pointer-events:none}
 #thumb.gone{display:none}
 .tp{position:absolute;display:block;transform-origin:50% 50%;pointer-events:none}
@@ -494,7 +497,6 @@ html:not(.fit) #stage,html:not(.fit) #stageTop{visibility:hidden} /* (until fitS
       <div id="balls"></div>
       <div id="cannonFront"><div id="cannonFrontBody"><img id="c1f" data-src="assets/img/cannon1_front.webp" alt=""><img id="c2f" data-src="assets/img/cannon2_front.webp" alt="" style="display:none"></div></div>
       <img id="rackFront" class="spr" data-src="assets/img/rack_front.webp" alt="">
-      <div id="hglows"></div>
     </div>
     <div id="thumb">
       <button id="playBtn" data-i18n-attr="aria-label:btnPlay"><span class="pg"></span><span class="rp"></span><img src="assets/img/playbtn.webp" alt="" data-i18n-attr="alt:btnPlay"></button></div>
