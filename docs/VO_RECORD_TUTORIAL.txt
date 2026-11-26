@@ -21,7 +21,7 @@ HOW TO RECORD
 
 THE LINES
 
- 1. Welcome to Cannon Quest!
+ 1. Welcome to Cannon Quest.
     (the player has just tapped Play; excited, inviting)
 
  2. This is the equation.
@@ -33,10 +33,10 @@ THE LINES
  4. These are the orbs.
     (first game: the spotlight is on the orbs in the tray; calm and clear, like showing a friend)
 
- 5. Tap the −5 orb!
+ 5. Tap the −5 orb.
     (first game: a hand taps the -5 orb; once tapped it flies into the cannon; calm and clear, like showing a friend; say −5 as "minus five")
 
- 6. Now tap FIRE!
+ 6. Now tap FIRE.
     (first game: the -5 is in the cannon; a hand taps the FIRE button; calm and clear, like showing a friend)
 
 (Then: ~/.cache/crown-quest/venv/bin/python tools/vo_split.py recordings/<file> tutorial, and ./build.sh.)

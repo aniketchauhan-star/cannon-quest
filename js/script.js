@@ -4309,7 +4309,7 @@ async function boot() {
   // start screen): the play scene's pictures (the markup's data-src ones, the tray's balls) + the font, then the sound effects
   for (const im of document.querySelectorAll('img[data-src]')) { im.src = im.dataset.src; im.removeAttribute('data-src'); }
   Rack.balls = ROUNDS[0].balls.map((s, i) => createBall(s, i)); G.rackFor = ROUNDS[0];
-  const font = document.fonts && document.fonts.load ? Promise.all([document.fonts.load('600 64px Poppins', '0123456789+−×='), document.fonts.load('700 64px Poppins', 'Let\'s free 0123456789+−×÷=()!'), document.fonts.load("italic 400 64px 'Swifty Math'", 'x'), document.fonts.load("400 64px 'Trig Text'", '0123456789+−×÷=()')]).catch(() => {}) : null;
+  const font = document.fonts && document.fonts.load ? Promise.all([document.fonts.load('600 64px Poppins', '0123456789+−×='), document.fonts.load('700 64px Poppins', 'Let\'s free 0123456789+−×÷=().'), document.fonts.load("italic 400 64px 'Swifty Math'", 'x'), document.fonts.load("400 64px 'Trig Text'", '0123456789+−×÷=()')]).catch(() => {}) : null;
   Pics.game = Pics.load(Pics.GAME, 15, font ? [font] : []);
   Pics.game.then(() => { CloudBurst.prepare(); CageBreak.load(); Pics.load(Pics.LATER, 30); }); // (the cloud's burst pieces are cut while the browser is idle; the cage's fracture is worked out; then x's dance and the end card's picture)
   const sfx = document.createElement('script'); sfx.src = 'js/sfx.js'; document.body.appendChild(sfx); // (it hands itself to Sound.loadSfx)
