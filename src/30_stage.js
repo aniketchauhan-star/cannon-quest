@@ -538,12 +538,14 @@ const Cloud = {
   // blurred, and come together sharpening, while wisps of vapour melt into it; its picture takes over as they meet,
   // the equation pops in, and a twinkle runs over it. (Under reduced motion, or before the pieces are cut, it simply
   // fades in.) Then the card's tab drops on
-  async enter() {
+  // withEq false: it forms bare, and its equation comes after it, on its own (showEq: the first question, after Play)
+  async enter(withEq = true) {
     CloudBurst.reset();
     const box = $('#eqBox'), m = CLOUD_MID;
+    const bare = () => { if (!withEq) Object.assign(box.style, { opacity: '0', transform: 'scale(0.8)' }); };
     QCard.hide();
     Sound.swoosh();
-    CloudBurst.make();
+    CloudBurst.make(); bare();
     if (CloudBurst.bits.length && !Motion.still()) {
       Object.assign(this, { x: 0, y: 0, s: 1, a: 1, blur: 0, rot: 0, jx: 0, jy: 0 });
       FX.gather(m.x, m.y + 26, 460, 180, 18);
@@ -551,19 +553,34 @@ const Cloud = {
       box.style.willChange = 'transform,opacity'; box.style.opacity = '0';
       await tween(Motion.BEAT.CLOUD_IN, (e, k) => {
         CloudBurst.gather(k);
+        if (!withEq) return;
         const q = clamp((k - 0.72) / 0.28, 0, 1); // the equation pops in as the cloud closes
         box.style.opacity = Ease.outQuad(q).toFixed(3); box.style.transform = `scale(${(0.8 + 0.2 * Ease.outBackSoft(q)).toFixed(4)})`;
       }, Ease.linear);
-      CloudBurst.reset();
-      Sound.chime();
-      FX.star(m.x - 150, m.y + 12, '#ffd84a', 60, 0.5, { n: 4, paint: true }); FX.star(m.x + 170, m.y - 22, '#ffffff', 48, 0.5, { n: 4, delay: 0.12 });
-      FX.star(m.x + 40, m.y - 80, '#ffd84a', 44, 0.5, { n: 4, paint: true, delay: 0.22 });
+      CloudBurst.reset(); bare();
+      if (withEq) this.twinkle();
     } else {
       Object.assign(this, { x: 0, y: 18, s: 0.88, a: 0, blur: 0, rot: 0, jx: 0, jy: 0 });
       FX.gather(m.x, m.y + 26, 380, 150, 14);
       await tween(Motion.BEAT.CLOUD_IN, (e, k) => { this.a = Ease.outQuad(Math.min(1, k * 1.4)); this.s = lerp(0.88, 1, e); this.y = lerp(18, 0, e); }, Ease.outBackSoft);
     }
     QCard.pop();
+  },
+  // a chime and a twinkle over the cloud as its equation arrives
+  twinkle() {
+    const m = CLOUD_MID;
+    Sound.chime();
+    FX.star(m.x - 150, m.y + 12, '#ffd84a', 60, 0.5, { n: 4, paint: true }); FX.star(m.x + 170, m.y - 22, '#ffffff', 48, 0.5, { n: 4, delay: 0.12 });
+    FX.star(m.x + 40, m.y - 80, '#ffd84a', 44, 0.5, { n: 4, paint: true, delay: 0.22 });
+  },
+  // the equation pops onto a cloud that formed without it (the user, 26 Nov 2026: "last cloud come and then equation
+  // come"): it grows in from 0.8 with a soft overshoot as it fades in, and the cloud twinkles
+  async showEq() {
+    const box = $('#eqBox');
+    box.style.willChange = 'transform,opacity';
+    this.twinkle();
+    await tween(0.55, (e, k) => { box.style.opacity = Ease.outQuad(Math.min(1, k * 1.8)).toFixed(3); box.style.transform = `scale(${(0.8 + 0.2 * e).toFixed(4)})`; }, Ease.outBackSoft);
+    Object.assign(box.style, { opacity: '', transform: '', willChange: '' });
   },
   // in a round's timeline, when the question is over (x freed or not), the CLOUDBURST (the user, 23 Nov: "extreme…
   // cloudburst after x compose"). 1) It draws in its breath: it squeezes a little and trembles harder and harder, a
@@ -1891,6 +1908,7 @@ const Spot = {
   show(target, opts = {}) {
     this.target = target; this.opts = opts; this.active = true;
     document.body.classList.add('spot');
+    this.glow(opts.glow);
     if (opts.drag) this.dress(opts.drag.ball);
     this.demoT0 = Clock.t + 0.5; this.held = false; this.dropped = false; // (the lesson starts once the spotlight has settled)
     this.place(true);
@@ -1935,7 +1953,15 @@ const Spot = {
     gsap.to(rs, { x: b.x, y: b.y, sx: 1, sy: 1, duration: Motion.d(D), ease: Motion.EASE.OUT });
     return rs;
   },
+  // opts.glow: what lights up while the spotlight is on it (.lit: a glow on the thing itself, no ring round it)
+  lit: [],
+  glow(els) {
+    for (const e of this.lit) e.classList.remove('lit');
+    this.lit = (els || []).filter(Boolean);
+    for (const e of this.lit) e.classList.add('lit');
+  },
   hide() {
+    this.glow(null);
     if (!this.active && !this.ringOn) return;
     this.active = false; this.target = null; this.held = false;
     document.body.classList.remove('spot');

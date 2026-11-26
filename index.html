@@ -304,10 +304,11 @@ body.dragging,body.dragging *{cursor:grabbing !important}
 .ball.guide .gl{animation:guide .9s ease-in-out infinite alternate}
 @keyframes guide{from{opacity:.55;transform:scale(.9)}to{opacity:1;transform:scale(1.06)}}
 .ball.hov img{filter:brightness(1.12)}
-/* the hint ring (Rack.glowWave): a gold circle hugging the orb's rim, front on (inset 2% = the orb's edge in its
-   picture, BALL_ART), with a soft glow kept short so it never spills onto the next orb. It rides in the orb, so it hops
-   with it and its bottom goes behind the tray's front rail as the orb's does */
-.ball .hr{position:absolute;inset:2%;border-radius:50%;pointer-events:none;opacity:0;box-shadow:0 0 0 5px #ffe46b,0 0 12px 5px rgba(255,200,40,.8),inset 0 0 10px 2px rgba(255,240,160,.75)}
+/* the hint glow (Rack.glowWave): a soft golden light round the orb's rim (inset 2% = the orb's edge in its picture,
+   BALL_ART), no outline (the user, 26 Nov 2026: "only glow… no need of the yellow circle"), kept short so it never
+   spills onto the next orb. It rides in the orb, so it hops with it and its bottom goes behind the tray's front rail
+   as the orb's does */
+.ball .hr{position:absolute;inset:2%;border-radius:50%;pointer-events:none;opacity:0;box-shadow:0 0 12px 6px rgba(255,214,60,.85),0 0 22px 9px rgba(255,190,30,.35)}
 .ball .hr.on{animation:hg 1s ease-out 1 both}
 @keyframes hg{0%{opacity:0;transform:scale(.94)}25%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.03)}}
 .ball.gone{display:none}
@@ -390,8 +391,15 @@ body.dragging,body.dragging *{cursor:grabbing !important}
 /* the drag lesson's see-through ball (Spot.demo): a copy of the −5 with a soft light round it */
 #spotGhost{pointer-events:none;cursor:default;opacity:0}
 #spotGhost img{filter:drop-shadow(0 0 8px rgba(255,248,200,.95)) drop-shadow(0 0 18px rgba(255,214,70,.6))}
-#spotRing,#spotRing2{position:absolute;left:0;top:0;width:200px;height:200px;border-radius:50%;pointer-events:none;opacity:0;
-  border:5px solid rgba(255,228,120,.95);box-shadow:0 0 16px 5px rgba(255,196,50,.55),inset 0 0 12px 3px rgba(255,220,100,.35)}
+/* no ring round what the spotlight shows (the user, 26 Nov 2026: "remove the outline of the yellow… only glow I want
+   when highlight, no need of the yellow circle"): the rings still lead the hand (Spot.rs) but are never drawn. The
+   thing itself glows instead (Spot.glow puts .lit on it): the equation, the cannon, FIRE; the guided orb has its own
+   glow (.ball.guide), the tray's orbs their hint glow (.hr) */
+#spotRing,#spotRing2{position:absolute;left:0;top:0;width:200px;height:200px;pointer-events:none;opacity:0;display:none}
+#eq.lit{filter:drop-shadow(0 0 5px rgba(255,240,170,.95)) drop-shadow(0 0 14px rgba(255,200,40,.8))}
+#c1.lit,#c2.lit{filter:drop-shadow(0 0 10px rgba(255,236,150,.95)) drop-shadow(0 0 26px rgba(255,196,40,.7))}
+#fireBtn.lit .fgl{animation:flit 1s ease-in-out infinite alternate}
+@keyframes flit{from{opacity:.35}to{opacity:.85}}
 #spotHand{position:absolute;left:0;top:0;width:90px;height:126.9px;margin:-32.6px 0 0 -34.4px;display:block;max-width:none;pointer-events:none;opacity:0;transform-origin:34.4px 32.6px;filter:drop-shadow(0 6px 7px rgba(20,10,60,.35))} /* your hand (art/ui/hand.webp); its fingertip is the point that taps */
 body.spot #hud.on{opacity:.5}
 #hud.on{opacity:1}

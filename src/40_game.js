@@ -471,9 +471,9 @@ async function tutorialLoad() {
   // 1) the equation, 2) the cannon, 3) the orbs: one at a time, everything else dimmed (not blurred: the equation
   // must stay readable in every step, user 23 Nov)
   const parts = [
-    [eqSpot, { sx: 1.3, sy: 1.45, pad: 30 }, 'tutEquation'], // (Poppins Bold is wider than Trig Text: the ring clears the 7 and the x)
-    [cannonSpot, { sx: 1.12, sy: 1.12, pad: 20 }, 'tutCannon'],
-    [orbsSpot, { sx: 1.5, sy: 2, pad: 24 }, 'tutOrbs'],
+    [eqSpot, { sx: 1.3, sy: 1.45, pad: 30, glow: [EqUI.el] }, 'tutEquation'], // (Poppins Bold is wider than Trig Text: the clear hole takes the 7 and the x)
+    [cannonSpot, { sx: 1.12, sy: 1.12, pad: 20, glow: [$('#c1'), $('#c2')] }, 'tutCannon'],
+    [orbsSpot, { sx: 1.5, sy: 2, pad: 24 }, 'tutOrbs'], // (the orbs glow one after another: Rack.glowWave)
   ];
   for (const [box, o, line] of parts) {
     if (G.tutSkip) return null;
@@ -498,7 +498,7 @@ async function tutorialLoad() {
       G.hooks.fireStep = true; G.spotOnly = 'fire';
       wait(Motion.BEAT.TAP_FLY + 0.15).then(() => {
         if (G.tutSkip || !G.fireResolve) return; // (skipped, or FIRE already tapped)
-        Spot.show(fireSpot, { hand: true, sx: 1.12, sy: 1.3, pad: 20, also: sockSpot(0), sx2: 1.25, sy2: 1.25, pad2: 26 });
+        Spot.show(fireSpot, { hand: true, sx: 1.12, sy: 1.3, pad: 20, also: sockSpot(0), sx2: 1.25, sy2: 1.25, pad2: 26, glow: [$('#fireBtn')] });
         VO.say('tutTapFire', 0.5);
       });
     };
@@ -794,16 +794,14 @@ async function onPlay() {
   QCard.hide();
   $('#world').classList.remove('title');
   // …and the play scene eases out from that close framing while it builds itself ONE PART AT A TIME (the user, 26 Nov
-  // 2026: "when I tap the start button, then the things should come one by one… first cloud come, then cannon come,
-  // then orb, then its stand"): each part comes only once the one before has landed, never two at once. The cloud
-  // forms with the equation on it; the cannon pops up onto the deck; the orbs' stand (the tray) slides up; the orbs
-  // drop into its cups one after another (the stand comes first, so they have somewhere to land); x's cage falls
-  // onto the deck last. Under reduced motion each part is simply there (tween, Motion.d)
+  // 2026: "when I tap the start button, then the things should come one by one"), each part only once the one before
+  // has landed, never two at once, and the cloud LAST, its equation after it ("the cloud should come in last… all the
+  // things come, cannon and others, then last cloud come and then equation come"): the cannon pops up onto the deck;
+  // the orbs' stand (the tray) slides up; the orbs drop into its cups one after another; x's cage falls onto the deck;
+  // the cloud forms in the sky, bare; then the equation pops onto it. Under reduced motion each part is simply there
   Stage.camTo({ fx: CX, fy: CY, z: 1 }, 1.1, Ease.outCubic);
   const gap = () => wait(Motion.d(0.15));
   await wait(Motion.d(0.3)); // (the board has dropped in)
-  await Cloud.enter();
-  await gap();
   await tween(0.75, (e) => (Cannon.morphS = Math.max(0.001, e)), Ease.outBack);
   Sound.clunk(); Cannon.groundDust(true); Stage.hit({ trauma: 0.12, ky: 6 });
   await gap();
@@ -815,6 +813,10 @@ async function onPlay() {
     .then(() => { b.land = 1; Sound.pop(0.75 + i * 0.06); })));
   await gap();
   await DeckCage.drop();
+  await gap();
+  await Cloud.enter(false);
+  await gap();
+  await Cloud.showEq();
   $('#hud').classList.add('on');
   G.firstEntry = true;
   runSession();
