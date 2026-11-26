@@ -295,8 +295,7 @@ const Music = {
 // WebP (0.25 of the template), the template's own proportions, so its whole thick wooden frame shows.
 // It hangs at the top of the screen, in the middle, above the cloud and never over it (#capPos; the user, 26 Nov
 // 2026: "the question panel should come in top between… in upper side of the cloud"), so it drops in from above and
-// lifts away; on the end screen, whose title has the top, it waits on the left, halfway down (#capPos.end), rising in
-// as it did before. The letter x in its words is set as mathematics, as on the cloud (.mx). It has no speaker icon, and no
+// lifts away; the end screen has no board, its line is only said (Caption.place). The letter x in its words is set as mathematics, as on the cloud (.mx). It has no speaker icon, and no
 // round hear-again button waits between lines (the user, 25 Nov 2026: "remove the X and sound icon… from this
 // entire game"): the board is only the words.
 const BOARD = { SLICE: [96, 100, 81, 100], EDGE: [48, 50, 40.5, 50] };
@@ -324,8 +323,6 @@ function mathX(el, word) {
 }
 const Caption = {
   el: null, bg: null, txt: null, pic: null, words: [], want: 0, shown: 0, ready: false, id: 0,
-  // which way it comes in and goes (px): down from the top of the screen, or up on the end screen's left
-  dy() { return this.el.parentElement.classList.contains('end') ? 1 : -1; },
   init() {
     if (this.el) return;
     this.el = $('#cap'); this.bg = this.el.querySelector('.bg'); this.txt = this.el.querySelector('.txt');
@@ -371,12 +368,12 @@ const Caption = {
     if (!document.fonts || document.fonts.status === 'loaded') this.W = w; // (kept once measured in the board's own font)
     return w;
   },
-  // the line laid out with every word hidden. The board is fitted and painted for the whole line first (at the top:
-  // its one size, the words centred in it), and only then are the words shrunk for their pop (a shrunk word would
-  // measure narrower and the line could wrap once they grow)
+  // the line laid out with every word hidden. The board is fitted and painted for the whole line first (its one
+  // size, the words centred in it), and only then are the words shrunk for their pop (a shrunk word would measure
+  // narrower and the line could wrap once they grow)
   lay(text) {
     gsap.killTweensOf(this.words);
-    const W = this.end ? 0 : this.wide();
+    const W = this.wide();
     const ws = (this.words = this.build(text));
     this.fit();
     if (W > (parseFloat(this.txt.style.width) || 0)) this.txt.style.width = W + 'px';
@@ -384,24 +381,24 @@ const Caption = {
     gsap.set(ws, { opacity: 0, y: 12, scale: 0.92 });
   },
   up() { return !!this.el && this.el.classList.contains('on'); },
-  // where it hangs: at the top during play, or on the left, halfway down, on the end screen (whose title has the
-  // top). A board that is up lifts away first and moves while out of sight; the next line brings it in at its place
+  // the end screen has no board: it lifts away and its line is only said (the user, 26 Nov 2026: "yh text box ki
+  // need ni hai… sirf VO mei hona chahie"); Play again brings it back at the top with the next line
   end: false,
   place(end) {
-    this.init(); this.end = !!end;
+    this.init(); this.end = !!end; this.ready = false;
     this.hide();
   },
-  pos() { this.el.parentElement.classList.toggle('end', this.end); },
   // the line's voice has started: the board comes in (or glides over from the line before), its words still hidden
   start(text) {
     this.init();
+    if (this.end) return; // (the end screen: voice only)
     const { el, bg, txt } = this, id = ++this.id, up = this.up() && +gsap.getProperty(el, 'opacity') > 0.05;
     this.want = 0; this.shown = 0; this.ready = false;
     el.classList.add('on');
     gsap.killTweensOf(el);
     if (!up) { // enter: the board is laid out (in its place) before it shows
-      gsap.killTweensOf([txt, bg]); this.pos(); this.lay(text);
-      gsap.set(txt, { opacity: 1, y: 0 }); gsap.set(bg, { x: 0, y: 0, scaleX: 1, scaleY: 1 }); gsap.set(el, { y: 14 * this.dy(), scale: 0.97 });
+      gsap.killTweensOf([txt, bg]); this.lay(text);
+      gsap.set(txt, { opacity: 1, y: 0 }); gsap.set(bg, { x: 0, y: 0, scaleX: 1, scaleY: 1 }); gsap.set(el, { y: -14, scale: 0.97 });
       this.ready = true;
     } else { // the board stays: the old words fade out and the new words come as said (a board whose size did change
       // glides from the old box to the new one)
@@ -429,15 +426,14 @@ const Caption = {
       Motion.to(w, { opacity: 1, y: 0, scale: 1, duration: Motion.DUR.NORMAL * 0.8, ease: Motion.EASE.POP, delay: Motion.d(k * 0.06) }));
     this.shown = m;
   },
-  // it lifts away (only when the screen changes: the end screen, Play again, the sound turned off), and takes its place
-  // for the next line once out of sight
+  // it lifts away (only when the screen changes: the end screen, Play again, the sound turned off)
   hide() {
     this.init();
     this.id++;
-    if (!this.el.classList.contains('on')) { if (!gsap.isTweening(this.el)) this.pos(); return; } // (gone, or going: it moves when out of sight)
+    if (!this.el.classList.contains('on')) return; // (gone, or going)
     this.el.classList.remove('on');
     gsap.killTweensOf(this.el);
-    Motion.to(this.el, { opacity: 0, y: this.dy() > 0 ? -6 : -10, scale: 0.98, duration: Motion.DUR.FAST + 0.03, ease: Motion.EASE.IN, onComplete: () => this.pos() });
+    Motion.to(this.el, { opacity: 0, y: -10, scale: 0.98, duration: Motion.DUR.FAST + 0.03, ease: Motion.EASE.IN });
   },
 };
 

@@ -722,7 +722,7 @@ const EndCard = {
 };
 async function showEnd(sid) {
   G.state = 'end';
-  Caption.place(true); // (the end title has the top: the board lifts away and says the end line on the left, halfway down)
+  Caption.place(true); // (the board lifts away: the end line is only said, no board)
   Note.hide(); Cannon.hideOrder(true);
   $('#fireBtn').classList.add('gone');
   Cannon.leave(); // (the cannon has done its work: it shrinks away, x takes the middle of the deck)
@@ -743,7 +743,7 @@ async function restartGame() {
   Motion.killAll(); Skip.hide(true);
   VO.stop(); G.inputOn = false; G.fireResolve = null; G.hooks = {}; G.helping = false; G.spotOnly = null; G.celebrate = false; Drag.cancel(); Spot.hide();
   EndCard.hide(); Note.hide(); Cannon.hideOrder(true);
-  Caption.place(false); // (the board lifts away, and comes back at the top with the next line)
+  Caption.place(false); // (the board comes back at the top with the next line)
   $('#fireBtn').classList.remove('gone');
   Cannon.back();
   Cannon.setFireActive(false); for (let i = 0; i < 2; i++) Cannon.highlight(i, false);

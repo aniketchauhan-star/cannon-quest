@@ -23,7 +23,7 @@ Status of each point in the review, in its own order. "Done" items are in the bu
 ## Gameplay screen
 | Review | Status |
 |---|---|
-| Instruction panel → speech bubble from X | **Undone** (25 Nov 2026): the user wanted the board back on the left, halfway down, as before. The results card moved to the middle, under the cloud (x 500), so the end line wraps beside it (the card is gone since 25 Nov; the end line still wraps clear of x's cage). |
+| Instruction panel → speech bubble from X | **Undone** (25 Nov 2026): the user wanted the board back on the left, halfway down, as before. The results card moved to the middle, under the cloud (x 500), so the end line wraps beside it (the card is gone since 25 Nov). Since 26 Nov the end screen has no board at all: its line is only said (the user: "yh text box ki need ni hai… sirf VO mei hona chahie"). |
 | Equation cloud: motion, rim light, haze | **Done.** |
 | Equation readability (x/3, +20%) | **Done.** The equation is 20% bigger, and x is the letter x, so a fraction no longer shrinks an icon. |
 | Cage on the deck, contact shadows | **Done.** The cage has its own contact shadow; the cannon and tray already had them. |
