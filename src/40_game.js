@@ -722,7 +722,7 @@ const EndCard = {
 };
 async function showEnd(sid) {
   G.state = 'end';
-  $('#capPos').classList.add('end'); // (the end title has the top: the board says the end line on the left, halfway down)
+  Caption.place(true); // (the end title has the top: the board lifts away and says the end line on the left, halfway down)
   Note.hide(); Cannon.hideOrder(true);
   $('#fireBtn').classList.add('gone');
   Cannon.leave(); // (the cannon has done its work: it shrinks away, x takes the middle of the deck)
@@ -743,7 +743,7 @@ async function restartGame() {
   Motion.killAll(); Skip.hide(true);
   VO.stop(); G.inputOn = false; G.fireResolve = null; G.hooks = {}; G.helping = false; G.spotOnly = null; G.celebrate = false; Drag.cancel(); Spot.hide();
   EndCard.hide(); Note.hide(); Cannon.hideOrder(true);
-  $('#capPos').classList.remove('end'); // (the board is back at the top)
+  Caption.place(false); // (the board lifts away, and comes back at the top with the next line)
   $('#fireBtn').classList.remove('gone');
   Cannon.back();
   Cannon.setFireActive(false); for (let i = 0; i < 2; i++) Cannon.highlight(i, false);
@@ -781,25 +781,40 @@ async function onPlay() {
   G.state = 'starting';
   $('#hud').classList.remove('ttl');
   Sound.init(); Sound.resume(); Music.start(); Sound.startAmbient();
-  G.welcome = VO.say('voWelcome', 0.15); // said while the scene builds itself
   flashScreen();
   // zoom-through: the camera punches toward the Play button while the start screen bursts away…
   Stage.camTo({ fx: TL.play.x, fy: TL.play.y, z: 1.15 }, 0.4, Ease.inCubic);
   await Title.exit();
+  // …then the welcome, and the question board drops in at the top with it (once the start screen's sign has gone
+  // from there); the board stays from now on, only its words change (Caption)
+  G.welcome = VO.say('voWelcome', 0.15);
   EqUI.setEq({ layers: initLayers(ROUNDS[0].eq), rhs: F(ROUNDS[0].rhs) }, false);
-  Cloud.y = -470; Cannon.morphS = 0.001; Rack.enterY = 330;
-  gsap.delayedCall(0.55, () => DeckCage.drop()); // x's cage falls onto the deck as the scene builds itself, after the cannon
+  Cloud.a = 0; Cloud.apply(Clock.t); Cannon.morphS = 0.001; Rack.enterY = 330; // (nothing of the scene shows before its turn)
+  Rack.balls.forEach((b) => { b.scale = 0.001; b.drop = 420; }); // (the orbs wait above their cups, too small to see)
   QCard.hide();
   $('#world').classList.remove('title');
-  // …and the play scene eases out from that close framing while it builds itself: the cloud with the question
-  // card first, then the tray, then the cannon, one after another (each lands with only a soft overshoot)
+  // …and the play scene eases out from that close framing while it builds itself ONE PART AT A TIME (the user, 26 Nov
+  // 2026: "when I tap the start button, then the things should come one by one… first cloud come, then cannon come,
+  // then orb, then its stand"): each part comes only once the one before has landed, never two at once. The cloud
+  // forms with the equation on it; the cannon pops up onto the deck; the orbs' stand (the tray) slides up; the orbs
+  // drop into its cups one after another (the stand comes first, so they have somewhere to land); x's cage falls
+  // onto the deck last. Under reduced motion each part is simply there (tween, Motion.d)
   Stage.camTo({ fx: CX, fy: CY, z: 1 }, 1.1, Ease.outCubic);
-  Sound.swoosh();
-  await Promise.all([
-    tween(Motion.BEAT.CLOUD_IN, (e) => (Cloud.y = -470 * (1 - e)), Ease.outBackSoft).then(() => QCard.pop()),
-    tween(0.9, (e) => (Rack.enterY = 330 * (1 - e)), Ease.outBackSoft, 0.18).then(() => Sound.settle()),
-    tween(0.75, (e) => (Cannon.morphS = Math.max(0.001, e)), Ease.outBack, 0.5).then(() => { Sound.clunk(); Cannon.groundDust(true); Stage.hit({ trauma: 0.12, ky: 6 }); }),
-  ]);
+  const gap = () => wait(Motion.d(0.15));
+  await wait(Motion.d(0.3)); // (the board has dropped in)
+  await Cloud.enter();
+  await gap();
+  await tween(0.75, (e) => (Cannon.morphS = Math.max(0.001, e)), Ease.outBack);
+  Sound.clunk(); Cannon.groundDust(true); Stage.hit({ trauma: 0.12, ky: 6 });
+  await gap();
+  Sound.whoosh(0.4);
+  await tween(0.8, (e) => (Rack.enterY = 330 * (1 - e)), Ease.outBackSoft);
+  Sound.settle();
+  await gap();
+  await Promise.all(Rack.balls.map((b, i) => tween(Motion.BEAT.BALL_DROP, (e, k) => { b.scale = Math.max(0.001, Math.min(1, k * 2.5)); b.drop = 420 * (1 - e); }, Ease.outBackSoft, i * 0.12)
+    .then(() => { b.land = 1; Sound.pop(0.75 + i * 0.06); })));
+  await gap();
+  await DeckCage.drop();
   $('#hud').classList.add('on');
   G.firstEntry = true;
   runSession();

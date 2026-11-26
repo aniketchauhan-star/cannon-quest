@@ -464,7 +464,7 @@ const Sound = {
     this.muted = m;
     if (this.ctx) this.master.gain.setTargetAtTime(m ? 0 : 0.95, this.ctx.currentTime, 0.05);
     Music.setMuted(m);
-    if (m) VO.stop();
+    if (m) { VO.stop(); if (!SILENT) Caption.hide(); } // (no voice, no board: the next voiced line brings it back)
   },
   play(key, { vol = 1, rate = 1, t = 0, verb = 0.08, pan = null, vary = 0.04 } = {}) {
     if (Motion.skipping) return true; // a skipped shot is silent (and no synth fallback either)
@@ -668,16 +668,21 @@ const Music = {
   },
 };
 
-// ---------- the caption board (what the voice is saying): the wooden board on the left (CSS #cap) ----------
-// It comes WITH the voice, and only with it (the user, 20 Nov: "the question template comes word by word, with the
-// voiceover… otherwise this will not come"). Nothing shows until a line's voice really starts (its recorded clip
-// playing): then the board rises in (ease-out) with the first word, and each word pops in as it is said (upTo,
-// driven by the word clock Said, below). A line whose voice never starts (sound off, no clip recorded yet, a clip
-// that fails) shows no board at all. The board is sized for the whole line before its first word
-// (fit makes the text box exactly as wide as the line's longest row), so it never grows while the words come. A new
-// line while the board is up: the old words fade out and the board (.bg) glides from its old box to the new one
-// (FLIP: position + size, as it stays centred on its line), then the new words come. After the line it sinks away
-// (ease-in). GSAP, transform + opacity only (animation skill); under reduced motion or a Skip each step lands at once.
+// ---------- the caption board (what the voice is saying): the wooden board at the top (CSS #cap) ----------
+// Its words come WITH the voice, and only with it (the user, 20 Nov: "the question template comes word by word, with
+// the voiceover… otherwise this will not come"). Nothing shows until the first line's voice really starts (its
+// recorded clip playing): then the board drops in (ease-out) with the first word, and each word pops in as it is
+// said (upTo, driven by the word clock Said, below). From then on the board STAYS (the user, 26 Nov 2026: "when the
+// text come again and again, so that time do not remove the question tablet. The question tablet should constant"):
+// it keeps its line until the next line's voice starts, then the old words fade out and the new ones come, one by
+// one, as they are said; a line cut short shows whole. At the top it has one size all game (wide: the widest line
+// it says there), so nothing of it moves between lines. It lifts away (ease-in) only when the screen changes: the end
+// screen (place), Play again, or the sound turned off (no voice, no words: the next voiced line brings it back). A
+// line whose voice never starts (no clip recorded yet, a clip that fails) leaves the board as it is. The board is
+// sized for the whole line before its first word (fit: the text box exactly as wide as the line's longest row), so it
+// never grows while the words come (a board whose size does change between lines, on the end screen, glides from
+// its old box to the new one: FLIP). GSAP, transform + opacity only (animation skill); under reduced motion or a
+// Skip each step lands at once.
 // The board is the user's question template (assets/img/question_board.webp, cut by tools/cut_question_board.py)
 // as a 9-slice, painted by paint() into the canvas .bg in whole device pixels, so its nine pieces meet exactly
 // (a CSS border-image leaves faint lines across the cream at the stage's fractional scales). SLICE: where the
@@ -734,15 +739,12 @@ const Caption = {
     const w = Math.max(...rs.map((q) => q.right)) - Math.min(...rs.map((q) => q.left));
     t.style.width = Math.ceil(w / k + 0.5) + 'px';
   },
-  // the line laid out with every word hidden: each word is its own span (.w), so it can pop in on its own, and a
-  // one-letter word (x) never ends a row: it shares an unbreakable group (.nw) with the word after it. The board is
-  // fitted and painted for the whole line first, and only then are the words shrunk for their pop (a shrunk word
-  // would measure narrower and the line could wrap once they grow)
-  lay(text) {
+  // a line's words into the text box: each word is its own span (.w), so it can pop in on its own, and a one-letter
+  // word (x) never ends a row: it shares an unbreakable group (.nw) with the word after it
+  build(text) {
     const t = this.txt, m = String(text).match(/\S+/g) || [], n = m.length;
-    gsap.killTweensOf(this.words);
     t.textContent = '';
-    const ws = (this.words = m.map((s) => { const w = document.createElement('span'); w.className = 'w'; mathX(w, s); return w; }));
+    const ws = m.map((s) => { const w = document.createElement('span'); w.className = 'w'; mathX(w, s); return w; });
     for (let i = 0; i < n;) {
       if (i) t.append(' ');
       let j = i; while (j < n - 1 && [...m[j]].length === 1) j++;
@@ -750,10 +752,41 @@ const Caption = {
       else { const g = document.createElement('span'); g.className = 'nw'; for (let k = i; k <= j; k++) { if (k > i) g.append(' '); g.append(ws[k]); } t.append(g); }
       i = j + 1;
     }
-    this.fit(); this.paint();
+    return ws;
+  },
+  // ONE size for the board at the top, all game long: as wide as the widest line it can say there (every voiced line
+  // but the end screen's), measured once in its font (the user, 26 Nov 2026: "do not remove the question tablet. The
+  // question tablet should constant"), so it never grows, shrinks or glides between lines: only its words change
+  W: 0,
+  wide() {
+    if (this.W) return this.W;
+    const keys = typeof VO_FILES !== 'undefined' ? VO_FILES.filter((k) => !/^voEnd/.test(k)) : [];
+    let w = 0;
+    for (const k of keys) { this.build(T(k)); this.fit(); w = Math.max(w, parseFloat(this.txt.style.width) || 0); }
+    if (!document.fonts || document.fonts.status === 'loaded') this.W = w; // (kept once measured in the board's own font)
+    return w;
+  },
+  // the line laid out with every word hidden. The board is fitted and painted for the whole line first (at the top:
+  // its one size, the words centred in it), and only then are the words shrunk for their pop (a shrunk word would
+  // measure narrower and the line could wrap once they grow)
+  lay(text) {
+    gsap.killTweensOf(this.words);
+    const W = this.end ? 0 : this.wide();
+    const ws = (this.words = this.build(text));
+    this.fit();
+    if (W > (parseFloat(this.txt.style.width) || 0)) this.txt.style.width = W + 'px';
+    this.paint();
     gsap.set(ws, { opacity: 0, y: 12, scale: 0.92 });
   },
   up() { return !!this.el && this.el.classList.contains('on'); },
+  // where it hangs: at the top during play, or on the left, halfway down, on the end screen (whose title has the
+  // top). A board that is up lifts away first and moves while out of sight; the next line brings it in at its place
+  end: false,
+  place(end) {
+    this.init(); this.end = !!end;
+    this.hide();
+  },
+  pos() { this.el.parentElement.classList.toggle('end', this.end); },
   // the line's voice has started: the board comes in (or glides over from the line before), its words still hidden
   start(text) {
     this.init();
@@ -761,11 +794,12 @@ const Caption = {
     this.want = 0; this.shown = 0; this.ready = false;
     el.classList.add('on');
     gsap.killTweensOf(el);
-    if (!up) { // enter: the board is laid out before it shows
-      gsap.killTweensOf([txt, bg]); this.lay(text);
+    if (!up) { // enter: the board is laid out (in its place) before it shows
+      gsap.killTweensOf([txt, bg]); this.pos(); this.lay(text);
       gsap.set(txt, { opacity: 1, y: 0 }); gsap.set(bg, { x: 0, y: 0, scaleX: 1, scaleY: 1 }); gsap.set(el, { y: 14 * this.dy(), scale: 0.97 });
       this.ready = true;
-    } else { // the old words fade out, the board glides from the old box to the new one, the new words come as said
+    } else { // the board stays: the old words fade out and the new words come as said (a board whose size did change
+      // glides from the old box to the new one)
       gsap.killTweensOf(txt);
       Motion.to(txt, { opacity: 0, y: -5, duration: Motion.DUR.FAST * 0.8, ease: Motion.EASE.IN, onComplete: () => {
         if (id !== this.id) return;
@@ -783,20 +817,22 @@ const Caption = {
   },
   // the first n words are up: the ones not yet shown pop in (a playful back.out; a few at once ripple 0.06 s apart)
   upTo(n) {
-    n = Math.min(n, this.words.length);
-    if (n > this.want) this.want = n;
-    if (!this.ready || this.want <= this.shown) return;
-    this.words.slice(this.shown, this.want).forEach((w, k) =>
+    if (n > this.want) this.want = n; // (Infinity: the whole line)
+    const m = Math.min(this.want, this.words.length);
+    if (!this.ready || m <= this.shown) return;
+    this.words.slice(this.shown, m).forEach((w, k) =>
       Motion.to(w, { opacity: 1, y: 0, scale: 1, duration: Motion.DUR.NORMAL * 0.8, ease: Motion.EASE.POP, delay: Motion.d(k * 0.06) }));
-    this.shown = this.want;
+    this.shown = m;
   },
+  // it lifts away (only when the screen changes: the end screen, Play again, the sound turned off), and takes its place
+  // for the next line once out of sight
   hide() {
     this.init();
     this.id++;
-    if (!this.el.classList.contains('on')) return;
+    if (!this.el.classList.contains('on')) { if (!gsap.isTweening(this.el)) this.pos(); return; } // (gone, or going: it moves when out of sight)
     this.el.classList.remove('on');
     gsap.killTweensOf(this.el);
-    Motion.to(this.el, { opacity: 0, y: this.dy() > 0 ? -6 : -10, scale: 0.98, duration: Motion.DUR.FAST + 0.03, ease: Motion.EASE.IN });
+    Motion.to(this.el, { opacity: 0, y: this.dy() > 0 ? -6 : -10, scale: 0.98, duration: Motion.DUR.FAST + 0.03, ease: Motion.EASE.IN, onComplete: () => this.pos() });
   },
 };
 
@@ -872,8 +908,7 @@ const VO = {
     if (this.cur) { try { this.cur.pause(); } catch (e) { /* ignore */ } this.cur = null; } // never let two lines overlap
     if (this.finish) this.finish();
     Said.begin(my, text, key);
-    // the line before's board stays until this line's voice starts (then glides over to it); if none starts soon, it goes
-    if (Caption.up()) wait(1.2).then(() => { if (my === this.token && !Said.heard) Caption.hide(); });
+    // (the board keeps the line before until this line's voice starts: then its words change)
     const clip = VO.has(key);
     if (clip) Music.duck(true);
     const est = (0.9 + text.length * 0.058) / this.RATE, t0 = performance.now(); // (how long it takes to say, at RATE)
@@ -898,7 +933,7 @@ const VO = {
     if (this.busy === spoken) this.busy = null;
     if (my !== this.token) return;
     await wait(hold);
-    if (my === this.token) { Caption.hide(); Music.duck(false); }
+    if (my === this.token) Music.duck(false); // (the board stays up, with this line on it, until the next line)
   },
   // say a line once the one being said has ended, so lines follow each other instead of cutting each other
   // off (a newer line, or stop(), drops it: the newest moment wins)
@@ -910,7 +945,7 @@ const VO = {
   },
   stop() {
     this.token++;
-    Said.stop(); Caption.hide();
+    Said.stop(); Caption.upTo(Infinity); // (a line cut short: the board shows it whole, and stays)
     if (this.cur) { try { this.cur.pause(); } catch (e) { /* ignore */ } this.cur = null; }
     const f = this.finish; this.finish = null; if (f) f();
     Music.duck(false);
@@ -4056,7 +4091,7 @@ const EndCard = {
 };
 async function showEnd(sid) {
   G.state = 'end';
-  $('#capPos').classList.add('end'); // (the end title has the top: the board says the end line on the left, halfway down)
+  Caption.place(true); // (the end title has the top: the board lifts away and says the end line on the left, halfway down)
   Note.hide(); Cannon.hideOrder(true);
   $('#fireBtn').classList.add('gone');
   Cannon.leave(); // (the cannon has done its work: it shrinks away, x takes the middle of the deck)
@@ -4077,7 +4112,7 @@ async function restartGame() {
   Motion.killAll(); Skip.hide(true);
   VO.stop(); G.inputOn = false; G.fireResolve = null; G.hooks = {}; G.helping = false; G.spotOnly = null; G.celebrate = false; Drag.cancel(); Spot.hide();
   EndCard.hide(); Note.hide(); Cannon.hideOrder(true);
-  $('#capPos').classList.remove('end'); // (the board is back at the top)
+  Caption.place(false); // (the board lifts away, and comes back at the top with the next line)
   $('#fireBtn').classList.remove('gone');
   Cannon.back();
   Cannon.setFireActive(false); for (let i = 0; i < 2; i++) Cannon.highlight(i, false);
@@ -4115,25 +4150,40 @@ async function onPlay() {
   G.state = 'starting';
   $('#hud').classList.remove('ttl');
   Sound.init(); Sound.resume(); Music.start(); Sound.startAmbient();
-  G.welcome = VO.say('voWelcome', 0.15); // said while the scene builds itself
   flashScreen();
   // zoom-through: the camera punches toward the Play button while the start screen bursts away…
   Stage.camTo({ fx: TL.play.x, fy: TL.play.y, z: 1.15 }, 0.4, Ease.inCubic);
   await Title.exit();
+  // …then the welcome, and the question board drops in at the top with it (once the start screen's sign has gone
+  // from there); the board stays from now on, only its words change (Caption)
+  G.welcome = VO.say('voWelcome', 0.15);
   EqUI.setEq({ layers: initLayers(ROUNDS[0].eq), rhs: F(ROUNDS[0].rhs) }, false);
-  Cloud.y = -470; Cannon.morphS = 0.001; Rack.enterY = 330;
-  gsap.delayedCall(0.55, () => DeckCage.drop()); // x's cage falls onto the deck as the scene builds itself, after the cannon
+  Cloud.a = 0; Cloud.apply(Clock.t); Cannon.morphS = 0.001; Rack.enterY = 330; // (nothing of the scene shows before its turn)
+  Rack.balls.forEach((b) => { b.scale = 0.001; b.drop = 420; }); // (the orbs wait above their cups, too small to see)
   QCard.hide();
   $('#world').classList.remove('title');
-  // …and the play scene eases out from that close framing while it builds itself: the cloud with the question
-  // card first, then the tray, then the cannon, one after another (each lands with only a soft overshoot)
+  // …and the play scene eases out from that close framing while it builds itself ONE PART AT A TIME (the user, 26 Nov
+  // 2026: "when I tap the start button, then the things should come one by one… first cloud come, then cannon come,
+  // then orb, then its stand"): each part comes only once the one before has landed, never two at once. The cloud
+  // forms with the equation on it; the cannon pops up onto the deck; the orbs' stand (the tray) slides up; the orbs
+  // drop into its cups one after another (the stand comes first, so they have somewhere to land); x's cage falls
+  // onto the deck last. Under reduced motion each part is simply there (tween, Motion.d)
   Stage.camTo({ fx: CX, fy: CY, z: 1 }, 1.1, Ease.outCubic);
-  Sound.swoosh();
-  await Promise.all([
-    tween(Motion.BEAT.CLOUD_IN, (e) => (Cloud.y = -470 * (1 - e)), Ease.outBackSoft).then(() => QCard.pop()),
-    tween(0.9, (e) => (Rack.enterY = 330 * (1 - e)), Ease.outBackSoft, 0.18).then(() => Sound.settle()),
-    tween(0.75, (e) => (Cannon.morphS = Math.max(0.001, e)), Ease.outBack, 0.5).then(() => { Sound.clunk(); Cannon.groundDust(true); Stage.hit({ trauma: 0.12, ky: 6 }); }),
-  ]);
+  const gap = () => wait(Motion.d(0.15));
+  await wait(Motion.d(0.3)); // (the board has dropped in)
+  await Cloud.enter();
+  await gap();
+  await tween(0.75, (e) => (Cannon.morphS = Math.max(0.001, e)), Ease.outBack);
+  Sound.clunk(); Cannon.groundDust(true); Stage.hit({ trauma: 0.12, ky: 6 });
+  await gap();
+  Sound.whoosh(0.4);
+  await tween(0.8, (e) => (Rack.enterY = 330 * (1 - e)), Ease.outBackSoft);
+  Sound.settle();
+  await gap();
+  await Promise.all(Rack.balls.map((b, i) => tween(Motion.BEAT.BALL_DROP, (e, k) => { b.scale = Math.max(0.001, Math.min(1, k * 2.5)); b.drop = 420 * (1 - e); }, Ease.outBackSoft, i * 0.12)
+    .then(() => { b.land = 1; Sound.pop(0.75 + i * 0.06); })));
+  await gap();
+  await DeckCage.drop();
   $('#hud').classList.add('on');
   G.firstEntry = true;
   runSession();
