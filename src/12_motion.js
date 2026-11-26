@@ -57,6 +57,7 @@ const Motion = {
     TAP_FLY: 0.6,    // a tapped ball flies into its socket (or back to the tray)
     MORPH: 0.6,      // the cannon changes to 1 or 2 sockets
     CAGE_IN: 0.55,   // a new cage falls onto the deck (once the next cloud has formed; play starts when it has landed)
+    SAID: 1.0,       // a line on the question board, once said, stays this long to be read, then the board lifts away (Caption.said)
   },
   reduced: false, skipping: false, live: new Set(),
   init() {

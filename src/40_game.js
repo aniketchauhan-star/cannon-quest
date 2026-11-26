@@ -436,6 +436,7 @@ function playShots(opts = {}) {
   const { tl, solved } = roundTimeline(opts);
   G.tl = tl;
   Cannon.live = 3; // the cannon gets its own layer now (at the tap), not mid-shot
+  Caption.hide(); // the shot goes: "Now tap FIRE." (or any line still up) lifts away (the user, 26 Nov 2026: "Tap fire wala instruction fire ke baad hta dena")
   return new Promise((res) => {
     tl.eventCallback('onComplete', () => { if (G.tl === tl) G.tl = null; G.celebrate = false; Skip.hide(); res(solved); });
     // Skip: the shot lands at its end, silently; the camera snaps to its final framing, no freeze or shake left
@@ -766,7 +767,7 @@ async function onPlay() {
   Stage.camTo({ fx: TL.play.x, fy: TL.play.y, z: 1.15 }, 0.4, Ease.inCubic);
   await Title.exit();
   // …then the welcome, and the question board drops in at the top with it (once the start screen's sign has gone
-  // from there); the board stays from now on, only its words change (Caption)
+  // from there); once said, it lifts away a moment later (Caption.said)
   G.welcome = VO.say('voWelcome', 0.15);
   EqUI.setEq({ layers: initLayers(ROUNDS[0].eq), rhs: F(ROUNDS[0].rhs) }, false);
   Cloud.a = 0; Cloud.apply(Clock.t); Cannon.morphS = 0.001; Rack.enterY = 330; // (nothing of the scene shows before its turn)

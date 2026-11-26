@@ -382,9 +382,10 @@ body.dragging,body.dragging *{cursor:grabbing !important}
    in top between… adjust the panel in upper side of the cloud… should not overlap with the cloud"); at most 1000
    wide, so every line is one row and the board stays one row tall (#capPos, in #stageTop: above the FX canvas, so
    cannon smoke never hides the words). The end screen has no board: its line is only said (the user, 26 Nov 2026:
-   "yh text box ki need ni hai… sirf VO mei hona chahie"). It drops in with the first line's voice and then STAYS (the user, 26 Nov 2026: "do
-   not remove the question tablet… constant"): between lines only its words change, the old ones fading out and each
-   new word popping in as it is said; it lifts away only when the screen changes (transform + opacity) */
+   "yh text box ki need ni hai… sirf VO mei hona chahie"). It drops in with a line's voice and lifts away a moment
+   after the line has been said (the user, 26 Nov 2026: "yh instruction jab bol diya hta dena"); between lines that
+   follow at once it stays and only its words change, the old ones fading out and each new word popping in as it is
+   said; "Now tap FIRE." stays until FIRE; the cheers as x is freed are voice only (Caption, VO; transform + opacity) */
 #overlay{position:absolute;inset:0;pointer-events:none}
 #capPos{position:absolute;left:0;top:10px;width:1672px;height:0;display:flex;justify-content:center;align-items:flex-start;pointer-events:none}
 #cap{position:relative;flex:none;max-width:1000px;padding:40px 42px 35px 42px;color:#4a2508;font-size:36px;line-height:1.3;letter-spacing:.005em;opacity:0;transform-origin:50% 0}

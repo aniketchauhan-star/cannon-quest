@@ -277,13 +277,18 @@ const Music = {
 // Its words come WITH the voice, and only with it (the user, 20 Nov: "the question template comes word by word, with
 // the voiceover… otherwise this will not come"). Nothing shows until the first line's voice really starts (its
 // recorded clip playing): then the board drops in (ease-out) with the first word, and each word pops in as it is
-// said (upTo, driven by the word clock Said, below). From then on the board STAYS (the user, 26 Nov 2026: "when the
-// text come again and again, so that time do not remove the question tablet. The question tablet should constant"):
-// it keeps its line until the next line's voice starts, then the old words fade out and the new ones come, one by
-// one, as they are said; a line cut short shows whole. At the top it has one size all game (wide: the widest line
-// it says there), so nothing of it moves between lines. It lifts away (ease-in) only when the screen changes: the end
-// screen (place), Play again, or the sound turned off (no voice, no words: the next voiced line brings it back). A
-// line whose voice never starts (no clip recorded yet, a clip that fails) leaves the board as it is. The board is
+// said (upTo, driven by the word clock Said, below). Once a line has been said, the board keeps it a moment to be
+// read (Motion.BEAT.SAID) and then lifts away (the user, 26 Nov 2026: "yh instruction jab bol diya hta dena", said()):
+// lines are there while they are being said, not left hanging. Lines that follow each other at once (the tutorial's
+// "This is the equation." → "This is the cannon." → …) keep the board up between them (the user, 26 Nov 2026: "when the
+// text come again and again… do not remove the question tablet"): the old words fade out and the new ones come, one
+// by one, as they are said; a line cut short shows whole. An instruction the player has to act on ("Now tap FIRE.")
+// stays until they do it (keep): the shot lifts the board away ("Tap fire wala instruction fire ke baad hta dena").
+// Some lines are voice only and never bring the board (the cheers as x is freed: the user, 26 Nov 2026: "Boom! x is
+// free yh sirf VO mei rhene do"). At the top it has one size all game (wide: the widest line it says there), so
+// nothing of it moves between lines. It also lifts away (ease-in) when the screen changes: the end screen (place),
+// Play again, or the sound turned off (no voice, no words: the next voiced line brings it back). A line whose voice
+// never starts (no clip recorded yet, a clip that fails) brings no board. The board is
 // sized for the whole line before its first word (fit: the text box exactly as wide as the line's longest row), so it
 // never grows while the words come (a board whose size does change between lines, on the end screen, glides from
 // its old box to the new one: FLIP). GSAP, transform + opacity only (animation skill); under reduced motion or a
@@ -323,6 +328,8 @@ function mathX(el, word) {
 }
 const Caption = {
   el: null, bg: null, txt: null, pic: null, words: [], want: 0, shown: 0, ready: false, id: 0,
+  keep: false, // the line on it is an instruction waiting for the player: it stays up until the shot (VO.KEEP)
+  linger: null, // a said line's moment to be read, before the board lifts away (said)
   init() {
     if (this.el) return;
     this.el = $('#cap'); this.bg = this.el.querySelector('.bg'); this.txt = this.el.querySelector('.txt');
@@ -357,12 +364,12 @@ const Caption = {
     return ws;
   },
   // ONE size for the board at the top, all game long: as wide as the widest line it can say there (every voiced line
-  // but the end screen's), measured once in its font (the user, 26 Nov 2026: "do not remove the question tablet. The
-  // question tablet should constant"), so it never grows, shrinks or glides between lines: only its words change
+  // but the end screen's and the voice-only ones), measured once in its font (the user, 26 Nov 2026: "do not remove
+  // the question tablet. The question tablet should constant"), so it never grows, shrinks or glides between lines
   W: 0,
   wide() {
     if (this.W) return this.W;
-    const keys = typeof VO_FILES !== 'undefined' ? VO_FILES.filter((k) => !/^voEnd/.test(k)) : [];
+    const keys = typeof VO_FILES !== 'undefined' ? VO_FILES.filter((k) => !/^voEnd/.test(k) && !VO.ONLY_SAID.test(k)) : [];
     let w = 0;
     for (const k of keys) { this.build(T(k)); this.fit(); w = Math.max(w, parseFloat(this.txt.style.width) || 0); }
     if (!document.fonts || document.fonts.status === 'loaded') this.W = w; // (kept once measured in the board's own font)
@@ -388,9 +395,11 @@ const Caption = {
     this.init(); this.end = !!end; this.ready = false;
     this.hide();
   },
-  // the line's voice has started: the board comes in (or glides over from the line before), its words still hidden
-  start(text) {
+  // the line's voice has started: the board comes in (or glides over from the line before), its words still hidden.
+  // keep: an instruction the player still has to carry out (it stays up after it has been said)
+  start(text, keep = false) {
     this.init();
+    this.stay(); this.keep = !!keep;
     if (this.end) return; // (the end screen: voice only)
     const { el, bg, txt } = this, id = ++this.id, up = this.up() && +gsap.getProperty(el, 'opacity') > 0.05;
     this.want = 0; this.shown = 0; this.ready = false;
@@ -426,9 +435,20 @@ const Caption = {
       Motion.to(w, { opacity: 1, y: 0, scale: 1, duration: Motion.DUR.NORMAL * 0.8, ease: Motion.EASE.POP, delay: Motion.d(k * 0.06) }));
     this.shown = m;
   },
-  // it lifts away (only when the screen changes: the end screen, Play again, the sound turned off)
+  // a line has been said (or cut short): the board keeps it a moment to be read (Motion.BEAT.SAID) and lifts away
+  // (the user, 26 Nov 2026: "yh instruction jab bol diya hta dena"). Not an instruction still waiting for the player
+  // (keep: the shot lifts that one), and not if the next line starts first (start / stay: the board stays up for it)
+  said() {
+    if (!this.up() || this.keep || this.linger) return;
+    this.linger = gsap.delayedCall(Motion.BEAT.SAID, () => { this.linger = null; this.hide(); }); // (on GSAP's clock: it waits while the game is paused)
+  },
+  // the next line is on its way: the board waits up for it
+  stay() { if (this.linger) { this.linger.kill(); this.linger = null; } },
+  // it lifts away: a line said and read, the shot (playShots: "Tap fire wala instruction fire ke baad hta dena"), a
+  // voice-only line, a skipped tutorial, or the screen changing (the end screen, Play again, the sound turned off)
   hide() {
     this.init();
+    this.stay(); this.keep = false;
     this.id++;
     if (!this.el.classList.contains('on')) return; // (gone, or going)
     this.el.classList.remove('on');
@@ -453,11 +473,11 @@ const Caption = {
 // , ; : . ! ? inside the line. A test robot (SILENT, no clip playing) runs on a clock at a speaking pace (cps:
 // weight a second). Pausing the game pauses the clock (and the clip).
 const Said = {
-  my: 0, text: '', at: [], from: [], total: 1, cps: 17, t: 0, heard: false, on: false, done: true, clip: null, words: null,
+  my: 0, text: '', key: '', board: true, at: [], from: [], total: 1, cps: 17, t: 0, heard: false, on: false, done: true, clip: null, words: null,
   begin(my, text, key) {
     this.stop();
     const w = typeof VO_WORDS !== 'undefined' && VO_WORDS[key];
-    Object.assign(this, { my, text, t: 0, heard: false, done: false, clip: null, at: [], from: [], words: w || null });
+    Object.assign(this, { my, text, key, board: !VO.ONLY_SAID.test(key), t: 0, heard: false, done: false, clip: null, at: [], from: [], words: w || null });
     const ms = [...String(text).matchAll(/\S+/g)];
     let c = 0;
     ms.forEach((m, i) => {
@@ -467,11 +487,12 @@ const Said = {
     });
     this.total = Math.max(1, c);
   },
-  // the voice has started: the board comes in with the first word
+  // the voice has started: the board comes in with the first word (a voice-only line: the board, with whatever it
+  // said before, lifts away)
   go(clip) {
     if (this.done || this.on || this.my !== VO.token) return;
     this.on = this.heard = true; this.clip = clip || null; this.t = 0;
-    Caption.start(this.text);
+    if (this.board) Caption.start(this.text, VO.KEEP.test(this.key)); else Caption.hide();
     gsap.ticker.add(this.tick);
     this.step();
   },
@@ -489,33 +510,41 @@ const Said = {
         : this.t * this.cps * VO.RATE;
       while (n < this.from.length && this.from[n] <= k) n++;
     }
-    Caption.upTo(Math.max(1, n));
+    if (this.board) Caption.upTo(Math.max(1, n));
   },
   // the line has been said: every word is up
   end() {
-    if (this.on) Caption.upTo(Infinity);
+    if (this.on && this.board) Caption.upTo(Infinity);
     this.stop();
   },
   stop() { gsap.ticker.remove(this.tick); this.on = false; this.done = true; this.clip = null; },
 };
 const VO = {
   RATE: 0.82, // every line's speed (1 = as recorded): slower, the pitch kept
+  // lines that are only said, never put on the board: the cheers as x is freed (the user, 26 Nov 2026: "Boom! x is
+  // free yh sirf VO mei rhene do"; and, of "Yes! You did it!": "jaise yh text yha ni hona chahie")
+  ONLY_SAID: /^voFreed/,
+  // instructions the board keeps up once said, until the player has done them: the orb to load, then FIRE (the shot
+  // lifts the board away, playShots: "Tap fire wala instruction fire ke baad hta dena"). Every other line lifts away
+  // a moment after it has been said (Caption.said)
+  KEEP: /^tutTap/,
   token: 0, missing: new Set(), cur: null, finish: null, busy: null,
   has(key) { return typeof VO_FILES !== 'undefined' && VO_FILES.includes(key) && !this.missing.has(key); },
-  // say a line by key: its recorded clip, and the board, whose words come as they are said; resolves when it has
-  // been said, or at once when stopped. No voice (sound off, no clip yet, a clip that fails): no board, the pause stays
+  // say a line by key: its recorded clip, and the board, whose words come as they are said (and which lifts away a
+  // moment after: Caption.said); resolves when it has been said, or at once when stopped. No voice (sound off, no clip
+  // yet, a clip that fails): no board, the pause stays
   async say(key, hold = 0.5) {
     const text = T(key), my = ++this.token;
     if (this.cur) { try { this.cur.pause(); } catch (e) { /* ignore */ } this.cur = null; } // never let two lines overlap
     if (this.finish) this.finish();
     Said.begin(my, text, key);
-    // (the board keeps the line before until this line's voice starts: then its words change)
     const clip = VO.has(key);
+    if (clip && !this.ONLY_SAID.test(key)) Caption.stay(); // (a line that follows at once: the board, if up, waits for it, and its words change when this voice starts)
     if (clip) Music.duck(true);
     const est = (0.9 + text.length * 0.058) / this.RATE, t0 = performance.now(); // (how long it takes to say, at RATE)
     const spoken = new Promise((resolve) => {
       let done = false;
-      const finish = () => { if (!done) { done = true; if (this.finish === finish) this.finish = null; if (my === this.token) Said.end(); resolve(); } };
+      const finish = () => { if (!done) { done = true; if (this.finish === finish) this.finish = null; if (my === this.token) Said.end(); Caption.said(); resolve(); } };
       this.finish = finish;
       if (SILENT) { if (clip) Said.go(); wait(est).then(finish); return; } // a test robot: no sound, but a recorded line's board runs as if spoken
       if (Sound.muted || !clip) { wait(est).then(finish); return; }
@@ -534,7 +563,7 @@ const VO = {
     if (this.busy === spoken) this.busy = null;
     if (my !== this.token) return;
     await wait(hold);
-    if (my === this.token) Music.duck(false); // (the board stays up, with this line on it, until the next line)
+    if (my === this.token) Music.duck(false);
   },
   // say a line once the one being said has ended, so lines follow each other instead of cutting each other
   // off (a newer line, or stop(), drops it: the newest moment wins)
@@ -546,7 +575,7 @@ const VO = {
   },
   stop() {
     this.token++;
-    Said.stop(); Caption.upTo(Infinity); // (a line cut short: the board shows it whole, and stays)
+    Said.stop(); if (Said.board) Caption.upTo(Infinity); // (a line cut short: the board shows it whole, a moment, then lifts away: Caption.said)
     if (this.cur) { try { this.cur.pause(); } catch (e) { /* ignore */ } this.cur = null; }
     const f = this.finish; this.finish = null; if (f) f();
     Music.duck(false);
