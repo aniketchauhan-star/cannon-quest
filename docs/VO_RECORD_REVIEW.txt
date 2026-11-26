@@ -21,10 +21,10 @@ HOW TO RECORD
 
 THE LINES
 
- 1. Try again! Look for the glowing orb.
-    (the shot missed: the same equation comes back for one more try, and the orb that undoes the last step glows; warm and encouraging)
+ 1. Not quite. Try again, you can do it.
+    (the shot missed: the same equation comes back for one more try (no hint: the player works it out again); warm and encouraging)
 
- 2. Watch how it's done!
+ 2. Watch how it's done.
     (the second try missed too: the game shows the way, firing the right orbs itself; calm and clear, like showing a friend)
 
 (Then: ~/.cache/crown-quest/venv/bin/python tools/vo_split.py recordings/<file> review, and ./build.sh.)

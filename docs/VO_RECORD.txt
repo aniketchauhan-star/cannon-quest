@@ -70,8 +70,8 @@ THE LINES
 17. Not this time. x is still locked in.
     (the retry missed too: x is still in the cage (the game shows the way next); gentle and kind, never like "wrong")
 
-18. Try again. Look for the glowing orb.
-    (the shot missed: the same equation comes back for one more try, and the orb that undoes the last step glows; warm and encouraging)
+18. Not quite. Try again, you can do it.
+    (the shot missed: the same equation comes back for one more try (no hint: the player works it out again); warm and encouraging)
 
 19. Watch how it's done.
     (the second try missed too: the game shows the way, firing the right orbs itself; calm and clear, like showing a friend)

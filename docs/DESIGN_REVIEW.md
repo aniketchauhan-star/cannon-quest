@@ -7,7 +7,7 @@ Status of each point in the review, in its own order. "Done" items are in the bu
 |---|---|---|
 | 1 | Re-stage the instruction panel and the equation cloud | **Done**, then the caption moved back (the user, 25 Nov 2026: "the question template… like before, in the left corner"): it is the wooden board on the left, halfway down, again, with no tail. The cloud bobs and drifts, has a warm rim light on its sun side and a soft haze at its base. |
 | 2 | Keep the caged X visible on deck as the cannon's target | **Done.** x cries in its cage on the right of the deck, with an "x" tag. When the equation is solved, a bolt of light flies from the x on the cloud to the cage, and the cage cracks open on the deck. |
-| 3 | A retry or a worked solution after a wrong answer | **Done, both.** First miss: the equation rewinds, the orbs come back, and the orb that undoes the outermost step glows (its "Try again!" panel was taken out again: the user, 25 Nov 2026, "remove the try again screen panel"). Second miss: the game loads and fires the right orbs itself, step by step. |
+| 3 | A retry or a worked solution after a wrong answer | **Done, both.** First miss: the equation rewinds and the orbs come back, with NO hint (the glowing orb was taken out on 26 Nov 2026: the user, "first time incorrect ke baad turant correct answer mat do… let the user try again"; its "Try again!" panel went on 25 Nov 2026). Second miss: the game loads and fires the right orbs itself, step by step. |
 | 4 | Correct-answer sequence under 8 s | **Done.** One-step answer: 7.9 s from FIRE to the next equation (measured), 5.7 s if the celebration is tapped away. A tap anywhere skips it. |
 | 5 | Progress indicator and a proper results screen | **Done**, then the dots removed (the user, 25 Nov 2026: no progress dots in the game). Results card with 1–3 stars, the freed count, each missed equation with its solution, and labelled Play again and Home buttons. **The card was then removed** (the user, 25 Nov 2026: "no need of this amazing panel"): the end screen is now the title "Quest complete!" at the top, x dancing in the middle in front of its broken cage, and Play again + Home under it, Play again only once x has danced a while (the user, 25 Nov 2026). |
 
@@ -58,7 +58,7 @@ Status of each point in the review, in its own order. "Done" items are in the bu
 | Portrait "Play anyway" | **Not done.** The scene keeps its landscape layout, scaled down. A usable portrait version needs its own layout (tray in two rows, cage beside the cannon); a portrait mockup from the designer would be the place to start. |
 | Touch targets ≥ 44 px | **Checked.** Orbs are 49 px on a 667×375 phone. Their tap areas, and FIRE's, reach past the art, so FIRE is about 51 px tall. |
 | Separate music and voice toggles | **Removed** with the pause panel (25 Nov). The speaker button mutes everything at once. |
-| Hints after a miss | **Done** (the retry's glowing orb). |
+| Hints after a miss | **Undone** (26 Nov 2026): the retry gives no hint, so the player works it out again; the answer comes only after a second miss (the shown way). |
 | Closer distractors in later rounds | **Kept.** Later trays already pair close moves: ÷7 with −7, ÷3 with −3, −6 with ÷3 (and −6 then ÷3 is a valid path). |
 | "x" label on the cage | **Done.** An "x" tag on the deck cage, and x is written as x in the equation. |
 

@@ -59,7 +59,7 @@
     "voEndAll": "the end: the player freed x every time",
     "voEndMost": "the end: the player freed x most times",
     "voEndSome": "the end: the player freed x only a few times",
-    "voRetry": "the shot missed: the same equation comes back for one more try, and the orb that undoes the last step glows",
+    "voRetry": "the shot missed: the same equation comes back for one more try (no hint: the player works it out again)",
     "voShowHow": "the second try missed too: the game shows the way, firing the right orbs itself"
   },
   "mood": {

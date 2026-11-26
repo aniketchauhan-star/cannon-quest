@@ -516,24 +516,15 @@ async function rewindEq(start) {
   EqUI.setEq(start, true);
   await wait(Motion.BEAT.REWIND);
 }
-// the hint on a retry: the orb that undoes the outermost thing still done to x (after the orbs loaded so far) glows
-// in the tray (design review: "after one wrong answer, highlight the operation that 'undoes' the outermost term")
-function guideNext() {
-  let e = G.eq;
-  for (const b of G.sockets) if (b) e = shownAfter(applyOp(e, b.op));
-  const want = isSolved(e) || G.sockets.every(Boolean) ? null : undoLabel(e);
-  const pick1 = want && Rack.balls.find((b) => b.where === 'rack' && b.op.label === want);
-  Rack.balls.forEach((b) => (b.guide = b === pick1));
-}
 // x is still stuck after the first try: one more try (design review, 23 Nov 2026: "offer one retry"). The equation
-// glides back to how it started, the fired orbs drop back into their cups, and the hint glows. No "Try again!" panel
-// under the cloud (the user, 25 Nov 2026: "remove the try again screen panel"): the rewind and the glowing orb say it
+// glides back to how it started and the fired orbs drop back into their cups, and that is all: NO orb glows, the
+// player works it out again on their own (the user, 26 Nov 2026: "first time incorrect ke baad turant correct answer
+// mat do… let the user try again, agar tb bhi glat kre tb denge"); only a second miss shows the answer (showHow). No
+// "Try again!" panel under the cloud (the user, 25 Nov 2026: "remove the try again screen panel")
 async function retry(sid, start) {
   VO.sayAfter('voRetry', 0.3);
   G.sockets = G.sockets.map(() => null); G.eq = start;
   await Promise.all([rewindEq(start), Rack.restore()]);
-  if (sid !== G.session) return;
-  G.hooks.onFill = () => guideNext();
 }
 // …and still stuck after the retry: the game shows the way, step by step ("then show the correct path step by step
 // before moving on"). The equation and the orbs go back; the orbs that free x glow and fly into the cannon one by
