@@ -683,8 +683,10 @@ const Music = {
 // (a CSS border-image leaves faint lines across the cream at the stage's fractional scales). SLICE: where the
 // template's rounded corners end, in WebP px (top right bottom left); EDGE: the same in art px, drawn at half the
 // WebP (0.25 of the template), the template's own proportions, so its whole thick wooden frame shows.
-// It stays on the left, halfway down (#capPos): the design review's speech bubble over x's cage was undone on
-// 25 Nov 2026 (the user: "the question template… like before, in the left corner"). It has no speaker icon, and no
+// It hangs at the top of the screen, in the middle, above the cloud and never over it (#capPos; the user, 26 Nov
+// 2026: "the question panel should come in top between… in upper side of the cloud"), so it drops in from above and
+// lifts away; on the end screen, whose title has the top, it waits on the left, halfway down (#capPos.end), rising in
+// as it did before. The letter x in its words is set as mathematics, as on the cloud (.mx). It has no speaker icon, and no
 // round hear-again button waits between lines (the user, 25 Nov 2026: "remove the X and sound icon… from this
 // entire game"): the board is only the words.
 const BOARD = { SLICE: [96, 100, 81, 100], EDGE: [48, 50, 40.5, 50] };
@@ -702,8 +704,18 @@ function paintBoard(c, el, im, edge = BOARD.EDGE) {
   for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++)
     g.drawImage(im, sx[i], sy[j], sx[i + 1] - sx[i], sy[j + 1] - sy[j], dx[i], dy[j], dx[i + 1] - dx[i], dy[j + 1] - dy[j]);
 }
+// a word of the board, with the letter x in it (x, x!, x?) set as mathematics (.mx: Latin Modern Math's italic x, as
+// on the cloud); every other word is plain text
+function mathX(el, word) {
+  const m = /^([^A-Za-z]*)x([^A-Za-z]*)$/.exec(word);
+  if (!m) { el.textContent = word; return; }
+  const x = document.createElement('span'); x.className = 'mx'; x.textContent = 'x';
+  el.replaceChildren(...[m[1], x, m[2]].filter((p) => p !== ''));
+}
 const Caption = {
   el: null, bg: null, txt: null, pic: null, words: [], want: 0, shown: 0, ready: false, id: 0,
+  // which way it comes in and goes (px): down from the top of the screen, or up on the end screen's left
+  dy() { return this.el.parentElement.classList.contains('end') ? 1 : -1; },
   init() {
     if (this.el) return;
     this.el = $('#cap'); this.bg = this.el.querySelector('.bg'); this.txt = this.el.querySelector('.txt');
@@ -730,7 +742,7 @@ const Caption = {
     const t = this.txt, m = String(text).match(/\S+/g) || [], n = m.length;
     gsap.killTweensOf(this.words);
     t.textContent = '';
-    const ws = (this.words = m.map((s) => { const w = document.createElement('span'); w.className = 'w'; w.textContent = s; return w; }));
+    const ws = (this.words = m.map((s) => { const w = document.createElement('span'); w.className = 'w'; mathX(w, s); return w; }));
     for (let i = 0; i < n;) {
       if (i) t.append(' ');
       let j = i; while (j < n - 1 && [...m[j]].length === 1) j++;
@@ -751,7 +763,7 @@ const Caption = {
     gsap.killTweensOf(el);
     if (!up) { // enter: the board is laid out before it shows
       gsap.killTweensOf([txt, bg]); this.lay(text);
-      gsap.set(txt, { opacity: 1, y: 0 }); gsap.set(bg, { x: 0, y: 0, scaleX: 1, scaleY: 1 }); gsap.set(el, { y: 14, scale: 0.97 });
+      gsap.set(txt, { opacity: 1, y: 0 }); gsap.set(bg, { x: 0, y: 0, scaleX: 1, scaleY: 1 }); gsap.set(el, { y: 14 * this.dy(), scale: 0.97 });
       this.ready = true;
     } else { // the old words fade out, the board glides from the old box to the new one, the new words come as said
       gsap.killTweensOf(txt);
@@ -784,7 +796,7 @@ const Caption = {
     if (!this.el.classList.contains('on')) return;
     this.el.classList.remove('on');
     gsap.killTweensOf(this.el);
-    Motion.to(this.el, { opacity: 0, y: -6, scale: 0.98, duration: Motion.DUR.FAST + 0.03, ease: Motion.EASE.IN });
+    Motion.to(this.el, { opacity: 0, y: this.dy() > 0 ? -6 : -10, scale: 0.98, duration: Motion.DUR.FAST + 0.03, ease: Motion.EASE.IN });
   },
 };
 
@@ -918,7 +930,7 @@ const DW = 1672, DH = 941, CX = DW / 2, CY = DH / 2;
 // by tools/cut_double_cannon.py. Both are cut onto one canvas with one mapping (1226×898 px, 0.84 px per art px, the
 // barrel's centre on CANNON.x, the base's bottom 4 px above the canvas's), so a round's morph swaps only the top. Each
 // one's painted FIRE pill is a dark recess where the game's FIRE button sits)
-const CANNON = { x: 836, bottom: 762, h: 360, src: { 1: [613, 449], 2: [613, 449] },
+const CANNON = { x: 836, bottom: 762, h: 324, src: { 1: [613, 449], 2: [613, 449] },
   // each socket's centre + radius: x and r as fractions of the sprite width, y of its height. r comes from where the
   // ring's gold starts (found on 240 rays): r × seat = the ring's widest inner edge + 1.8 canvas px (see seat)
   holes: { 1: [[0.4978, 0.5072, 0.1164]], 2: [[0.3473, 0.5194, 0.0884], [0.6507, 0.5202, 0.0892]] },
@@ -939,11 +951,14 @@ const CANNON = { x: 836, bottom: 762, h: 360, src: { 1: [613, 449], 2: [613, 449
 const BALL_ART = 0.96; // the orb's share of its picture (ball_*.webp: the orb is ~161 of 168 px)
 // tray art (wooden, metal corners; its plain middle stretched to hold 8 balls): ball spots along its floor (holesX,
 // holeY), the bottom edge and the outer edges in source px; a seated ball's centre sits `seat` px below (+) / above (−) its spot
-const RACK = { left: 166, top: 780, w: 1340, srcW: 1618, holesX: [212.3, 382.4, 552.5, 722.7, 892.8, 1063.0, 1233.1, 1403.2], holeY: 59.5, bot: 185.4, edges: [2, 1616], seat: 12 }; // (12: each ball rests on the trough's floor, its bottom ~16 px behind the front rail, so it sits in the tray instead of hovering on the rail)
-const BALL_D = 122, MUZZLE = { x: CANNON.x, y: CANNON.bottom - CANNON.h + 14 }; // (BALL_D = the .ball size in the CSS)
+const RACK = { left: 233, top: 795, w: 1206, srcW: 1618, holesX: [212.3, 382.4, 552.5, 722.7, 892.8, 1063.0, 1233.1, 1403.2], holeY: 59.5, bot: 185.4, edges: [2, 1616], seat: 11 }; // (11: each ball rests on the trough's floor, its bottom ~16 px behind the front rail, so it sits in the tray instead of hovering on the rail)
+const BALL_D = 110, MUZZLE = { x: CANNON.x, y: CANNON.bottom - CANNON.h + 14 }; // (BALL_D = the .ball size in the CSS)
 // the equation cloud, far off in the sky and well clear of the cannon: Cloud.apply draws #cloud (card included) at
-// CLOUD_FAR of its size, about its transform-origin (world 828, 163). Where a shot hits (on the card), and its middle
-const CLOUD_FAR = 0.88, CLOUD_HIT = { x: 828, y: 174 }, CLOUD_MID = { x: 828, y: 133 };
+// CLOUD_FAR of its size, about its transform-origin (world 828, 294). Where a shot hits (on the card), and its middle.
+// The cannon, the tray and its orbs are 10 % smaller and the cloud 16 % (the user, 26 Nov 2026: "cloud, cannon and
+// ops and its stands should slightly small"), so the question board fits above the cloud at the top of the screen:
+// the cloud's top is at y 173, its underside at 358 (the board ends at 132)
+const CLOUD_FAR = 0.74, CLOUD_HIT = { x: 828, y: 303 }, CLOUD_MID = { x: 828, y: 269 };
 // background layers cut from the user's deck picture (tools/cut_deck_bg.py): how much each follows the camera (1 =
 // the deck, with its railing and plants, where the cannon stands; less = farther away, so it drifts less). Moved by
 // transform only, when the camera moves. Each layer holds ~25 bg px of picture under the edge of the one in front
@@ -2062,7 +2077,7 @@ const CageBreak = {
 // frame's height, in the middle of the deck; the broken cage's foot (its base ring's bottom, a little further back on
 // the deck than x), its middle (the dome's ball) and the picture's height. BROKEN: cage_broken.webp's size, and its
 // base ring's bottom and its middle in it (printed by the tool)
-const XEND = { x: 1330, foot: 732, free: 300, cage: 300 };
+const XEND = { x: 1330, foot: 732, free: 270, cage: 270 }; // (270: 10 % smaller with the cannon, 26 Nov 2026, so the two keep their sizes to each other)
 const END = { x: 846, foot: 762, h: 300, cage: { x: 672, foot: 742, h: 450 } };
 const BROKEN = { w: 418, h: 744, foot: 704, mid: 208.5 };
 const EndX = {
@@ -2926,7 +2941,7 @@ const Spot = {
 //  • NO painted clouds: the only cloud in the game is the equation's (the user, 19 Nov).
 //  • JUNGLE: low mist drifting between the trees, soft shafts of sunlight that breathe, sunlit specks floating up,
 //    and now and then a leaf tumbling down from the trees.
-//  • BIRDS: a small flock (1–3) now and then, crossing between the hills and the treetops. They flap a few beats
+//  • BIRDS: a small flock (1–3) now and then, in the sky either side of the cloud, into or out of the treetops. They flap a few beats
 //    and glide. GSAP, so they stop with the game on pause; none under reduced motion.
 //  • WIND: the two leafy plants behind the railing sway on one gust curve (Wind.lean). Each plant's delay follows
 //    its x, so a gust crosses the scene from left to right. The sway starts and ends upright, as painted.
@@ -3028,6 +3043,13 @@ const Jungle = {
 // ---------- BIRDS ----------
 const BIRD_SVG = '<span class="bb"><svg viewBox="0 0 44 30"><path class="w" d="M22 15C17 9 10 6 2 8C9 9.5 15 12 20 17Z"/><path class="w" d="M22 15C27 9 34 6 42 8C35 9.5 29 12 24 17Z"/>'
   + '<path d="M16.5 16L11.5 14.2L12.2 18.2Z"/><ellipse cx="22" cy="16" rx="5.6" ry="2.6"/><circle cx="27.2" cy="14.9" r="2.2"/></svg></span>';
+// Birds keep to the open sky either side of the cloud and never cross it (the user, 26 Nov 2026: "the birds should
+// not overlap with the cloud"): a flock glides in from one side of the screen and comes down into the trees on that
+// side, or rises out of them and flies off that side. They meet the treetops at BIRD_SKY (art px), well clear of the
+// cloud (x 606–1072, y 173–358) and of the question board at the top, also with the camera leaning in (their layer
+// drifts at most ~40 px against the cloud's). The birds of a flock follow one another along the same line, a moment
+// apart, each a little above or below it.
+const BIRD_SKY = { left: [370, 490], right: [1180, 1300], edgeY: [185, 255], treeY: [440, 470] };
 const Birds = {
   live: 0,
   start() { gsap.delayedCall(2.5, () => this.next()); }, // the first flock soon after the start screen shows
@@ -3036,18 +3058,25 @@ const Birds = {
     gsap.delayedCall(9 + Math.random() * 9, () => this.next()); // then one every 9–18 s (game time)
   },
   flock() {
-    const box = $('#bgBirds'), r = Math.random(), n = r < 0.4 ? 1 : r < 0.75 ? 2 : 3, dir = Math.random() < 0.5 ? 1 : -1;
-    const y0 = 120 + Math.random() * 130, dur = 17 + Math.random() * 7, rise = (Math.random() - 0.5) * 80;
-    let left = n; this.live++;
+    const box = $('#bgBirds'), r = Math.random(), n = r < 0.4 ? 1 : r < 0.75 ? 2 : 3, rnd = (a, b) => a + Math.random() * (b - a);
+    const left = Math.random() < 0.5, up = Math.random() < 0.5; // which side; rising out of the trees (or coming down into them)
+    const [a, b] = left ? BIRD_SKY.left : BIRD_SKY.right;
+    const edge = { x: left ? -90 : DW + 90, y: rnd(...BIRD_SKY.edgeY) }, tree = { x: rnd(a, b), y: rnd(...BIRD_SKY.treeY) };
+    const [p0, p1] = up ? [tree, edge] : [edge, tree], dir = p1.x > p0.x ? 1 : -1, dur = rnd(6.5, 9);
+    let alive = n; this.live++;
     for (let i = 0; i < n; i++) {
       const el = document.createElement('div'); el.className = 'bird'; el.innerHTML = BIRD_SVG; box.appendChild(el);
       const beat = 2.2 + Math.random() * 0.6, ph = -Math.random() * beat; // its own wingbeat and phase
       el.querySelectorAll('.bb,.w').forEach((p) => { p.style.animationDuration = beat + 's'; p.style.animationDelay = ph + 's'; });
-      const back = i * (46 + Math.random() * 30), dy = i ? (i % 2 ? 1 : -1) * (12 + Math.random() * 14) : 0, s = (0.72 + Math.random() * 0.3) * (i ? 0.9 : 1);
-      const x0 = dir > 0 ? -90 - back : DW + 90 + back, x1 = x0 + dir * (DW + 260);
-      gsap.set(el, { x: x0, y: y0 + dy, scaleX: dir * s, scaleY: s });
-      gsap.to(el, { y: `+=${rise}`, duration: dur, ease: 'sine.inOut' });
-      gsap.to(el, { x: x1, duration: dur, ease: 'none', onComplete: () => { el.remove(); if (--left === 0) this.live--; } });
+      const delay = i * rnd(0.35, 0.6), dy = i ? (i % 2 ? 1 : -1) * rnd(10, 22) : 0, s = rnd(0.72, 1.02) * (i ? 0.9 : 1);
+      // into the trees: level at first, then dipping (nose down), fading as the leaves take it; out of them: a steep
+      // climb that levels off, coming into sight from behind the treetops
+      const tilt = dir * (up ? -12 : 13);
+      gsap.set(el, { x: p0.x, y: p0.y + dy, scaleX: dir * s, scaleY: s, rotation: up ? tilt : 0, opacity: up ? 0 : 1 });
+      gsap.to(el, { x: p1.x, duration: dur, delay, ease: 'none', onComplete: () => { el.remove(); if (--alive === 0) this.live--; } });
+      gsap.to(el, { y: p1.y + dy, duration: dur, delay, ease: up ? 'power1.out' : 'power1.in' });
+      gsap.to(el, { rotation: up ? 0 : tilt, duration: dur * 0.7, delay: delay + (up ? dur * 0.3 : 0), ease: 'sine.inOut' });
+      gsap.to(el, up ? { opacity: 1, duration: dur * 0.2, delay: delay + dur * 0.05 } : { opacity: 0, duration: dur * 0.18, delay: delay + dur * 0.8 });
     }
   },
 };
@@ -3548,7 +3577,7 @@ function roundTimeline(opts = {}) {
 // eq1 is the equation right after the shot; when the shot added a number to a bracket, two more beats follow: the
 // bracket is multiplied out, then the numbers are joined ("3(x + 2) − 6 = 15" → "3x + 6 − 6 = 15" → "3x = 15").
 // last: the shot that frees x (no reading pause after it: the freeing starts as the equation settles)
-const SHOT_CAM = { WIND: { fx: CX, fy: 500, z: 1.05 }, FOLLOW: { fx: CX, fy: 460, z: 1.03 }, READ: { fx: CX, fy: 455, z: 1.04 } };
+const SHOT_CAM = { WIND: { fx: CX, fy: 480, z: 1.05 }, FOLLOW: { fx: CX, fy: 460, z: 1.03 }, READ: { fx: CX, fy: 455, z: 1.04 } };
 function addShot(tl, t0, i, b, eq0, eq1, first = true, last = false) {
   const B = Motion.BEAT, to = { ...CLOUD_HIT };
   let p = null, inL = null, inR = null, ms = null, tg = null, tail = null, tails = null;
@@ -3679,7 +3708,7 @@ function addFreed(tl, t0, opts = {}) {
     FX.bolt(xe ? EqUI.worldAt(xe) : { ...CLOUD_HIT }, cagePt(), B.BOLT); Sound.whistle();
     Vignette.to(0.4, B.BOLT + B.CRACK * 0.5);
   }, null, tz);
-  camDrive(tl, tz - 0.2, { fx: 1040, fy: 470, z: Motion.reduced ? 1 : CAGE.zoom }, 0.2 + B.BOLT + B.CRACK, Ease.inOutCubic); // (the cloud and the tray stay in view)
+  camDrive(tl, tz - 0.2, { fx: 1040, fy: 462, z: Motion.reduced ? 1 : CAGE.zoom }, 0.2 + B.BOLT + B.CRACK, Ease.inOutCubic); // (the cloud and the tray stay in view; the cloud's top stays under the question board)
   // 2) it strikes the cage, and x pushes three times: it cracks further each time (the user's cracks, played at CAGE.T / CRACK)
   tl.call(() => { const w = cagePt(); FX.star(w.x, w.y, '#efe0ff', 220, 0.3, { n: 8 }); FX.burst(w.x, w.y, '#c58bff', 18, 380, { white: 0.3 }); Sound.rumble(); Stage.hit({ trauma: 0.16, zoom: 0.012 }); }, null, tc);
   drive(B.CRACK, (e, k) => CageBreak.strain(k * CAGE.T), Ease.linear, tl, tc);
@@ -3774,7 +3803,7 @@ async function tutorialLoad() {
   // 1) the equation, 2) the cannon, 3) the orbs: one at a time, everything else dimmed (not blurred: the equation
   // must stay readable in every step, user 23 Nov)
   const parts = [
-    [eqSpot, { sx: 1.08, sy: 1.25, pad: 30 }, 'tutEquation'],
+    [eqSpot, { sx: 1.3, sy: 1.45, pad: 30 }, 'tutEquation'], // (Poppins Bold is wider than Trig Text: the ring clears the 7 and the x)
     [cannonSpot, { sx: 1.12, sy: 1.12, pad: 20 }, 'tutCannon'],
     [orbsSpot, { sx: 1.5, sy: 2, pad: 24 }, 'tutOrbs'],
   ];
@@ -4025,6 +4054,7 @@ const EndCard = {
 };
 async function showEnd(sid) {
   G.state = 'end';
+  $('#capPos').classList.add('end'); // (the end title has the top: the board says the end line on the left, halfway down)
   Note.hide(); Cannon.hideOrder(true);
   $('#fireBtn').classList.add('gone');
   Cannon.leave(); // (the cannon has done its work: it shrinks away, x takes the middle of the deck)
@@ -4045,6 +4075,7 @@ async function restartGame() {
   Motion.killAll(); Skip.hide(true);
   VO.stop(); G.inputOn = false; G.fireResolve = null; G.hooks = {}; G.helping = false; G.spotOnly = null; G.celebrate = false; Drag.cancel(); Spot.hide();
   EndCard.hide(); Note.hide(); Cannon.hideOrder(true);
+  $('#capPos').classList.remove('end'); // (the board is back at the top)
   $('#fireBtn').classList.remove('gone');
   Cannon.back();
   Cannon.setFireActive(false); for (let i = 0; i < 2; i++) Cannon.highlight(i, false);
@@ -4198,7 +4229,7 @@ async function boot() {
   // start screen): the play scene's pictures (the markup's data-src ones, the tray's balls) + the font, then the sound effects
   for (const im of document.querySelectorAll('img[data-src]')) { im.src = im.dataset.src; im.removeAttribute('data-src'); }
   Rack.balls = ROUNDS[0].balls.map((s, i) => createBall(s, i)); G.rackFor = ROUNDS[0];
-  const font = document.fonts && document.fonts.load ? Promise.all([document.fonts.load('600 64px Poppins', '0123456789+−×='), document.fonts.load("400 64px 'Trig Text'", '0123456789+−×÷=()')]).catch(() => {}) : null;
+  const font = document.fonts && document.fonts.load ? Promise.all([document.fonts.load('600 64px Poppins', '0123456789+−×='), document.fonts.load('700 64px Poppins', 'Let\'s free 0123456789+−×÷=()!'), document.fonts.load("italic 400 64px 'Swifty Math'", 'x'), document.fonts.load("400 64px 'Trig Text'", '0123456789+−×÷=()')]).catch(() => {}) : null;
   Pics.game = Pics.load(Pics.GAME, 15, font ? [font] : []);
   Pics.game.then(() => { CloudBurst.prepare(); CageBreak.load(); Pics.load(Pics.LATER, 30); }); // (the cloud's burst pieces are cut while the browser is idle; the cage's fracture is worked out; then x's dance and the end card's picture)
   const sfx = document.createElement('script'); sfx.src = 'js/sfx.js'; document.body.appendChild(sfx); // (it hands itself to Sound.loadSfx)

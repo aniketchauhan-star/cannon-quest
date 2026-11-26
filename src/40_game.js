@@ -245,7 +245,7 @@ function roundTimeline(opts = {}) {
 // eq1 is the equation right after the shot; when the shot added a number to a bracket, two more beats follow: the
 // bracket is multiplied out, then the numbers are joined ("3(x + 2) − 6 = 15" → "3x + 6 − 6 = 15" → "3x = 15").
 // last: the shot that frees x (no reading pause after it: the freeing starts as the equation settles)
-const SHOT_CAM = { WIND: { fx: CX, fy: 500, z: 1.05 }, FOLLOW: { fx: CX, fy: 460, z: 1.03 }, READ: { fx: CX, fy: 455, z: 1.04 } };
+const SHOT_CAM = { WIND: { fx: CX, fy: 480, z: 1.05 }, FOLLOW: { fx: CX, fy: 460, z: 1.03 }, READ: { fx: CX, fy: 455, z: 1.04 } };
 function addShot(tl, t0, i, b, eq0, eq1, first = true, last = false) {
   const B = Motion.BEAT, to = { ...CLOUD_HIT };
   let p = null, inL = null, inR = null, ms = null, tg = null, tail = null, tails = null;
@@ -376,7 +376,7 @@ function addFreed(tl, t0, opts = {}) {
     FX.bolt(xe ? EqUI.worldAt(xe) : { ...CLOUD_HIT }, cagePt(), B.BOLT); Sound.whistle();
     Vignette.to(0.4, B.BOLT + B.CRACK * 0.5);
   }, null, tz);
-  camDrive(tl, tz - 0.2, { fx: 1040, fy: 470, z: Motion.reduced ? 1 : CAGE.zoom }, 0.2 + B.BOLT + B.CRACK, Ease.inOutCubic); // (the cloud and the tray stay in view)
+  camDrive(tl, tz - 0.2, { fx: 1040, fy: 462, z: Motion.reduced ? 1 : CAGE.zoom }, 0.2 + B.BOLT + B.CRACK, Ease.inOutCubic); // (the cloud and the tray stay in view; the cloud's top stays under the question board)
   // 2) it strikes the cage, and x pushes three times: it cracks further each time (the user's cracks, played at CAGE.T / CRACK)
   tl.call(() => { const w = cagePt(); FX.star(w.x, w.y, '#efe0ff', 220, 0.3, { n: 8 }); FX.burst(w.x, w.y, '#c58bff', 18, 380, { white: 0.3 }); Sound.rumble(); Stage.hit({ trauma: 0.16, zoom: 0.012 }); }, null, tc);
   drive(B.CRACK, (e, k) => CageBreak.strain(k * CAGE.T), Ease.linear, tl, tc);
@@ -471,7 +471,7 @@ async function tutorialLoad() {
   // 1) the equation, 2) the cannon, 3) the orbs: one at a time, everything else dimmed (not blurred: the equation
   // must stay readable in every step, user 23 Nov)
   const parts = [
-    [eqSpot, { sx: 1.08, sy: 1.25, pad: 30 }, 'tutEquation'],
+    [eqSpot, { sx: 1.3, sy: 1.45, pad: 30 }, 'tutEquation'], // (Poppins Bold is wider than Trig Text: the ring clears the 7 and the x)
     [cannonSpot, { sx: 1.12, sy: 1.12, pad: 20 }, 'tutCannon'],
     [orbsSpot, { sx: 1.5, sy: 2, pad: 24 }, 'tutOrbs'],
   ];
@@ -722,6 +722,7 @@ const EndCard = {
 };
 async function showEnd(sid) {
   G.state = 'end';
+  $('#capPos').classList.add('end'); // (the end title has the top: the board says the end line on the left, halfway down)
   Note.hide(); Cannon.hideOrder(true);
   $('#fireBtn').classList.add('gone');
   Cannon.leave(); // (the cannon has done its work: it shrinks away, x takes the middle of the deck)
@@ -742,6 +743,7 @@ async function restartGame() {
   Motion.killAll(); Skip.hide(true);
   VO.stop(); G.inputOn = false; G.fireResolve = null; G.hooks = {}; G.helping = false; G.spotOnly = null; G.celebrate = false; Drag.cancel(); Spot.hide();
   EndCard.hide(); Note.hide(); Cannon.hideOrder(true);
+  $('#capPos').classList.remove('end'); // (the board is back at the top)
   $('#fireBtn').classList.remove('gone');
   Cannon.back();
   Cannon.setFireActive(false); for (let i = 0; i < 2; i++) Cannon.highlight(i, false);
@@ -895,7 +897,7 @@ async function boot() {
   // start screen): the play scene's pictures (the markup's data-src ones, the tray's balls) + the font, then the sound effects
   for (const im of document.querySelectorAll('img[data-src]')) { im.src = im.dataset.src; im.removeAttribute('data-src'); }
   Rack.balls = ROUNDS[0].balls.map((s, i) => createBall(s, i)); G.rackFor = ROUNDS[0];
-  const font = document.fonts && document.fonts.load ? Promise.all([document.fonts.load('600 64px Poppins', '0123456789+−×='), document.fonts.load("400 64px 'Trig Text'", '0123456789+−×÷=()')]).catch(() => {}) : null;
+  const font = document.fonts && document.fonts.load ? Promise.all([document.fonts.load('600 64px Poppins', '0123456789+−×='), document.fonts.load('700 64px Poppins', 'Let\'s free 0123456789+−×÷=()!'), document.fonts.load("italic 400 64px 'Swifty Math'", 'x'), document.fonts.load("400 64px 'Trig Text'", '0123456789+−×÷=()')]).catch(() => {}) : null;
   Pics.game = Pics.load(Pics.GAME, 15, font ? [font] : []);
   Pics.game.then(() => { CloudBurst.prepare(); CageBreak.load(); Pics.load(Pics.LATER, 30); }); // (the cloud's burst pieces are cut while the browser is idle; the cage's fracture is worked out; then x's dance and the end card's picture)
   const sfx = document.createElement('script'); sfx.src = 'js/sfx.js'; document.body.appendChild(sfx); // (it hands itself to Sound.loadSfx)

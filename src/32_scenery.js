@@ -7,7 +7,7 @@
 //  • NO painted clouds: the only cloud in the game is the equation's (the user, 19 Nov).
 //  • JUNGLE: low mist drifting between the trees, soft shafts of sunlight that breathe, sunlit specks floating up,
 //    and now and then a leaf tumbling down from the trees.
-//  • BIRDS: a small flock (1–3) now and then, crossing between the hills and the treetops. They flap a few beats
+//  • BIRDS: a small flock (1–3) now and then, in the sky either side of the cloud, into or out of the treetops. They flap a few beats
 //    and glide. GSAP, so they stop with the game on pause; none under reduced motion.
 //  • WIND: the two leafy plants behind the railing sway on one gust curve (Wind.lean). Each plant's delay follows
 //    its x, so a gust crosses the scene from left to right. The sway starts and ends upright, as painted.
@@ -109,6 +109,13 @@ const Jungle = {
 // ---------- BIRDS ----------
 const BIRD_SVG = '<span class="bb"><svg viewBox="0 0 44 30"><path class="w" d="M22 15C17 9 10 6 2 8C9 9.5 15 12 20 17Z"/><path class="w" d="M22 15C27 9 34 6 42 8C35 9.5 29 12 24 17Z"/>'
   + '<path d="M16.5 16L11.5 14.2L12.2 18.2Z"/><ellipse cx="22" cy="16" rx="5.6" ry="2.6"/><circle cx="27.2" cy="14.9" r="2.2"/></svg></span>';
+// Birds keep to the open sky either side of the cloud and never cross it (the user, 26 Nov 2026: "the birds should
+// not overlap with the cloud"): a flock glides in from one side of the screen and comes down into the trees on that
+// side, or rises out of them and flies off that side. They meet the treetops at BIRD_SKY (art px), well clear of the
+// cloud (x 606–1072, y 173–358) and of the question board at the top, also with the camera leaning in (their layer
+// drifts at most ~40 px against the cloud's). The birds of a flock follow one another along the same line, a moment
+// apart, each a little above or below it.
+const BIRD_SKY = { left: [370, 490], right: [1180, 1300], edgeY: [185, 255], treeY: [440, 470] };
 const Birds = {
   live: 0,
   start() { gsap.delayedCall(2.5, () => this.next()); }, // the first flock soon after the start screen shows
@@ -117,18 +124,25 @@ const Birds = {
     gsap.delayedCall(9 + Math.random() * 9, () => this.next()); // then one every 9–18 s (game time)
   },
   flock() {
-    const box = $('#bgBirds'), r = Math.random(), n = r < 0.4 ? 1 : r < 0.75 ? 2 : 3, dir = Math.random() < 0.5 ? 1 : -1;
-    const y0 = 120 + Math.random() * 130, dur = 17 + Math.random() * 7, rise = (Math.random() - 0.5) * 80;
-    let left = n; this.live++;
+    const box = $('#bgBirds'), r = Math.random(), n = r < 0.4 ? 1 : r < 0.75 ? 2 : 3, rnd = (a, b) => a + Math.random() * (b - a);
+    const left = Math.random() < 0.5, up = Math.random() < 0.5; // which side; rising out of the trees (or coming down into them)
+    const [a, b] = left ? BIRD_SKY.left : BIRD_SKY.right;
+    const edge = { x: left ? -90 : DW + 90, y: rnd(...BIRD_SKY.edgeY) }, tree = { x: rnd(a, b), y: rnd(...BIRD_SKY.treeY) };
+    const [p0, p1] = up ? [tree, edge] : [edge, tree], dir = p1.x > p0.x ? 1 : -1, dur = rnd(6.5, 9);
+    let alive = n; this.live++;
     for (let i = 0; i < n; i++) {
       const el = document.createElement('div'); el.className = 'bird'; el.innerHTML = BIRD_SVG; box.appendChild(el);
       const beat = 2.2 + Math.random() * 0.6, ph = -Math.random() * beat; // its own wingbeat and phase
       el.querySelectorAll('.bb,.w').forEach((p) => { p.style.animationDuration = beat + 's'; p.style.animationDelay = ph + 's'; });
-      const back = i * (46 + Math.random() * 30), dy = i ? (i % 2 ? 1 : -1) * (12 + Math.random() * 14) : 0, s = (0.72 + Math.random() * 0.3) * (i ? 0.9 : 1);
-      const x0 = dir > 0 ? -90 - back : DW + 90 + back, x1 = x0 + dir * (DW + 260);
-      gsap.set(el, { x: x0, y: y0 + dy, scaleX: dir * s, scaleY: s });
-      gsap.to(el, { y: `+=${rise}`, duration: dur, ease: 'sine.inOut' });
-      gsap.to(el, { x: x1, duration: dur, ease: 'none', onComplete: () => { el.remove(); if (--left === 0) this.live--; } });
+      const delay = i * rnd(0.35, 0.6), dy = i ? (i % 2 ? 1 : -1) * rnd(10, 22) : 0, s = rnd(0.72, 1.02) * (i ? 0.9 : 1);
+      // into the trees: level at first, then dipping (nose down), fading as the leaves take it; out of them: a steep
+      // climb that levels off, coming into sight from behind the treetops
+      const tilt = dir * (up ? -12 : 13);
+      gsap.set(el, { x: p0.x, y: p0.y + dy, scaleX: dir * s, scaleY: s, rotation: up ? tilt : 0, opacity: up ? 0 : 1 });
+      gsap.to(el, { x: p1.x, duration: dur, delay, ease: 'none', onComplete: () => { el.remove(); if (--alive === 0) this.live--; } });
+      gsap.to(el, { y: p1.y + dy, duration: dur, delay, ease: up ? 'power1.out' : 'power1.in' });
+      gsap.to(el, { rotation: up ? 0 : tilt, duration: dur * 0.7, delay: delay + (up ? dur * 0.3 : 0), ease: 'sine.inOut' });
+      gsap.to(el, up ? { opacity: 1, duration: dur * 0.2, delay: delay + dur * 0.05 } : { opacity: 0, duration: dur * 0.18, delay: delay + dur * 0.8 });
     }
   },
 };

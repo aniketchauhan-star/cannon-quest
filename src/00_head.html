@@ -68,8 +68,9 @@ img{-webkit-user-drag:none;user-select:none}
 @keyframes sspin2{from{transform:scaleX(-1) rotate(17deg)}to{transform:scaleX(-1) rotate(377deg)}}
 @keyframes sbreath{from{opacity:.42}to{opacity:.82}}
 @keyframes spulse{to{transform:scale(1.07)}}
-/* birds: a few, now and then, crossing the sky between the hills and the treetops (Birds in src/32_scenery.js flies
-   each one; GSAP, so they stop on pause). Each flaps a few times, then glides, rising a little on the beats */
+/* birds: a few, now and then, in the sky either side of the cloud, never across it, gliding down into the treetops
+   or rising out of them (Birds in src/32_scenery.js flies each one; GSAP, so they stop on pause). Each flaps a few
+   times, then glides, rising a little on the beats */
 #bgBirds{left:0;top:0;width:0;height:0}
 .bird{position:absolute;left:0;top:0;width:44px;height:30px;margin:-15px 0 0 -22px;will-change:transform}
 .bird .bb{display:block;width:100%;height:100%;animation:bbob 2.4s ease-in-out infinite}
@@ -110,10 +111,13 @@ img{-webkit-user-drag:none;user-select:none}
 
 
 /* ---------- the equation cloud: the question sits right on the cloud ---------- */
-/* (far off in the sky: Cloud.apply draws it, label and equation included, at CLOUD_FAR; lifted so its top stays near the screen's top edge) */
-#cloud{position:absolute;left:500px;top:-23px;width:656px;height:300px;transform-origin:50% 62%;will-change:transform}
+/* (far off in the sky: Cloud.apply draws it, label and equation included, at CLOUD_FAR. Its top sits clear under
+   the question board at the top of the screen (#capPos; the user, 26 Nov 2026: "the panel in upper side of the
+   cloud… should not overlap with the cloud"), also while the camera leans in: CLOUD_HIT / CLOUD_MID follow it) */
+#cloud{position:absolute;left:500px;top:108px;width:656px;height:300px;transform-origin:50% 62%;will-change:transform}
 /* the cloud art (tools/paint_cloud.py): painted like the clouds of the deck picture, so it belongs to that sky: a big
-   dome, puffs stepping down, a flat blue base whose wisps run out 62 px past the box on each side; lit by the sun */
+   dome, puffs stepping down, a soft blue underside that melts into the sky (no thin wisps running out of it: the
+   user, 26 Nov 2026, "fix the string of the cloud… it should blend with the background"); lit by the sun */
 #cloud .cl{position:absolute;left:-52px;top:10px;width:760px;height:281px}
 /* its warm rim light on the sun's side (tools/cloud_rim.py: a picture laid exactly over it) and a soft haze where it
    meets the sky (design review, 23 Nov 2026: "a warm rim light on the sun side (top right), and a soft haze where it
@@ -130,15 +134,19 @@ img{-webkit-user-drag:none;user-select:none}
 #qTab{position:absolute;left:328px;top:80px;translate:-50% -50%;padding:7px 24px;border-radius:99px;background:var(--glass);box-shadow:0 0 0 3px #ffd23d,0 5px 12px rgba(20,10,60,.24);color:#fff;font-size:25px;line-height:1.2;letter-spacing:.01em;white-space:nowrap}
 #qTab:empty{display:none}
 #eqBox{position:absolute;left:328px;top:178px;width:0;height:0} /* (the middle of the cloud's body) */
-/* the equation, the orbs' numbers and the caption's words (on the user's question template): Trig Text (the user's
-   font, 19 Nov), its one weight (400) */
-#eq,.ball b,#cap .txt{font-family:'Trig Text','Poppins',system-ui,sans-serif;font-weight:400}
+/* the equation and the question board's words: Poppins Bold (700), as in the user's Distance Formula game (the user,
+   26 Nov 2026: "use Poppins, like distance formula… we are using x like this"); its x is set as mathematics, as
+   Distance Formula sets it (.xv, #cap .mx). The orbs' numbers keep Trig Text (the user's font, 19 Nov), its one weight */
+#eq,#cap .txt{font-family:'Poppins',system-ui,sans-serif;font-weight:700}
+.ball b{font-family:'Trig Text','Poppins',system-ui,sans-serif;font-weight:400}
 #eq{position:absolute;left:0;top:0;transform:translate(-50%,-50%);display:flex;align-items:center;white-space:nowrap;font-size:84px;line-height:1;letter-spacing:-.01em;font-variant-numeric:lining-nums;color:var(--ink);transform-origin:0 0}
 #eq.wob{animation:eqwob .45s ease-in-out 3}
 @keyframes eqwob{25%{rotate:-3deg}75%{rotate:3deg}}
 .tk{display:inline-flex;align-items:center;justify-content:center;position:relative;flex:none}
-/* x: the letter, in x's own violet (its cage stands on the deck) */
-.xv{color:#7a22d6;margin:0 .02em}
+/* x: the letter, in x's own violet (its cage stands on the deck), set as mathematics the way Distance Formula sets
+   it: Latin Modern Math's italic x (TeX's own; 'Swifty Math', build.sh), its own weight, never a made-up bold. A
+   little larger than the words round it, so its small TeX x-height stands as tall as Poppins' */
+.xv{color:#7a22d6;margin:0 .06em 0 .02em;font-family:'Swifty Math','Poppins',system-ui,sans-serif;font-style:italic;font-weight:400;font-synthesis:style;font-size:1.22em}
 .op{margin:0 .17em}
 .eqs{margin:0 .24em}
 .paren{transform:scaleY(1.12);margin:0 .02em}
@@ -273,13 +281,13 @@ img{-webkit-user-drag:none;user-select:none}
 #fireBtn.gone{opacity:0;pointer-events:none;transition:opacity .35s ease-in} /* (the end card) */
 
 /* ---------- rack + balls ---------- */
-.ball{position:absolute;left:0;top:0;width:122px;height:122px;margin:-61px 0 0 -61px;cursor:grab;touch-action:none} /* = BALL_D */
+.ball{position:absolute;left:0;top:0;width:110px;height:110px;margin:-55px 0 0 -55px;cursor:grab;touch-action:none} /* = BALL_D */
 /* a ball in the player's hand (Drag): it rides in #fly, above everything, with a soft shadow dropped below it */
 .ball.drag img{filter:drop-shadow(0 16px 10px rgba(40,18,4,.34))}
 body.dragging,body.dragging *{cursor:grabbing !important}
 .ball.mv{will-change:transform}
 .ball img{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-.ball b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:52px;line-height:1;letter-spacing:-.02em;color:var(--ink);padding-top:2px;pointer-events:none;text-shadow:0 2px 0 rgba(255,255,255,.28)}
+.ball b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:47px;line-height:1;letter-spacing:-.02em;color:var(--ink);padding-top:2px;pointer-events:none;text-shadow:0 2px 0 rgba(255,255,255,.28)}
 .ball b .dv{margin-right:.03em}
 .ball .gl{position:absolute;inset:-34%;border-radius:50%;pointer-events:none;opacity:0;background:radial-gradient(closest-side,rgba(255,251,208,.95),rgba(255,214,40,.75) 48%,rgba(255,196,0,0))}
 .ball.guide img{filter:drop-shadow(0 0 9px #fff6a0) drop-shadow(0 0 20px #ffc800)}
@@ -296,7 +304,7 @@ body.dragging,body.dragging *{cursor:grabbing !important}
 /* the orbs' tap area reaches a little past each orb (not into the next one), so it stays 44 px or more on a small phone */
 .ball::before{content:'';position:absolute;inset:-7%;border-radius:50%}
 /* the faint ghost of an orb in its cup while it is away (Rack.ghosts) */
-.bghost{position:absolute;width:122px;height:122px;margin:-61px 0 0 -61px;opacity:0;transition:opacity .25s ease-out;pointer-events:none}
+.bghost{position:absolute;width:110px;height:110px;margin:-55px 0 0 -55px;opacity:0;transition:opacity .25s ease-out;pointer-events:none}
 .bghost img{display:block;width:100%;height:100%;filter:saturate(.3) brightness(1.2)}
 .bghost.on{opacity:.24}
 .ball .ao{position:absolute;inset:3%;border-radius:50%;background:radial-gradient(ellipse 70% 32% at 50% 90%,rgba(66,26,4,.5),rgba(66,26,4,.2) 58%,rgba(66,26,4,0) 100%);opacity:0;transition:opacity .25s;pointer-events:none}
@@ -307,8 +315,8 @@ body.dragging,body.dragging *{cursor:grabbing !important}
 .bshadow{position:absolute;width:0;height:0;opacity:0;transition:opacity .25s;pointer-events:none} /* at the seated ball's centre */
 .bshadow.on{opacity:1}
 .bshadow i{position:absolute;border-radius:50%}
-.bshadow .cast{left:-34px;top:-58px;width:124px;height:124px;background:radial-gradient(closest-side,rgba(52,18,0,.58),rgba(52,18,0,.5) 70%,rgba(52,18,0,0))} /* on the back wall, down-right of the ball */
-.bshadow .pool{left:-72px;top:28px;width:148px;height:32px;background:radial-gradient(closest-side,rgba(36,10,0,.9),rgba(36,10,0,.6) 58%,rgba(36,10,0,0))} /* where the ball meets the trough, just above the rail */
+.bshadow .cast{left:-31px;top:-52px;width:112px;height:112px;background:radial-gradient(closest-side,rgba(52,18,0,.58),rgba(52,18,0,.5) 70%,rgba(52,18,0,0))} /* on the back wall, down-right of the ball */
+.bshadow .pool{left:-65px;top:25px;width:133px;height:29px;background:radial-gradient(closest-side,rgba(36,10,0,.9),rgba(36,10,0,.6) 58%,rgba(36,10,0,0))} /* where the ball meets the trough, just above the rail */
 /* ---------- ground contact: shadow groups multiply onto the plaza; light + ring groups paint normally so colour reads on bright sand ---------- */
 #ground{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none}
 .gsh{position:absolute;left:0;top:0;width:0;height:0;transform-origin:0 0;pointer-events:none}
@@ -323,7 +331,7 @@ body.dragging,body.dragging *{cursor:grabbing !important}
 .gsh .glow{background:radial-gradient(closest-side,rgba(90,236,255,.62),rgba(90,236,255,.28) 50%,rgba(90,236,255,0));filter:blur(2px)}
 .gsh .gold{border:3px solid rgba(255,248,205,.95);box-shadow:0 0 6px 2px rgba(255,214,70,.95),0 0 18px 7px rgba(255,176,20,.65),inset 0 0 8px 2px rgba(255,214,70,.8)}
 
-/* ---------- caption (what the voice says): the user's question template, on the left, halfway down ----------
+/* ---------- caption (what the voice says): the user's question template, at the top in the middle ----------
    art/ui/question_template.png (an orange wooden frame, dark-brown outline, cream panel), cut by
    tools/cut_question_board.py at 0.5 into assets/img/question_board.webp (1070×272) and painted as a 9-slice at 0.25
    (half the WebP, so it stays sharp on a 2× screen) into the canvas .bg by Caption.paint (src/20_audio.js), in whole
@@ -331,22 +339,27 @@ body.dragging,body.dragging *{cursor:grabbing !important}
    frame and its grain show; the corners stay as drawn and only straight frame and cream stretch to the words. The
    words (36px) sit in the cream panel, whose inset at 0.25 is 24 / 19 / 19.5 / 18.5 px (top right bottom left), as
    far from its left edge as from its right (no speaker icon: the user, 25 Nov 2026). Dark-brown words on the cream, so they always read. It hugs its words
-   (Caption.fit: as wide as its longest line), is at most 560 wide (its right edge stays clear of the cannon at
-   x ~595) and stays centred on y 470 (#capPos, in #stageTop: above the FX canvas, so cannon smoke never hides the
-   words). It shows only while a voice line is being said: it rises in as the voice starts, each word pops in as it
-   is said, it glides between lines and sinks away after the line (transform + opacity) */
+   (Caption.fit: as wide as its longest line) and hangs from the top of the screen, in the middle, between the pause /
+   sound buttons and Skip, above the cloud and never over it (the user, 26 Nov 2026: "the question panel should come
+   in top between… adjust the panel in upper side of the cloud… should not overlap with the cloud"); at most 1000
+   wide, so every line is one row and the board stays one row tall (#capPos, in #stageTop: above the FX canvas, so
+   cannon smoke never hides the words). On the end screen, whose title has the top, it waits on the left, halfway
+   down, as before (#capPos.end). It shows only while a voice line is being said: it drops in as the voice starts,
+   each word pops in as it is said, it glides between lines and lifts away after the line (transform + opacity) */
 #overlay{position:absolute;inset:0;pointer-events:none}
-/* (25 Nov 2026, the user: "the question template… like before, in the left corner": the design review's speech
-   bubble over x's cage, with its tail, is undone; the board is back on the left, halfway down) */
-#capPos{position:absolute;left:30px;top:470px;height:0;display:flex;align-items:center;pointer-events:none}
-#cap{position:relative;flex:none;max-width:560px;padding:40px 42px 35px 42px;color:#4a2508;font-size:36px;line-height:1.3;letter-spacing:.005em;opacity:0;transform-origin:0 50%}
+#capPos{position:absolute;left:0;top:10px;width:1672px;height:0;display:flex;justify-content:center;align-items:flex-start;pointer-events:none}
+#cap{position:relative;flex:none;max-width:1000px;padding:40px 42px 35px 42px;color:#4a2508;font-size:36px;line-height:1.3;letter-spacing:.005em;opacity:0;transform-origin:50% 0}
+/* (the end screen: on the left, halfway down, at most 450 wide, so the end line wraps clear of x's broken cage) */
+#capPos.end{left:30px;top:470px;width:auto;justify-content:flex-start;align-items:center}
+#capPos.end #cap{max-width:450px;transform-origin:0 50%}
 #cap .bg{position:absolute;left:0;top:0;width:100%;height:100%;display:block;transform-origin:0 0;filter:drop-shadow(0 7px 9px rgba(40,18,4,.3))}
-body:has(#endBtns.on) #cap{max-width:450px} /* (the end screen is up: the end line wraps clear of x's cage) */
 #cap .txt{display:block;position:relative;text-wrap:balance}
 /* its words come one by one with the voice (Caption.upTo): each is its own box so it can pop in (transform +
    opacity); a one-letter word (x) and the word after it share a .nw group, so x never ends a row */
 #cap .w{display:inline-block;opacity:0}
 #cap .nw{white-space:nowrap}
+/* the letter x in the board's words, set as mathematics as on the cloud (Caption.lay wraps it) */
+#cap .mx{font-family:'Swifty Math','Poppins',system-ui,sans-serif;font-style:italic;font-weight:400;font-synthesis:style;font-size:1.22em;line-height:0;margin:0 .03em}
 
 
 /* ---------- HUD (from the art: pause, sound) ---------- */
@@ -454,10 +467,10 @@ body.spot #hud.on{opacity:.5}
 #againBtn .rip{position:absolute;inset:-4px;border-radius:inherit;border:4px solid #fff6d2;opacity:0;pointer-events:none}
 #againBtn .gleam{position:absolute;inset:0;border-radius:inherit;overflow:hidden;pointer-events:none}
 #againBtn .gleam i{position:absolute;top:-12%;bottom:-12%;left:-45%;width:30%;background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.5),rgba(255,255,255,0))}
-/* short labels with no voice: a hint over FIRE, and a banner under the cloud ("Watch how!"). Skip's look */
+/* short labels with no voice: a hint over FIRE, and a banner beside the cloud ("Watch how!"). Skip's look */
 .note{position:absolute;left:0;top:0;translate:-50% 0;padding:10px 24px 9px;border-radius:99px;background:var(--glass);color:#fff;font-size:26px;line-height:1.15;white-space:nowrap;text-align:center;box-shadow:0 0 0 2.5px rgba(255,210,61,.9),0 8px 18px rgba(20,10,60,.28);opacity:0;transform:translateY(10px) scale(.94);transition:opacity .2s ease-in,transform .2s ease-in;pointer-events:none}
 .note.on{opacity:1;transform:none;transition:opacity .28s ease-out,transform .45s cubic-bezier(.34,1.45,.64,1)}
-#banner{left:560px;top:272px;translate:-50% 0;padding:12px 36px 11px;border-radius:26px}
+#banner{left:330px;top:236px;translate:-50% 0;padding:12px 36px 11px;border-radius:26px} /* (in the sky left of the cloud) */
 #banner b{display:block;font-weight:600;font-size:34px}
 #banner span{display:block;font-size:22px;color:#ffe08a;margin-top:2px}
 

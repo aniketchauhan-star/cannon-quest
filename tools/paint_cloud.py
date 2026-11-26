@@ -3,7 +3,11 @@
 # Repainted 25 Nov 2026 (user: "fix the cloud… it should look good"): the old one was a stack of airbrushed round
 # balls on a flat plate. This one follows the deck clouds closely:
 #   • shape: one big dome (a little wider than tall) just right of the middle, puffs of different sizes stepping down
-#     on each side, a flat underside that runs out into long thin wisps with pointed tips at both ends
+#     on each side, a flat underside that curves up a little at its ends
+# 26 Nov 2026 (user: "fix the string of the cloud… it should blend with the background"): the long thin wisps that
+# ran out of the underside on both sides (they read as a string) are gone, the underside melts into the sky over its
+# last ~13 px instead of ending on a ruled line, the outline is feathered by ~3 px (no cut-out edge), and the shade
+# takes a little more of the sky's blue
 #   • colour: two-tone, like the deck clouds: a bright white cap on each puff where the sun hits (top right, the
 #     game's SUN in src/32_scenery.js), a soft sky-blue below it, a clean soft step between the two (not airbrushed)
 #   • depth: the puffs overlap, back to front; each front puff casts a soft blue shade on the puff behind it, so its
@@ -47,19 +51,22 @@ PUFFS = [
     (392, 122, 120, 110),                         # the dome
     (250, 164, 94, 86), (536, 160, 92, 88),       # the big puffs either side of it
     (166, 206, 64, 56), (636, 212, 58, 50),       # the shoulders
-    (112, 244, 32, 26), (682, 246, 28, 22),       # small puffs where the wisps begin
+    (112, 244, 32, 26), (682, 246, 28, 22),       # small puffs at the ends of the underside
     (236, 256, 56, 42), (398, 252, 78, 50),       # low puffs in front, sunk in the body: only their tops show
     (560, 258, 58, 40),
 ]
-# the wisps along the flat underside: from x0 to x1, how thick in the middle; they lie behind the puffs
-WISPS = [(2, 330, 17), (430, 758, 16), (120, 640, 24)]
+SOFT = 13             # the underside melts into the sky over this many art px
+FEATHER = 4.0         # the outline's feather (gaussian sigma, in saved px = 2 art px)
 
 h, w = H * K, W * K
 yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
 X = (xx + 0.5) / K; Y = (yy + 0.5) / K  # art px
 del xx, yy
-# a gentle wave on the flat underside, so it is not ruler-straight
+# a gentle wave on the flat underside, so it is not ruler-straight, and its ends curve up a little into the end puffs
 base_y = BASE + 1.2 * np.sin(X / 41.0) + 0.6 * np.sin(X / 15.0 + 1.3)
+_e = np.clip((np.abs(X - 392) - 170) / 150, 0, 1)
+base_y = base_y - 9 * _e * _e * (3 - 2 * _e)
+del _e
 EDGE = 1.3  # anti-alias width (art px)
 
 
@@ -76,20 +83,6 @@ def over(col, cov, c2, a2):  # paint colour c2 with coverage a2 over (col, cov)
 
 col = np.zeros((h, w, 3), np.float32) + SHADE
 cov = np.zeros((h, w), np.float32)
-
-# 1) the wisps, behind everything: a thin lens on the underside, pointed at both ends, its tips lifting a little
-for (x0, x1, th) in WISPS:
-    cx, hw = (x0 + x1) / 2, (x1 - x0) / 2
-    u = (X - cx) / hw
-    inn = np.abs(u) < 1
-    prof = np.clip(1 - u * u, 0, 1) ** 1.25 * th          # thickness along it (0 at the tips)
-    mid = base_y + 2.5 - 3.0 * u * u                        # its centre line (the tips curl up a touch)
-    top, bot = mid - prof * 0.8, mid + prof * 0.2
-    d = np.minimum(Y - top, bot - Y)
-    a = np.clip(d / EDGE + 0.5, 0, 1) * inn
-    tt = np.clip((Y - top) / (prof + 1e-3), 0, 1)           # 0 on its top edge, 1 at its bottom
-    c = SHADE + (CAP - SHADE) * (0.75 * (1 - tt) ** 2)[..., None]
-    col, cov = over(col, cov, c, a)
 
 # 2) the puffs, back to front. A puff is round on top; below its middle its sides curve in much more gently and run
 #    down into the flat underside (an egg with its bottom cut flat), so no puff shows a round bottom: under their tops
@@ -143,14 +136,23 @@ col += (SHADE - col) * (0.55 * band)[..., None]
 
 # far away: a touch of the sky's blue in the shade
 lum = (col.mean(-1, keepdims=True) - 170) / 85
-col += (SKY - col) * (0.045 * (1 - np.clip(lum, 0, 1)))
+col += (SKY - col) * (0.09 * (1 - np.clip(lum, 0, 1)))
+
+# the underside melts into the sky (no ruled line under the cloud)
+cov *= smooth(-1.0, SOFT, base_y - Y)
 
 # downsample (premultiplied) to the saved size
 pm = np.concatenate([col * cov[..., None], cov[..., None] * 255], -1)
 pm = pm.reshape(H * S, SS, W * S, SS, 4).mean((1, 3))
 a = pm[..., 3:] / 255
 rgb = np.where(a > 1e-4, pm[..., :3] / np.maximum(a, 1e-4), 0)
-img = np.concatenate([np.clip(rgb, 0, 255), np.clip(pm[..., 3:], 0, 255)], -1).astype(np.uint8)
+# the outline feathered: the alpha eases from ~0.2 at the very edge to full ~2 sigma inside (the colour stays the
+# cloud's own, so no fringe), so the cloud sits in the sky instead of on it
+al0 = pm[..., 3] / 255
+g = nd.gaussian_filter(al0, FEATHER)
+t = np.clip((g - 0.3) / 0.7, 0, 1)
+al1 = al0 * (t * t * (3 - 2 * t))
+img = np.concatenate([np.clip(rgb, 0, 255), np.clip(al1[..., None] * 255, 0, 255)], -1).astype(np.uint8)
 
 # where the equation goes: the solid span of each row (art px), to check against #eqBox / EqUI.maxW, maxH
 al = img[..., 3] / 255.0

@@ -54,5 +54,6 @@ They are stored as Opus (`assets/sfx/*.webm`) to keep the game small.
 
 ## Libraries and fonts
 - GSAP 3.15.0 by GreenSock, bundled locally in `libs/gsap.min.js` (free under the GSAP Standard License)
-- Poppins SemiBold (600) by the Indian Type Foundry, SIL Open Font License 1.1 (`assets/fonts/OFL-Poppins.txt`). The game's typeface for everything but the maths; `build.sh` embeds `assets/fonts/poppins-600-*.woff2` into `index.html`
-- Trig Text (Regular, 400), from Lilita One by Juan Montoreano, SIL Open Font License 1.1 (`assets/fonts/OFL-TrigText.txt`). Supplied by the user on 19 Nov 2026 for the equation on the cloud and the numbers on the orbs; `build.sh` embeds `assets/fonts/trigtext-regular.woff2` into `index.html`
+- Poppins SemiBold (600) and Bold (700) by the Indian Type Foundry, SIL Open Font License 1.1 (`assets/fonts/OFL-Poppins.txt`). SemiBold for the buttons and labels; Bold for the equation on the cloud and the question board's words (as in the user's Distance Formula game, 26 Nov 2026); `build.sh` embeds `assets/fonts/poppins-600-*.woff2` and `poppins-700-*.woff2` into `index.html`
+- Swifty Math: the italic x of Latin Modern Math (GUST e-foundry), renamed as its licence asks, the file from the user's Distance Formula game (`assets/fonts/swifty-math.woff2`; GUST Font License, `assets/fonts/GUST-FONT-LICENSE.txt`). The letter x on the cloud and on the question board, set as mathematics
+- Trig Text (Regular, 400), from Lilita One by Juan Montoreano, SIL Open Font License 1.1 (`assets/fonts/OFL-TrigText.txt`). Supplied by the user on 19 Nov 2026; now the numbers on the orbs and the end title; `build.sh` embeds `assets/fonts/trigtext-regular.woff2` into `index.html`

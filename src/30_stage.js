@@ -9,7 +9,7 @@ const DW = 1672, DH = 941, CX = DW / 2, CY = DH / 2;
 // by tools/cut_double_cannon.py. Both are cut onto one canvas with one mapping (1226×898 px, 0.84 px per art px, the
 // barrel's centre on CANNON.x, the base's bottom 4 px above the canvas's), so a round's morph swaps only the top. Each
 // one's painted FIRE pill is a dark recess where the game's FIRE button sits)
-const CANNON = { x: 836, bottom: 762, h: 360, src: { 1: [613, 449], 2: [613, 449] },
+const CANNON = { x: 836, bottom: 762, h: 324, src: { 1: [613, 449], 2: [613, 449] },
   // each socket's centre + radius: x and r as fractions of the sprite width, y of its height. r comes from where the
   // ring's gold starts (found on 240 rays): r × seat = the ring's widest inner edge + 1.8 canvas px (see seat)
   holes: { 1: [[0.4978, 0.5072, 0.1164]], 2: [[0.3473, 0.5194, 0.0884], [0.6507, 0.5202, 0.0892]] },
@@ -30,11 +30,14 @@ const CANNON = { x: 836, bottom: 762, h: 360, src: { 1: [613, 449], 2: [613, 449
 const BALL_ART = 0.96; // the orb's share of its picture (ball_*.webp: the orb is ~161 of 168 px)
 // tray art (wooden, metal corners; its plain middle stretched to hold 8 balls): ball spots along its floor (holesX,
 // holeY), the bottom edge and the outer edges in source px; a seated ball's centre sits `seat` px below (+) / above (−) its spot
-const RACK = { left: 166, top: 780, w: 1340, srcW: 1618, holesX: [212.3, 382.4, 552.5, 722.7, 892.8, 1063.0, 1233.1, 1403.2], holeY: 59.5, bot: 185.4, edges: [2, 1616], seat: 12 }; // (12: each ball rests on the trough's floor, its bottom ~16 px behind the front rail, so it sits in the tray instead of hovering on the rail)
-const BALL_D = 122, MUZZLE = { x: CANNON.x, y: CANNON.bottom - CANNON.h + 14 }; // (BALL_D = the .ball size in the CSS)
+const RACK = { left: 233, top: 795, w: 1206, srcW: 1618, holesX: [212.3, 382.4, 552.5, 722.7, 892.8, 1063.0, 1233.1, 1403.2], holeY: 59.5, bot: 185.4, edges: [2, 1616], seat: 11 }; // (11: each ball rests on the trough's floor, its bottom ~16 px behind the front rail, so it sits in the tray instead of hovering on the rail)
+const BALL_D = 110, MUZZLE = { x: CANNON.x, y: CANNON.bottom - CANNON.h + 14 }; // (BALL_D = the .ball size in the CSS)
 // the equation cloud, far off in the sky and well clear of the cannon: Cloud.apply draws #cloud (card included) at
-// CLOUD_FAR of its size, about its transform-origin (world 828, 163). Where a shot hits (on the card), and its middle
-const CLOUD_FAR = 0.88, CLOUD_HIT = { x: 828, y: 174 }, CLOUD_MID = { x: 828, y: 133 };
+// CLOUD_FAR of its size, about its transform-origin (world 828, 294). Where a shot hits (on the card), and its middle.
+// The cannon, the tray and its orbs are 10 % smaller and the cloud 16 % (the user, 26 Nov 2026: "cloud, cannon and
+// ops and its stands should slightly small"), so the question board fits above the cloud at the top of the screen:
+// the cloud's top is at y 173, its underside at 358 (the board ends at 132)
+const CLOUD_FAR = 0.74, CLOUD_HIT = { x: 828, y: 303 }, CLOUD_MID = { x: 828, y: 269 };
 // background layers cut from the user's deck picture (tools/cut_deck_bg.py): how much each follows the camera (1 =
 // the deck, with its railing and plants, where the cannon stands; less = farther away, so it drifts less). Moved by
 // transform only, when the camera moves. Each layer holds ~25 bg px of picture under the edge of the one in front
@@ -1153,7 +1156,7 @@ const CageBreak = {
 // frame's height, in the middle of the deck; the broken cage's foot (its base ring's bottom, a little further back on
 // the deck than x), its middle (the dome's ball) and the picture's height. BROKEN: cage_broken.webp's size, and its
 // base ring's bottom and its middle in it (printed by the tool)
-const XEND = { x: 1330, foot: 732, free: 300, cage: 300 };
+const XEND = { x: 1330, foot: 732, free: 270, cage: 270 }; // (270: 10 % smaller with the cannon, 26 Nov 2026, so the two keep their sizes to each other)
 const END = { x: 846, foot: 762, h: 300, cage: { x: 672, foot: 742, h: 450 } };
 const BROKEN = { w: 418, h: 744, foot: 704, mid: 208.5 };
 const EndX = {

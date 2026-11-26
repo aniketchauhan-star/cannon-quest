@@ -288,8 +288,10 @@ const Music = {
 // (a CSS border-image leaves faint lines across the cream at the stage's fractional scales). SLICE: where the
 // template's rounded corners end, in WebP px (top right bottom left); EDGE: the same in art px, drawn at half the
 // WebP (0.25 of the template), the template's own proportions, so its whole thick wooden frame shows.
-// It stays on the left, halfway down (#capPos): the design review's speech bubble over x's cage was undone on
-// 25 Nov 2026 (the user: "the question template… like before, in the left corner"). It has no speaker icon, and no
+// It hangs at the top of the screen, in the middle, above the cloud and never over it (#capPos; the user, 26 Nov
+// 2026: "the question panel should come in top between… in upper side of the cloud"), so it drops in from above and
+// lifts away; on the end screen, whose title has the top, it waits on the left, halfway down (#capPos.end), rising in
+// as it did before. The letter x in its words is set as mathematics, as on the cloud (.mx). It has no speaker icon, and no
 // round hear-again button waits between lines (the user, 25 Nov 2026: "remove the X and sound icon… from this
 // entire game"): the board is only the words.
 const BOARD = { SLICE: [96, 100, 81, 100], EDGE: [48, 50, 40.5, 50] };
@@ -307,8 +309,18 @@ function paintBoard(c, el, im, edge = BOARD.EDGE) {
   for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++)
     g.drawImage(im, sx[i], sy[j], sx[i + 1] - sx[i], sy[j + 1] - sy[j], dx[i], dy[j], dx[i + 1] - dx[i], dy[j + 1] - dy[j]);
 }
+// a word of the board, with the letter x in it (x, x!, x?) set as mathematics (.mx: Latin Modern Math's italic x, as
+// on the cloud); every other word is plain text
+function mathX(el, word) {
+  const m = /^([^A-Za-z]*)x([^A-Za-z]*)$/.exec(word);
+  if (!m) { el.textContent = word; return; }
+  const x = document.createElement('span'); x.className = 'mx'; x.textContent = 'x';
+  el.replaceChildren(...[m[1], x, m[2]].filter((p) => p !== ''));
+}
 const Caption = {
   el: null, bg: null, txt: null, pic: null, words: [], want: 0, shown: 0, ready: false, id: 0,
+  // which way it comes in and goes (px): down from the top of the screen, or up on the end screen's left
+  dy() { return this.el.parentElement.classList.contains('end') ? 1 : -1; },
   init() {
     if (this.el) return;
     this.el = $('#cap'); this.bg = this.el.querySelector('.bg'); this.txt = this.el.querySelector('.txt');
@@ -335,7 +347,7 @@ const Caption = {
     const t = this.txt, m = String(text).match(/\S+/g) || [], n = m.length;
     gsap.killTweensOf(this.words);
     t.textContent = '';
-    const ws = (this.words = m.map((s) => { const w = document.createElement('span'); w.className = 'w'; w.textContent = s; return w; }));
+    const ws = (this.words = m.map((s) => { const w = document.createElement('span'); w.className = 'w'; mathX(w, s); return w; }));
     for (let i = 0; i < n;) {
       if (i) t.append(' ');
       let j = i; while (j < n - 1 && [...m[j]].length === 1) j++;
@@ -356,7 +368,7 @@ const Caption = {
     gsap.killTweensOf(el);
     if (!up) { // enter: the board is laid out before it shows
       gsap.killTweensOf([txt, bg]); this.lay(text);
-      gsap.set(txt, { opacity: 1, y: 0 }); gsap.set(bg, { x: 0, y: 0, scaleX: 1, scaleY: 1 }); gsap.set(el, { y: 14, scale: 0.97 });
+      gsap.set(txt, { opacity: 1, y: 0 }); gsap.set(bg, { x: 0, y: 0, scaleX: 1, scaleY: 1 }); gsap.set(el, { y: 14 * this.dy(), scale: 0.97 });
       this.ready = true;
     } else { // the old words fade out, the board glides from the old box to the new one, the new words come as said
       gsap.killTweensOf(txt);
@@ -389,7 +401,7 @@ const Caption = {
     if (!this.el.classList.contains('on')) return;
     this.el.classList.remove('on');
     gsap.killTweensOf(this.el);
-    Motion.to(this.el, { opacity: 0, y: -6, scale: 0.98, duration: Motion.DUR.FAST + 0.03, ease: Motion.EASE.IN });
+    Motion.to(this.el, { opacity: 0, y: this.dy() > 0 ? -6 : -10, scale: 0.98, duration: Motion.DUR.FAST + 0.03, ease: Motion.EASE.IN });
   },
 };
 
