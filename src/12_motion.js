@@ -5,8 +5,8 @@
 //    requestAnimationFrame underneath, time-based (deltaTime), never setInterval.
 //  • Only transform + opacity move. Ease-out to enter, ease-in to leave, back.out
 //    for playful pops. UI feedback 150–300 ms, concept reveals 400–800 ms.
-//  • Each shot (and its outcome) is ONE GSAP timeline, with a Skip button that
-//    jumps it to the end, silently (tl.progress(1)).
+//  • Each shot (and its outcome) is ONE GSAP timeline; a tap on the scene while x
+//    is being freed jumps it to the end, silently (tl.progress(1)). No Skip button.
 //  • prefers-reduced-motion: motion lands at once (pauses for reading stay);
 //    no shake, particles, idle loops or camera drift.
 // =====================================================================
@@ -190,36 +190,16 @@ const Perf = {
   },
 };
 
-// ---------- the Skip button (top-right, level with Pause and Sound): shown while a tutorial or a shot is playing ----------
-// It always sits in the same place and only fades (design review, 23 Nov 2026: "Skip appears and disappears between
-// states, which makes the top-right corner flicker. Keep it in a fixed place and fade it in and out"). A hide waits a
-// moment, so a shot that follows the tutorial (or the next shot) keeps it up instead of blinking it off and on.
+// ---------- skipping a shot: no button (the user, 26 Nov 2026: "Skip ki bhi [need ni hai]") ----------
+// A shot says what skips it (show); only a tap on the scene while x is being freed calls it (wireInput: design
+// review, "let a tap skip the celebration"). The tutorial cannot be skipped.
 const Skip = {
-  el: null, fn: null, on: false, later: null,
-  init() {
-    this.el = $('#skipBtn');
-    this.el.addEventListener('click', () => this.now());
-  },
-  // skip what is playing (the button, or a tap on the scene during a celebration)
+  fn: null,
   now() {
-    if (!this.on || G.paused) return;
+    if (!this.fn || G.paused) return;
     Sound.click();
-    const f = this.fn; this.hide(true); if (f) f();
+    const f = this.fn; this.fn = null; f();
   },
-  show(fn) {
-    this.fn = fn;
-    if (this.later) { this.later.kill(); this.later = null; }
-    if (this.on) return;
-    this.on = true; this.el.classList.add('on');
-    gsap.killTweensOf(this.el);
-    Motion.to(this.el, { opacity: 1, duration: Motion.DUR.FAST, ease: Motion.EASE.OUT });
-  },
-  hide(soon = false) {
-    this.fn = null;
-    if (!this.on) return;
-    this.on = false; this.el.classList.remove('on'); // (it stops taking taps at once)
-    if (this.later) this.later.kill();
-    const go = () => { this.later = null; if (!this.on) { gsap.killTweensOf(this.el); Motion.to(this.el, { opacity: 0, duration: Motion.DUR.FAST, ease: Motion.EASE.IN }); } };
-    if (soon) go(); else this.later = gsap.delayedCall(0.4, go);
-  },
+  show(fn) { this.fn = fn; },
+  hide() { this.fn = null; },
 };

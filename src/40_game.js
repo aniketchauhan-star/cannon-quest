@@ -4,7 +4,7 @@
 // =====================================================================
 const G = {
   state: 'boot', session: 0, idx: 0, freed: 0, eq: null, sockets: [], inputOn: false, fireResolve: null, hooks: {},
-  taught1: false, tutSkip: false, idle: 0, rackFor: null, firstEntry: false, paused: false, helping: false, tl: null,
+  taught1: false, idle: 0, rackFor: null, firstEntry: false, paused: false, helping: false, tl: null,
   welcome: null, said: { freed: 0, stuck: 0, next: 0 },
   results: [],          // per equation: 'ok' (x freed at the first try), 'ok2' (on the retry), 'miss' (the game showed how)
   celebrate: false,     // x is being freed: a tap anywhere skips to the next question
@@ -448,15 +448,10 @@ function playShots(opts = {}) {
 // (user, 20 Nov). Five steps: the spotlight shows the three parts in turn (1 the equation, 2 the cannon, 3 the
 // orbs); 4 the hand taps the glowing −5 and the player taps it (or drags it, or presses its key): it flies into the
 // cannon; 5 the hand moves to FIRE and the player taps it (or presses Enter), and the shot goes (user, 20 Nov: "the 5
-// one is click fire button"; before, the cannon fired by itself). Every line by key; Skip ends it.
+// one is click fire button"; before, the cannon fired by itself). Every line by key. It cannot be skipped: there is
+// no Skip button (the user, 26 Nov 2026: "Skip ki bhi [need ni hai]").
 // It plays every time the game is opened (user, 20 Nov: "in this screen, add a tutorial part": it had been saved in
 // the browser after one showing, so it never came again). Only Play again, in the same visit, goes straight into play.
-function skipTutorial() {
-  G.tutSkip = true;
-  VO.stop(); Spot.hide(); G.spotOnly = null;
-  Rack.balls.forEach((b) => (b.guide = false));
-  if (G.hooks) { G.hooks.onFill = null; G.hooks.softSpot = false; }
-}
 const sockSpot = (i = 0) => () => { const h = Cannon.holes()[i]; return Spot.worldBox(h.x, h.y, h.r * 2, h.r * 2); };
 // the three parts the tutorial shows, as boxes on screen (stage units)
 const eqSpot = () => Spot.boxOf(EqUI.el);
@@ -466,8 +461,7 @@ const orbsSpot = () => Spot.boxOf(Rack.balls.filter((b) => b.where === 'rack').m
 const ballSpot = (b) => () => { const r = Rack.restPos(b.holder); return Spot.worldBox(r.x, r.y - 11, BALL_D + 22, BALL_D + 22); };
 const fireSpot = () => Spot.boxOf($('#fireBtn'));
 async function tutorialLoad() {
-  G.taught1 = true; G.tutSkip = false;
-  Skip.show(skipTutorial);
+  G.taught1 = true;
   // 1) the equation, 2) the cannon, 3) the orbs: one at a time, everything else dimmed (not blurred: the equation
   // must stay readable in every step, user 23 Nov)
   const parts = [
@@ -476,14 +470,11 @@ async function tutorialLoad() {
     [orbsSpot, { sx: 1.5, sy: 2, pad: 24 }, 'tutOrbs'], // (the orbs glow one after another: Rack.glowWave)
   ];
   for (const [box, o, line] of parts) {
-    if (G.tutSkip) return null;
     Spot.show(box, o);
     if (line === 'tutOrbs') Rack.glowWave();
     await VO.say(line, 0.5);
   }
-  if (G.tutSkip) return null;
   return () => {
-    if (G.tutSkip) return;
     // 4) tap the glowing −5: the hand taps it, and only it can be loaded (a key or a drag loads it too)
     const guide = ROUNDS[G.idx].guide || [];
     Rack.balls.forEach((b) => (b.guide = guide.some((g) => parseOp(g).label === b.op.label)));
@@ -494,10 +485,10 @@ async function tutorialLoad() {
     // 5) it flies into the cannon; once it has landed in its socket, the spotlight moves to FIRE (the loaded socket
     // stays clear beside it) and the hand taps it. The −5 stays in now: only FIRE answers (it may be tapped at once)
     G.hooks.onFill = (filled, n) => {
-      if (G.tutSkip || filled !== n || G.hooks.fireStep) return;
+      if (filled !== n || G.hooks.fireStep) return;
       G.hooks.fireStep = true; G.spotOnly = 'fire';
       wait(Motion.BEAT.TAP_FLY + 0.15).then(() => {
-        if (G.tutSkip || !G.fireResolve) return; // (skipped, or FIRE already tapped)
+        if (!G.fireResolve) return; // (FIRE already tapped)
         Spot.show(fireSpot, { hand: true, sx: 1.12, sy: 1.3, pad: 20, also: sockSpot(0), sx2: 1.25, sy2: 1.25, pad2: 26, glow: [$('#fireBtn')] });
         VO.say('tutTapFire', 0.5);
       });
@@ -731,7 +722,7 @@ async function showEnd(sid) {
 async function restartGame() {
   G.session++;
   if (G.tl) { G.tl.kill(); G.tl = null; } // the running round's timeline is torn down with everything else in flight
-  Motion.killAll(); Skip.hide(true);
+  Motion.killAll(); Skip.hide();
   VO.stop(); G.inputOn = false; G.fireResolve = null; G.hooks = {}; G.helping = false; G.spotOnly = null; G.celebrate = false; Drag.cancel(); Spot.hide();
   EndCard.hide(); Note.hide(); Cannon.hideOrder(true);
   Caption.place(false); // (the board comes back at the top with the next line)
@@ -755,13 +746,12 @@ function goHome() {
 }
 
 // ---- pause ----
-// No panel: the game freezes as it is and the pause button turns into play (the user, 25 Nov 2026: "remove this panel
-// of paused, no need of this panel"; the design review's pause menu and its music / voice / sounds switches are gone)
+// No pause button and no panel (the user, 25 Nov 2026: "remove this panel of paused"; 26 Nov 2026: "yh upar do buttons
+// ki need ni hai", the Pause and Sound buttons): the game freezes only while its tab is hidden, and goes on by itself
+// when it comes back (wireInput)
 function setPaused(p) {
   if (G.state === 'title' || G.state === 'boot' || G.paused === p) return;
   G.paused = p; Clock.paused = p; Scenery.pause(p);
-  $('#pauseBtn img').src = IMG + (p ? 'play.webp' : 'pause.webp');
-  $('#pauseBtn').setAttribute('aria-label', T(p ? 'btnResume' : 'btnPause'));
   if (p) { Drag.cancel(); gsap.globalTimeline.pause(); Music.pause(); Sound.suspend(); VO.pause(); } // (a ball in hand goes home)
   else { gsap.globalTimeline.resume(); Music.resume(); Sound.resume(); VO.resume(); }
 }
@@ -770,7 +760,6 @@ function setPaused(p) {
 async function onPlay() {
   if (G.state !== 'title') return;
   G.state = 'starting';
-  $('#hud').classList.remove('ttl');
   Sound.init(); Sound.resume(); Music.start(); Sound.startAmbient();
   flashScreen();
   // zoom-through: the camera punches toward the Play button while the start screen bursts away…
@@ -808,7 +797,6 @@ async function onPlay() {
   await Cloud.enter(false);
   await gap();
   await Cloud.showEq();
-  $('#hud').classList.add('on');
   G.firstEntry = true;
   runSession();
 }
@@ -819,19 +807,15 @@ async function onPlay() {
 function wireInput() {
   $('#fireBtn').addEventListener('pointerdown', (e) => { e.preventDefault(); tapFire(); });
   $('#playBtn').addEventListener('click', onPlay);
-  $('#pauseBtn').addEventListener('click', () => { const p = !G.paused; if (!p) setPaused(false); Sound.click(); if (p) setPaused(true); });
   $('#againBtn').addEventListener('click', () => { Sound.click(); restartGame(); });
   $('#homeBtn').addEventListener('click', goHome);
   // a tap anywhere on the scene while x is being freed skips to the next question (design review: "let a tap skip
   // the celebration")
   $('#viewport').addEventListener('pointerdown', (e) => { if (G.celebrate && G.tl && !G.paused && !e.target.closest('button')) Skip.now(); });
-  $('#sndBtn').addEventListener('click', () => { Sound.init(); Sound.click(); Sound.setMuted(!Sound.muted); $('#sndBtn').classList.toggle('muted', Sound.muted); });
   $('#rotateOk').addEventListener('click', () => $('#rotate').classList.add('dismissed'));
   addEventListener('keydown', (e) => {
     if (e.repeat) return;
     if (G.state === 'title' && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onPlay(); return; }
-    if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') { setPaused(!G.paused); return; }
-    if (e.key === 'm' || e.key === 'M') { $('#sndBtn').click(); return; }
     if (G.paused) return;
     if (/^[1-8]$/.test(e.key)) { const b = Rack.balls.find((x) => x.holder === +e.key - 1); if (b) tapBall(b); }
     else if (e.key === 'Backspace') { const f = G.sockets.filter(Boolean); if (f.length) tapBall(f[f.length - 1]); }
@@ -840,7 +824,7 @@ function wireInput() {
   // a tapped button shouldn't keep focus (no focus box, and Enter/Space stay for FIRE)
   addEventListener('pointerup', () => { const a = document.activeElement; if (a && a.tagName === 'BUTTON') a.blur(); });
   addEventListener('resize', () => Stage.resize());
-  document.addEventListener('visibilitychange', () => { if (document.hidden && G.state === 'play') setPaused(true); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { if (G.state === 'play') setPaused(true); } else setPaused(false); });
 }
 // one frame, on gsap.ticker (requestAnimationFrame underneath): everything moves by elapsed time
 // Real time (rdt) drives the camera and its shake; game time (dt) is real time × hit-stop / slow-mo (TimeFx), and
@@ -865,8 +849,8 @@ function frame(time, deltaMs) {
 // preloads them); the play scene's arrive while the player is on the start screen (Title.exit waits for them,
 // in case Play is tapped first) ----
 const Pics = {
-  TITLE: ['bg_sky', 'sun_glow', 'sun_rays', 'bg_mount', 'bg_trees', 'bg_plantL', 'bg_plantR', 'bg_deck', 't_logo', 't_cannon', 'playbtn', 'x_cry', 'sound'],
-  GAME: ['cloud', 'cloud_rim', 'cannon1', 'cannon2', 'cannon1_front', 'cannon2_front', 'rack', 'rack_front', 'fire', 'fire2', 'cage_empty', 'cage_crack', 'hand', 'pause', 'play', 'question_board',
+  TITLE: ['bg_sky', 'sun_glow', 'sun_rays', 'bg_mount', 'bg_trees', 'bg_plantL', 'bg_plantR', 'bg_deck', 't_logo', 't_cannon', 'playbtn', 'x_cry'],
+  GAME: ['cloud', 'cloud_rim', 'cannon1', 'cannon2', 'cannon1_front', 'cannon2_front', 'rack', 'rack_front', 'fire', 'fire2', 'cage_empty', 'cage_crack', 'hand', 'question_board',
     ...[...new Set(Object.values(OP_ART))].map((i) => `ball_${i}`)], // (the orbs' four colours: OP_ART)
   LATER: ['x_dance', 'cage_broken'], // (wanted only once x is first freed, and at the end: fetched after the rest)
   game: null, // (a promise: the play scene's pictures and the font)
@@ -892,14 +876,13 @@ async function boot() {
   Object.assign(Stage.cam, { fx: CX, fy: CY, z: 1.05 }); Stage.snap(); Stage.update(0);
   await Pics.load(Pics.TITLE, 8); // usually in already: they have been downloading since the page's <head>
   if (Sound.live()) await Promise.race([Sound.ready(), later(1000)]); // (sound allowed at once: the entrance's sounds are decoded first)
-  Cloud.init(); Cannon.init(); Rack.init(); EqUI.init(); DeckCage.init(); Title.init(); Spot.init(); Skip.init(); Caption.init();
+  Cloud.init(); Cannon.init(); Rack.init(); EqUI.init(); DeckCage.init(); Title.init(); Spot.init(); Caption.init();
   wireInput();
   gsap.ticker.add(frame);
   window.__cqBooted = true; window.__cq = { G, Clock, Rack, Drag, Sound, Music, Stage, EqUI, VO, Motion, Skip, Spot, Title, Cloud, Cannon, TimeFx, Perf, FX, Pics, CageBreak, CloudBurst, Fracture, Vignette, Fireworks, Sprite, EndX, DeckCage, Caption, EndCard, Note };
   // the start screen: the scene fades in while the title plays its intro, and the Play button pops in
   G.state = 'title';
   Title.start();
-  $('#hud').classList.add('ttl'); // (only the sound button, on the start screen)
   Motion.to($('#world'), { opacity: 1, duration: Motion.DUR.SLOW, ease: Motion.EASE.OUT });
   // …and the rest comes while the player looks at it (nothing of it was asked for before, so it never slowed the
   // start screen): the play scene's pictures (the markup's data-src ones, the tray's balls) + the font, then the sound effects

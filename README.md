@@ -12,17 +12,16 @@ It is based on the *Cannon Quest* deck, the POD A stand-up brief (16 Nov 2026), 
 - Drag a ball into the cannon to load it: near the cannon the nearest empty socket glows and draws the ball in, and let go there, it drops in and fills the socket. Let go anywhere else and it flies back to the tray. On the two-socket cannon you can drop a ball straight into socket 1 or 2. With the cannon full, drop a ball on a loaded socket to swap it in: the ball that was there flies back to the tray.
 - Tapping still works too: tap a ball to load it. With the cannon full, tapping another ball swaps it in for the ball loaded last, which flies back to the tray (no need to unload first). Tap a loaded ball to send it back, or drag it out. No × is drawn on a loaded ball (the user, 25 Nov 2026).
 - Tap **FIRE** to fire. Tapped too early, it shakes and says what is missing ("Load 2 orbs first.").
-- **Skip** (top right, level with Pause and Sound) fades in while the tutorial or a shot is playing. It ends the tutorial, or jumps the shot straight to its result. While x is being freed, a tap anywhere on the scene skips too.
-- **Pause** freezes the game where it is, with no panel; the button turns into a play button, and tapping it again carries on. The speaker button mutes everything at once; it is also on the start screen.
+- No buttons in the corners: no Pause, no Sound, no Skip (the user, 26 Nov 2026: "yh upar do buttons ki need ni hai. Skip ki bhi"). The tutorial plays through. While x is being freed, a tap anywhere on the scene jumps to the next question.
+- The game freezes by itself while its tab is hidden, and goes on when it comes back.
 - No round speaker or "x" tag is drawn anywhere in play: the question board is only its words, and x's cage carries no label (the user, 25 Nov 2026).
-- Keyboard: `1`–`8` load a ball (also during the tutorial), `Backspace` removes the last one, `Enter` fires, `P` pauses, `M` mutes.
+- Keyboard: `1`–`8` load a ball (also during the tutorial), `Backspace` removes the last one, `Enter` fires.
 
 ## What's in the game
 - **Design review of 23 Nov 2026 (@Karan):** done; what changed for each point is in `docs/DESIGN_REVIEW.md`.
 - **Start screen:** your mockup `art/start_screen/start_mockup.png`, built from your sheet `art/start_screen/start_sheet.png`. Every piece sits where the mockup puts it, on the game's own deck background.
   - The CANNON QUEST plaque is at the top, the wooden cannon at the bottom left, and the golden cage at the bottom right with x inside it. Play sits on the deck between them, off the rope line, 220 art px (1.25× the 176 you chose; the review asked for 1.5×), with a breathing glow, a slow pulse and its ripple.
   - x cries in its cage: your crying-x art (`x_cry`, the same as in the game), so x has its face and tears from the first second (review: "give the title X the same eyes and a sad idle animation"). Its old struggle loop was made for the plain letter x and went with it.
-  - The sound button is on the start screen too (top left), so a classroom can mute before starting.
   - The pieces come in one after another, each with its own real recorded sound (CC0, see `CREDITS.md`; `Title.IN` and `Title.cues` in `src/35_title.js`, `Sound.signLand` / `rollIn` / `cannonLand` / `cageLand` / `cork` in `src/20_audio.js`):
     - the CANNON QUEST sign drops from the sky with a swish and bounces into place with a wooden knock;
     - the cannon slides in from the left over the deck (a soft roll) and plants itself with a heavy thud and a puff of dust;

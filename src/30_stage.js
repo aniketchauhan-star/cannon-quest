@@ -1482,7 +1482,7 @@ const Cannon = {
   hint() { this.fire.classList.remove('hint'); void this.fire.offsetWidth; this.fire.classList.add('hint'); },
   // which socket fires first, shown in the first two-socket round only (design review, 23 Nov 2026: "nothing explains
   // the order; add '1' and '2' labels or number the chambers in the first two-step round"). The user had the markers
-  // removed for good on 23 Nov, so these come for that one round and go when it fires. Skip's look: dark glass, gold edge
+  // removed for good on 23 Nov, so these come for that one round and go when it fires. Dark glass, gold edge
   showOrder() {
     this.hideOrder(true);
     const fx = $('#sockFx');
@@ -1832,7 +1832,7 @@ const QCard = {
 };
 
 // ---------- short labels with no voice: a hint over FIRE ("Load 2 orbs first!") and a banner under the cloud ("Watch
-// how!": the "Try again!" one was taken out, the user, 25 Nov 2026), in Skip's look. They come and go by CSS transitions (transform + opacity); placed in stage units ----------
+// how!": the "Try again!" one was taken out, the user, 25 Nov 2026), in dark glass with a gold edge. They come and go by CSS transitions (transform + opacity); placed in stage units ----------
 const Note = {
   tipT: null, banT: null,
   // a hint over a point of the scene (art px), for a moment

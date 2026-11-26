@@ -136,7 +136,7 @@ img{-webkit-user-drag:none;user-select:none}
 #cloud .chz{position:absolute;left:40px;top:140px;width:576px;height:150px;border-radius:50%;pointer-events:none;background:radial-gradient(closest-side,rgba(242,251,255,.45),rgba(242,251,255,.2) 55%,rgba(242,251,255,0))}
 /* No box: the question sits right on the cloud (the user asked to remove the card on 19 Nov). During play there is no
    label, only the equation (the user removed "Find the value of x" on 19 Nov); at the end a small dark label
-   (the same dark glass + gold ring as Skip and the caption) reads "Your score", under the cloud's top bump. The equation
+   (dark glass + gold ring) reads "Your score", under the cloud's top bump. The equation
    sits in the middle of the cloud's body (its centre of mass), always fitted inside the cloud (EqUI.maxW / maxH).
    Measured on cloud.webp (tools/paint_cloud.py, repainted 25 Nov), in #cloud box px: the body is solid from x 112 to
    570 below y 140 and from x 106 to 574 below y 160, down to its flat base at y 272; its middle is x 328 */
@@ -265,7 +265,7 @@ img{-webkit-user-drag:none;user-select:none}
 .sbk{position:absolute;display:block;border-radius:50%;pointer-events:none;opacity:0;transition:opacity .2s ease-out;
   background:radial-gradient(circle at 50% 46%,#2b1306 0,#1a0903 58%,#0d0401 100%);box-shadow:inset 0 5px 7px rgba(0,0,0,.65)}
 .sbk.on{opacity:1}
-/* the order the two sockets fire in, only in the first two-socket round (Cannon.showOrder): Skip's dark glass + gold */
+/* the order the two sockets fire in, only in the first two-socket round (Cannon.showOrder): dark glass + gold */
 .stag{position:absolute;translate:-50% -50%;min-width:46px;height:46px;padding:2px 12px 0;border-radius:99px;display:grid;place-items:center;background:var(--glass);color:#fff;font-size:28px;line-height:1;box-shadow:0 0 0 2.5px rgba(255,210,61,.92),0 5px 12px rgba(20,10,60,.3);pointer-events:none}
 .sglow{position:absolute;border-radius:50%;pointer-events:none;opacity:0;box-shadow:0 0 0 7px rgba(255,236,120,.95),0 0 34px 16px rgba(255,196,40,.9),inset 0 0 26px 8px rgba(255,220,90,.7);transition:opacity .2s}
 .sglow.on{opacity:1;animation:sg .5s ease-in-out infinite alternate}
@@ -378,8 +378,7 @@ body.dragging,body.dragging *{cursor:grabbing !important}
    words (36px) sit in the cream panel, whose inset at 0.25 is 24 / 19 / 19.5 / 18.5 px (top right bottom left), as
    far from its left edge as from its right (no speaker icon: the user, 25 Nov 2026). Dark-brown words on the cream, so they always read. At the top
    it has ONE size all game (Caption.wide: as wide as the widest line it says there, the words centred in it). It
-   hangs from the top of the screen, in the middle, between the pause /
-   sound buttons and Skip, above the cloud and never over it (the user, 26 Nov 2026: "the question panel should come
+   hangs from the top of the screen, in the middle, above the cloud and never over it (the user, 26 Nov 2026: "the question panel should come
    in top between… adjust the panel in upper side of the cloud… should not overlap with the cloud"); at most 1000
    wide, so every line is one row and the board stays one row tall (#capPos, in #stageTop: above the FX canvas, so
    cannon smoke never hides the words). The end screen has no board: its line is only said (the user, 26 Nov 2026:
@@ -399,8 +398,6 @@ body.dragging,body.dragging *{cursor:grabbing !important}
 #cap .mx{font-family:'Swifty Math','Poppins',system-ui,sans-serif;font-style:italic;font-weight:400;font-synthesis:style;font-size:1.22em;line-height:0;margin:0 .03em}
 
 
-/* ---------- HUD (from the art: pause, sound) ---------- */
-#hud{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .3s ease-out}
 /* ---------- spotlight tutorial: a light dim over everything except the focus, and NO blur (user, 23 Nov: the blur
    hid the equation; it must stay readable in every step) ----------
    up to two clear holes (--x/--y/--rx/--ry, and --x2/… for a second one, parked off screen when unused): each mask
@@ -424,28 +421,9 @@ body.dragging,body.dragging *{cursor:grabbing !important}
 #fireBtn.lit .fgl{animation:flit 1s ease-in-out infinite alternate}
 @keyframes flit{from{opacity:.35}to{opacity:.85}}
 #spotHand{position:absolute;left:0;top:0;width:90px;height:126.9px;margin:-32.6px 0 0 -34.4px;display:block;max-width:none;pointer-events:none;opacity:0;transform-origin:34.4px 32.6px;filter:drop-shadow(0 6px 7px rgba(20,10,60,.35))} /* your hand (art/ui/hand.webp); its fingertip is the point that taps */
-body.spot #hud.on{opacity:.5}
-#hud.on{opacity:1}
-.hbtn{position:absolute;top:max(10px,2.4vh);width:clamp(46px,5.3vw,96px);aspect-ratio:132/133;pointer-events:auto;transition:transform .12s;filter:drop-shadow(0 4px 6px rgba(0,0,0,.18))}
-.hbtn img{width:100%;height:100%;display:block}
-.hbtn:active{transform:scale(.9)}
-#pauseBtn{left:max(10px,2vw)}
-#sndBtn{left:calc(max(10px,2vw) + clamp(46px,5.3vw,96px) + max(8px,1vw))}
-/* on the start screen only the sound button shows, in the first place (design review: "put the sound toggle here so a
-   classroom can mute before starting"); it glides to its place beside Pause when the game starts */
-#hud.ttl{opacity:1}
-#hud.ttl>*:not(#sndBtn){visibility:hidden}
-#hud.ttl #sndBtn{translate:calc(-1 * (clamp(46px,5.3vw,96px) + max(8px,1vw))) 0}
-#sndBtn{transition:transform .12s,translate .45s cubic-bezier(.22,1,.36,1)}
-#sndBtn.muted::after{content:'';position:absolute;left:14%;right:14%;top:47%;height:9%;background:#e8132b;border-radius:9px;transform:rotate(-40deg);box-shadow:0 0 0 3px #fff}
-/* Skip: always in the same place, top right, level with Pause and Sound; it only fades (Skip in src/12_motion.js). (No
-   progress dots: the user took them out of the game, 25 Nov 2026) */
-#skipBtn{position:absolute;top:max(10px,2.4vh);right:max(10px,2vw);height:clamp(40px,4.4vw,58px);padding:0 clamp(14px,1.5vw,22px) 0 clamp(16px,1.7vw,24px);display:flex;align-items:center;gap:.4em;border-radius:99px;background:var(--glass);color:#fff;font-size:clamp(16px,1.7vw,23px);line-height:1;letter-spacing:.01em;box-shadow:0 0 0 2px rgba(255,210,61,.85),0 6px 16px rgba(20,10,60,.24);opacity:0;pointer-events:none;transition:background-color .15s ease-out,scale .12s ease-out}
-#skipBtn.on{pointer-events:auto}
-#skipBtn:hover{background:var(--glass-hi)}
-#skipBtn:active{scale:.95} /* (scale, not transform: GSAP owns its transform for the enter/exit) */
-#skipBtn span{padding-top:.08em}
-#skipBtn svg{width:.9em;height:.9em;flex:none}
+/* No buttons in the corners: no Pause, no Sound, no Skip (the user, 26 Nov 2026: "yh upar do buttons ki need ni hai.
+   Skip ki bhi"). The game pauses by itself while its tab is hidden, and goes on when it comes back (setPaused). (No
+   progress dots either: the user took them out of the game, 25 Nov 2026) */
 #fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none}
 /* flying balls ride above the particles (so a ball and its label read through the muzzle blast), in a copy of
    the stage + camera transform that Stage keeps in step with the world */
@@ -511,7 +489,7 @@ body.spot #hud.on{opacity:.5}
 #againBtn .rip{position:absolute;inset:-4px;border-radius:inherit;border:4px solid #fff6d2;opacity:0;pointer-events:none}
 #againBtn .gleam{position:absolute;inset:0;border-radius:inherit;overflow:hidden;pointer-events:none}
 #againBtn .gleam i{position:absolute;top:-12%;bottom:-12%;left:-45%;width:30%;background:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.5),rgba(255,255,255,0))}
-/* short labels with no voice: a hint over FIRE, and a banner beside the cloud ("Watch how!"). Skip's look */
+/* short labels with no voice: a hint over FIRE, and a banner beside the cloud ("Watch how!"). */
 .note{position:absolute;left:0;top:0;translate:-50% 0;padding:10px 24px 9px;border-radius:99px;background:var(--glass);color:#fff;font-size:26px;line-height:1.15;white-space:nowrap;text-align:center;box-shadow:0 0 0 2.5px rgba(255,210,61,.9),0 8px 18px rgba(20,10,60,.28);opacity:0;transform:translateY(10px) scale(.94);transition:opacity .2s ease-in,transform .2s ease-in;pointer-events:none}
 .note.on{opacity:1;transform:none;transition:opacity .28s ease-out,transform .45s cubic-bezier(.34,1.45,.64,1)}
 #banner{left:330px;top:236px;translate:-50% 0;padding:12px 36px 11px;border-radius:26px} /* (in the sky left of the cloud) */
@@ -578,11 +556,6 @@ html:not(.fit) #stage,html:not(.fit) #stageTop{visibility:hidden} /* (until fitS
        the camera; what flies (#worldTop) still passes over it -->
   <div id="stageTop"><div id="capPos"><div id="cap"><canvas class="bg"></canvas><span class="txt"></span></div></div><div id="worldTop"><div id="fly"></div></div></div>
   <div id="flash"></div>
-  <div id="hud">
-    <button id="pauseBtn" class="hbtn" data-i18n-attr="aria-label:btnPause"><img data-src="assets/img/pause.webp" alt=""></button>
-    <button id="sndBtn" class="hbtn" data-i18n-attr="aria-label:btnSound"><img data-src="assets/img/sound.webp" alt=""></button>
-    <button id="skipBtn" data-i18n-attr="aria-label:btnSkip"><span data-i18n="btnSkip"></span><svg viewBox="0 0 24 24" fill="#ffd23d" aria-hidden="true"><path d="M4 5.5v13l9-6.5zM13 5.5v13l9-6.5z"/></svg></button>
-  </div>
   <div id="rotate"><div><div class="ph"></div><span data-i18n-html="rotateHint"></span><br><button id="rotateOk" data-i18n="btnPlayAnyway"></button></div></div></div>
 <script>
 /* Fit the art-space stage to the screen before the first paint, so the start screen shows at once, in its place

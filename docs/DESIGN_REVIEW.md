@@ -17,7 +17,7 @@ Status of each point in the review, in its own order. "Done" items are in the bu
 | Play button undersized, on the rope line | **Done, partly by size.** Now 1.25× (220 px), moved onto the deck off the rope, with a breathing glow and pulse. Not 1.5×: the designer had earlier asked for a small Play button. |
 | The caged X has no personality | **Done.** The title cage now holds x's crying art, the same as in the game. |
 | The scene is static | **Already moving:** sun rays, mist, light shafts, falling leaves and swaying plants. x crying and Play's glow add more. **Not done:** a cannon wobble on hover, because the designer asked that the cannon and cage stand still once they land. |
-| No sound toggle | **Done.** The sound button is on the start screen. |
+| No sound toggle | **Done, then removed.** The sound button was on the start screen; the user took the Pause, Sound and Skip buttons out of the game (26 Nov 2026). |
 | Logo drop-in | **Already in:** the logo drops from the sky and bounces into place. |
 
 ## Gameplay screen
@@ -39,7 +39,7 @@ Status of each point in the review, in its own order. "Done" items are in the bu
 | Review | Status |
 |---|---|
 | A real pause overlay | **Removed** (the designer, 25 Nov: "no need of this panel"). Pause freezes the game with no panel, and its button turns into a play button. |
-| Skip flicker | **Done.** Skip stays in one place, top right, and only fades. |
+| Skip flicker | **Done, then removed.** Skip stayed in one place, top right, and only faded; the user took the Skip button out (26 Nov 2026). |
 | Progress indicator | Removed by the user (25 Nov 2026). |
 
 ## Core loop
