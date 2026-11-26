@@ -245,7 +245,7 @@ function roundTimeline(opts = {}) {
 // eq1 is the equation right after the shot; when the shot added a number to a bracket, two more beats follow: the
 // bracket is multiplied out, then the numbers are joined ("3(x + 2) − 6 = 15" → "3x + 6 − 6 = 15" → "3x = 15").
 // last: the shot that frees x (no reading pause after it: the freeing starts as the equation settles)
-const SHOT_CAM = { WIND: { fx: CX, fy: 480, z: 1.05 }, FOLLOW: { fx: CX, fy: 460, z: 1.03 }, READ: { fx: CX, fy: 455, z: 1.04 } };
+const SHOT_CAM = { WIND: { fx: CX, fy: 465, z: 1.04 }, FOLLOW: { fx: CX, fy: 460, z: 1.03 }, READ: { fx: CX, fy: 455, z: 1.04 } };
 function addShot(tl, t0, i, b, eq0, eq1, first = true, last = false) {
   const B = Motion.BEAT, to = { ...CLOUD_HIT };
   let p = null, inL = null, inR = null, ms = null, tg = null, tail = null, tails = null;
@@ -376,7 +376,7 @@ function addFreed(tl, t0, opts = {}) {
     FX.bolt(xe ? EqUI.worldAt(xe) : { ...CLOUD_HIT }, cagePt(), B.BOLT); Sound.whistle();
     Vignette.to(0.4, B.BOLT + B.CRACK * 0.5);
   }, null, tz);
-  camDrive(tl, tz - 0.2, { fx: 1040, fy: 462, z: Motion.reduced ? 1 : CAGE.zoom }, 0.2 + B.BOLT + B.CRACK, Ease.inOutCubic); // (the cloud and the tray stay in view; the cloud's top stays under the question board)
+  camDrive(tl, tz - 0.2, { fx: 1040, fy: 450, z: Motion.reduced ? 1 : CAGE.zoom }, 0.2 + B.BOLT + B.CRACK, Ease.inOutCubic); // (the cloud and the tray stay in view; the cloud's top stays under the question board)
   // 2) it strikes the cage, and x pushes three times: it cracks further each time (the user's cracks, played at CAGE.T / CRACK)
   tl.call(() => { const w = cagePt(); FX.star(w.x, w.y, '#efe0ff', 220, 0.3, { n: 8 }); FX.burst(w.x, w.y, '#c58bff', 18, 380, { white: 0.3 }); Sound.rumble(); Stage.hit({ trauma: 0.16, zoom: 0.012 }); }, null, tc);
   drive(B.CRACK, (e, k) => CageBreak.strain(k * CAGE.T), Ease.linear, tl, tc);

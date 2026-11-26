@@ -1,23 +1,22 @@
-# The equation cloud (assets/img/cloud.webp), painted in the style of the clouds in the user's deck picture
-# (art/background/new_background.png), so it reads as a cloud of that world and not a sticker laid on top.
-# Repainted 25 Nov 2026 (user: "fix the cloud… it should look good"): the old one was a stack of airbrushed round
-# balls on a flat plate. This one follows the deck clouds closely:
-#   • shape: one big dome (a little wider than tall) just right of the middle, puffs of different sizes stepping down
-#     on each side, a flat underside that curves up a little at its ends
-# 26 Nov 2026 (user: "fix the string of the cloud… it should blend with the background"): the long thin wisps that
-# ran out of the underside on both sides (they read as a string) are gone, the underside melts into the sky over its
-# last ~13 px instead of ending on a ruled line, the outline is feathered by ~3 px (no cut-out edge), and the shade
-# takes a little more of the sky's blue
-#   • colour: two-tone, like the deck clouds: a bright white cap on each puff where the sun hits (top right, the
-#     game's SUN in src/32_scenery.js), a soft sky-blue below it, a clean soft step between the two (not airbrushed)
-#   • depth: the puffs overlap, back to front; each front puff casts a soft blue shade on the puff behind it, so its
-#     edge shows as a light scallop on blue, as in the deck clouds. The lower front puffs are blue with a light lip
-#   • no outline; a clean edge; the shade keeps a touch of the sky's own blue (it is far away)
-# Its body is sized for the equation: in #cloud box px the equation's box (EqUI.maxW × maxH = 440 × 124, centred on
-# #eqBox 328,178) sits inside the cloud; tools check: it prints the solid span of each row.
-# The puffs' list is mirrored (as circles) by CLOUD_PUFFS in src/30_stage.js, which cuts the cloudburst's pieces.
-# Then re-run tools/cloud_rim.py on the new picture (its warm rim light is laid exactly over it).
-# Run: ~/.cache/bj-voices/venv/bin/python tools/paint_cloud.py [out.webp]   (Pillow + numpy + scipy; cwebp on PATH)
+# The equation cloud (assets/img/cloud.webp).
+# 26 Nov 2026, the user sent the cloud they want ("make cloud like this i want": a glossy cartoon cumulus on a blue
+# sky; it came only as a chat picture, so it is painted here after it). Earlier the same day: "fix the string of the
+# cloud… it should blend with the background", then "the downside of the cloud is like we cut that… it should come
+# properly… like the cloud is really in the sky". So, as in their picture:
+#   • shape: one whole cloud, round all the way round: a big dome a little left of the middle, a smaller puff on its
+#     left and one on its right, big round puffs low at both ends, two puffs in the middle, and a belly of round
+#     bumps underneath (the lowest in the middle). Their places are the picture's (REF, in its pixels), drawn 1.45×
+#     wider than tall (WIDE), so the equation fits in it while the cloud floats in the band of sky between the question
+#     board and the far hills
+#   • look: one soft white body (the puffs melt together, as in the picture), lit from above: a glossy highlight just
+#     inside its upper edges, a soft sky-blue low in the cloud, deepest along its underside and the lower edge of each
+#     bump; a soft blue crease along the top of a puff that sits in front of another; a clean edge, no outline
+# Its body is sized for the equation: in #cloud box px the equation (EqUI.maxW × maxH, centred on #eqBox) sits inside
+# the cloud; the tool prints the cloud's top and bottom and the solid span of each row to check it.
+# The puffs are mirrored (as circles, back to front) by CLOUD_PUFFS in src/30_stage.js, which cuts the cloudburst's
+# pieces, and CLOUD_ART.base / mid there follow its bottom / middle (the tool prints both). Then re-run
+# tools/cloud_rim.py on the new picture (its warm rim light is laid exactly over it).
+# Run: ~/.cache/bj-voices/venv/bin/python tools/paint_cloud.py [out.webp|out.png]   (Pillow + numpy + scipy; cwebp on PATH)
 import os
 import subprocess
 import sys
@@ -34,40 +33,45 @@ W, H = 760, 281      # the art's box (#cloud .cl in src/00_head.html), in art px
 S = 2                # saved at 2× (sharp on retina)
 SS = 3               # supersampling for clean edges
 K = S * SS
-BASE = 262           # the flat underside (art px from the top of the box)
+FEATHER = 2.5        # the edge's softness (gaussian sigma, in saved px)
 
-# the deck clouds' colours (sampled from art/background/new_background_2x.png)
-LIGHT = np.array([255, 255, 255], np.float32)   # sunlit white
-CAP = np.array([244, 250, 255], np.float32)     # the white cap away from its brightest spot
-LOWCAP = np.array([216, 238, 253], np.float32)  # the cap of a puff low in the cloud (it gets less sun)
-SHADE = np.array([196, 230, 252], np.float32)   # the soft blue of the shaded side
-DEEP = np.array([168, 214, 248], np.float32)    # tucked in under a puff in front
-SKY = np.array([30, 172, 253], np.float32)      # the sky behind it (bg_sky near the cloud)
-SUN = np.array([0.30, -0.78, 0.55]); SUN /= np.linalg.norm(SUN)  # from the top right, toward the viewer (y down)
-
-# puffs, back to front: centre x, y, half width, half height (art px). The dome is at the back; each later puff sits
-# in front of the ones before it.
-PUFFS = [
-    (392, 122, 120, 110),                         # the dome
-    (250, 164, 94, 86), (536, 160, 92, 88),       # the big puffs either side of it
-    (166, 206, 64, 56), (636, 212, 58, 50),       # the shoulders
-    (112, 244, 32, 26), (682, 246, 28, 22),       # small puffs at the ends of the underside
-    (236, 256, 56, 42), (398, 252, 78, 50),       # low puffs in front, sunk in the body: only their tops show
-    (560, 258, 58, 40),
+# the user's picture: each puff a circle (centre x, y, radius, in its px), back to front
+REF = [
+    (611, 545, 272, 1.08),   # the dome (round, as in the picture; the rest are drawn WIDE)
+    (315, 590, 130),   # the puff on its left
+    (900, 560, 135),   # the puff on its right
+    (835, 690, 112),   # (fills the body between the right puffs, as the picture's does)
+    (200, 742, 155),   # the big puff low at the left end
+    (1035, 745, 170),  # the big puff low at the right end
+    (420, 680, 132),   # the middle puffs
+    (720, 790, 138),
+    (395, 830, 135),   # the belly's bumps
+    (625, 835, 155),
+    (850, 875, 70),
 ]
-SOFT = 13             # the underside melts into the sky over this many art px
-FEATHER = 4.0         # the outline's feather (gaussian sigma, in saved px = 2 art px)
+# how strongly each puff's upper edge shows as a soft crease on the puffs behind it (the picture shows the middle puffs'
+# and the end puffs' tops; the belly's bumps hardly show above, only their round bottoms)
+CREASES = [0, 0.32, 0.32, 0.16, 0.34, 0.34, 0.4, 0.4, 0.08, 0.1, 0.16]
+REF_BOX = (45, 267, 1205, 990)            # the picture's cloud: left, top, right, bottom
+CH, TOP, WIDE = 233, 24, 1.45             # the cloud here: its height and top (art px), and how much wider than the picture
+FY = CH / (REF_BOX[3] - REF_BOX[1]); FX = FY * WIDE
+PUFFS = [(380 + (p[0] - (REF_BOX[0] + REF_BOX[2]) / 2) * FX, TOP + (p[1] - REF_BOX[1]) * FY, p[2] * FY * (p[3] if len(p) > 3 else WIDE), p[2] * FY) for p in REF]
+BOT = TOP + CH
+
+WHITE = np.array([246, 250, 255], np.float32)   # the cloud's white (a breath of blue, so the gloss reads on it)
+TOPW = np.array([236, 244, 254], np.float32)    # the top of a puff just inside its gloss
+GLOSS = np.array([255, 255, 255], np.float32)   # the glossy highlight
+SHADE = np.array([200, 226, 251], np.float32)   # the soft blue low in the cloud
+DEEP = np.array([168, 207, 247], np.float32)    # its underside, the lower edge of a puff
+CREASE = np.array([214, 233, 252], np.float32)  # where a puff in front meets one behind
+SKY = np.array([30, 172, 253], np.float32)      # the sky behind it (bg_sky near the cloud)
+LIT = np.array([-0.12, -0.80, 0.59]); LIT /= np.linalg.norm(LIT)   # from above, a little left, toward the viewer (y down)
 
 h, w = H * K, W * K
 yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
 X = (xx + 0.5) / K; Y = (yy + 0.5) / K  # art px
 del xx, yy
-# a gentle wave on the flat underside, so it is not ruler-straight, and its ends curve up a little into the end puffs
-base_y = BASE + 1.2 * np.sin(X / 41.0) + 0.6 * np.sin(X / 15.0 + 1.3)
-_e = np.clip((np.abs(X - 392) - 170) / 150, 0, 1)
-base_y = base_y - 9 * _e * _e * (3 - 2 * _e)
-del _e
-EDGE = 1.3  # anti-alias width (art px)
+EDGE = 1.2  # anti-alias width (art px)
 
 
 def smooth(e0, e1, v):
@@ -81,84 +85,78 @@ def over(col, cov, c2, a2):  # paint colour c2 with coverage a2 over (col, cov)
     return col, cov
 
 
-col = np.zeros((h, w, 3), np.float32) + SHADE
+def puff(cx, cy, rx, ry):  # its local coordinates, signed distance to its edge (art px, near enough) and coverage
+    u = (X - cx) / rx; v = (Y - cy) / ry
+    dist = (1 - np.sqrt(u * u + v * v)) * min(rx, ry)
+    return u, v, dist, np.clip(dist / EDGE + 0.5, 0, 1)
+
+
+# the whole cloud's outline first: one body (any pocket of sky closed in by puffs is filled), and how far each point is
+# from its edge, so the shading can follow the cloud's own outline, not each puff's
+union = np.zeros((h, w), bool)
+for (cx, cy, rx, ry) in PUFFS:
+    union |= puff(cx, cy, rx, ry)[3] > 0.5
+union = nd.binary_fill_holes(union)
+disk = nd.generate_binary_structure(2, 1)
+smooth_union = nd.binary_closing(union, disk, iterations=int(2.5 * K))  # (the joins between puffs eased, for the shading)
+din = nd.distance_transform_edt(smooth_union) / K    # art px inside from the outline
+
+col = np.zeros((h, w, 3), np.float32) + WHITE
 cov = np.zeros((h, w), np.float32)
-
-# 2) the puffs, back to front. A puff is round on top; below its middle its sides curve in much more gently and run
-#    down into the flat underside (an egg with its bottom cut flat), so no puff shows a round bottom: under their tops
-#    the puffs melt into one body, as in the deck clouds. Down that body every puff turns the same soft blue, so only
-#    the tops of the puffs show, as light scallops
-def body(Yv):  # the one blue of the cloud's body at height Yv: lighter higher up
-    k = smooth(150, BASE, Yv)[..., None]
-    return SHADE + (DEEP - SHADE) * (0.35 * k)
-
-
 for i, (cx, cy, rx, ry) in enumerate(PUFFS):
-    u = (X - cx) / rx
-    bot = max(BASE - cy, 1) * 1.25                       # the lower half's depth (it reaches the underside)
-    v = np.where(Y < cy, (Y - cy) / ry, (Y - cy) / bot)
-    r2 = u * u + v * v
-    rr = np.sqrt(r2)
-    # signed distance to the edge, in art px (close enough for a soft edge)
-    dist = (1 - rr) * np.where(Y < cy, min(rx, ry), min(rx, bot))
-    a = np.clip(dist / EDGE + 0.5, 0, 1) * smooth(-EDGE, EDGE, base_y - Y)  # cut flat on the underside
+    u, v, dist, a = puff(cx, cy, rx, ry)
     if not a.any():
         continue
-    # a front puff's soft shade on what is behind it, just outside its top edge
+    # a puff in front lays a soft blue crease on the puff behind it, along its upper edge only (as in the picture)
     if i > 0:
-        sh = smooth(14, 0, -dist) * (dist < 0.5) * cov * smooth(cy + 0.55 * ry, cy + 0.05 * ry, Y)
-        col += (DEEP - col) * (0.38 * sh)[..., None]
-    # its shading as a soft dome, lit from the top right (the lower half's normal turns down slowly)
-    vv = np.where(Y < cy, v, v * 0.7)
-    nz = np.sqrt(np.clip(1 - u * u - vv * vv, 0, 1)) * 1.1
-    n = np.stack([u, vv, nz]); n /= np.linalg.norm(n, axis=0) + 1e-6
-    lit = n[0] * SUN[0] + n[1] * SUN[1] + n[2] * SUN[2]
-    # how high the puff sits in the cloud: low puffs get a paler cap
-    low = np.clip((cy - 150) / 90, 0, 1)
-    cap = CAP + (LOWCAP - CAP) * low
-    hi = smooth(0.55, 0.95, lit)[..., None] * (1 - 0.75 * low)   # the brightest spot, toward the sun
-    capc = cap + (LIGHT - cap) * hi
-    # the step from the white cap to the blue, as in the deck clouds: the white runs right up to the puff's top edge,
-    # the blue lies under it along a smile-shaped line (a little lower on the sun's side); soft but clear. It sits
-    # higher on puffs low in the cloud
-    nz0 = np.sqrt(np.clip(1 - u * u - vv * vv, 0, 1))
-    score = 0.7 * (-vv) + 0.2 * u + 0.35 * nz0 - 0.12 - 0.12 * low
-    t = smooth(-0.06, 0.06, score)
-    c = body(Y) + (capc - body(Y)) * t[..., None]
-    # a thin light lip on the edge that faces the sun (the deck clouds' scallops read by it)
-    lip = smooth(4, 0, dist) * (dist > -0.5) * smooth(0.0, 0.5, n[0] * 0.55 - n[1] * 0.85) * (Y < cy)
-    c += (LIGHT - c) * ((0.3 - 0.18 * low) * lip)[..., None]
+        sh = smooth(13, 0, -dist) * (dist < 0.5) * cov * smooth(0.15, -0.55, v) * smooth(2, 10, din)
+        col += (CREASE - col) * (CREASES[i] * sh)[..., None]
+    nz = np.sqrt(np.clip(1 - u * u - v * v, 0, 1))
+    n = np.stack([u, v, nz]); n /= np.linalg.norm(n, axis=0) + 1e-6
+    d = n[0] * LIT[0] + n[1] * LIT[1] + n[2] * LIT[2]
+    c = np.zeros((h, w, 3), np.float32) + WHITE
+    # low in the cloud it turns a soft blue (the whole cloud's light, not this puff's)
+    c += (SHADE - c) * (0.6 * smooth(TOP + 0.5 * CH, BOT, Y))[..., None]
+    # a little roundness of its own: the side away from the light a touch bluer
+    c += (SHADE - c) * (0.3 * (1 - smooth(-0.25, 0.6, d)) * smooth(24, 6, din))[..., None]
+    # near the cloud's outline: the edges that face down go deep blue, the edges that face up get a thin light rim
+    # and, just inside it, the glossy highlight
+    down = smooth(-0.15, 0.65, n[1])
+    near = smooth(16, 0, din)
+    c += (DEEP - c) * (0.7 * near * down)[..., None]
+    c += (TOPW - c) * (0.8 * smooth(9, 3, din) * smooth(1.2, 3, din) * (1 - down))[..., None]
+    gloss = smooth(3, 6.5, din) * smooth(15, 8, din) * smooth(0.25, 0.75, -n[1] * 0.9 - n[0] * 0.2)
+    c += (GLOSS - c) * (0.95 * gloss)[..., None]
+    c += (SHADE - c) * (0.45 * smooth(2.2, 0, din) * (1 - down))[..., None]
     col, cov = over(col, cov, c, a)
-
-# 3) the flat underside: a soft blue band the last few px above it, so the bottom of every puff reads as one base
-band = smooth(BASE - 16, BASE - 1, Y) * cov
-col += (SHADE - col) * (0.55 * band)[..., None]
+# the closed-in pockets: the cloud's own body
+fill = union & (cov < 0.5)
+col[fill] = (WHITE + (SHADE - WHITE) * 0.6 * smooth(TOP + 0.5 * CH, BOT, Y[fill])[..., None])
+cov = np.where(union, np.maximum(cov, (din > 0.6).astype(np.float32)), cov)
 
 # far away: a touch of the sky's blue in the shade
 lum = (col.mean(-1, keepdims=True) - 170) / 85
-col += (SKY - col) * (0.09 * (1 - np.clip(lum, 0, 1)))
-
-# the underside melts into the sky (no ruled line under the cloud)
-cov *= smooth(-1.0, SOFT, base_y - Y)
+col += (SKY - col) * (0.05 * (1 - np.clip(lum, 0, 1)))
 
 # downsample (premultiplied) to the saved size
 pm = np.concatenate([col * cov[..., None], cov[..., None] * 255], -1)
 pm = pm.reshape(H * S, SS, W * S, SS, 4).mean((1, 3))
 a = pm[..., 3:] / 255
 rgb = np.where(a > 1e-4, pm[..., :3] / np.maximum(a, 1e-4), 0)
-# the outline feathered: the alpha eases from ~0.2 at the very edge to full ~2 sigma inside (the colour stays the
-# cloud's own, so no fringe), so the cloud sits in the sky instead of on it
+# the edge eased a little (the colour stays the cloud's own, so no fringe): clean, not cut out
 al0 = pm[..., 3] / 255
 g = nd.gaussian_filter(al0, FEATHER)
 t = np.clip((g - 0.3) / 0.7, 0, 1)
 al1 = al0 * (t * t * (3 - 2 * t))
 img = np.concatenate([np.clip(rgb, 0, 255), np.clip(al1[..., None] * 255, 0, 255)], -1).astype(np.uint8)
 
-# where the equation goes: the solid span of each row (art px), to check against #eqBox / EqUI.maxW, maxH
 al = img[..., 3] / 255.0
-for y in range(90, 261, 20):
+rows = np.where(al.max(1) > 0.5)[0]; cols = np.where(al.max(0) > 0.5)[0]
+print('cloud (art px): x', round(cols.min() / S), '→', round(cols.max() / S), ' y', round(rows.min() / S), '→', round(rows.max() / S))
+for y in range(100, 241, 10):
     xs = np.where(al[int(y * S)] > 0.98)[0]
     print('row', y, 'solid', (round(xs.min() / S), round(xs.max() / S)) if len(xs) else None)
+print('CLOUD_PUFFS = [' + ', '.join(f'[{round(cx)}, {round(cy)}, {round(max(rx, ry))}, {i}]' for i, (cx, cy, rx, ry) in enumerate(PUFFS)) + ']', ' base', round(BOT), ' mid', [380, round(TOP + CH / 2)])
 
 with tempfile.TemporaryDirectory() as td:
     png = os.path.join(td, 'cloud.png')

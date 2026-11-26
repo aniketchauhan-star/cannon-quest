@@ -33,11 +33,13 @@ const BALL_ART = 0.96; // the orb's share of its picture (ball_*.webp: the orb i
 const RACK = { left: 233, top: 795, w: 1206, srcW: 1618, holesX: [212.3, 382.4, 552.5, 722.7, 892.8, 1063.0, 1233.1, 1403.2], holeY: 59.5, bot: 185.4, edges: [2, 1616], seat: 11 }; // (11: each ball rests on the trough's floor, its bottom ~16 px behind the front rail, so it sits in the tray instead of hovering on the rail)
 const BALL_D = 110, MUZZLE = { x: CANNON.x, y: CANNON.bottom - CANNON.h + 14 }; // (BALL_D = the .ball size in the CSS)
 // the equation cloud, far off in the sky and well clear of the cannon: Cloud.apply draws #cloud (card included) at
-// CLOUD_FAR of its size, about its transform-origin (world 828, 294). Where a shot hits (on the card), and its middle.
-// The cannon, the tray and its orbs are 10 % smaller and the cloud 16 % (the user, 26 Nov 2026: "cloud, cannon and
-// ops and its stands should slightly small"), so the question board fits above the cloud at the top of the screen:
-// the cloud's top is at y 173, its underside at 358 (the board ends at 132)
-const CLOUD_FAR = 0.74, CLOUD_HIT = { x: 828, y: 303 }, CLOUD_MID = { x: 828, y: 269 };
+// CLOUD_FAR of its size, about its transform-origin (world 828, 277). Where a shot hits (on the card), and its middle.
+// The cannon, the tray and its orbs are 10 % smaller and the cloud smaller too (the user, 26 Nov 2026: "cloud, cannon
+// and ops and its stands should slightly small"), so the question board fits above the cloud at the top of the
+// screen: the cloud's top is at y 160 (the board ends at 132) and its round belly at 339, floating over a band of
+// clear sky above the far hills (their ridge is at 345–348 under its lowest bump). (26 Nov 2026, later: "clouds
+// slightly big": 0.72 → 0.78, the equation's font 84 → 78 px, so the words stay the size they were in a bigger cloud)
+const CLOUD_FAR = 0.78, CLOUD_HIT = { x: 828, y: 283 }, CLOUD_MID = { x: 828, y: 250 };
 // background layers cut from the user's deck picture (tools/cut_deck_bg.py): how much each follows the camera (1 =
 // the deck, with its railing and plants, where the cannon stands; less = farther away, so it drifts less). Moved by
 // transform only, when the camera moves. Each layer holds ~25 bg px of picture under the edge of the one in front
@@ -617,15 +619,15 @@ const Cloud = {
 // ---------- the cloud bursting: it comes apart into its own puffs ----------
 // The pieces are the cloud's own picture (cloud.webp) cut into canvases: each puff of tools/paint_cloud.py (PUFFS:
 // centre, radius = the larger of its half width and height, its place back to front; art px of the 760 × 281 picture) less the puffs in front
-// of it, with a soft edge, so each piece is a soft lump of this very cloud; the flat blue base is cut into four
+// of it, with a soft edge, so each piece is a soft lump of this very cloud; what is left of its belly is cut into four
 // lengths. Each piece also has a blurred twin, so it can melt into mist as it goes. At the pop the pieces sit exactly
 // on the cloud and the cloud's picture lets go under them, so the swap never shows; they drift out from its middle
 // (the inner ones first), slowing as air does, rising a little and swelling, and soften into mist that fades. If the
 // cloud is repainted, keep CLOUD_PUFFS in step with paint_cloud.py (another cloud still bursts, only not along its
 // own puffs).
-const CLOUD_ART = { w: 760, h: 281, x: -52, y: 10, base: 262, mid: [392, 186] }; // (.cl in #cloud's box; its flat underside; the burst's centre)
-const CLOUD_PUFFS = [[392, 122, 120, 0], [250, 164, 94, 1], [536, 160, 92, 2], [166, 206, 64, 3], [636, 212, 58, 4], [112, 244, 32, 5],
-  [682, 246, 28, 6], [236, 256, 56, 7], [398, 252, 78, 8], [560, 258, 58, 9]];
+const CLOUD_ART = { w: 760, h: 281, x: -52, y: 10, base: 257, mid: [380, 140] }; // (.cl in #cloud's box; the bottom of its belly; the burst's centre)
+const CLOUD_PUFFS = [[373, 114, 95, 0], [235, 128, 61, 1], [509, 118, 63, 2], [478, 160, 52, 3], [181, 177, 72, 4], [572, 178, 79, 5],
+  [284, 157, 62, 6], [424, 193, 64, 7], [273, 205, 63, 8], [380, 207, 72, 9], [485, 220, 33, 10]];
 const CloudBurst = {
   cl: null, wrap: null, bits: [], jobs: null, on: false,
   // The pieces are cut once, one piece at a time while the browser is idle, from when the play scene's pictures are
@@ -670,7 +672,7 @@ const CloudBurst = {
       const dx = cx - A.mid[0], dy = cy - A.mid[1], len = Math.hypot(dx, dy) || 1;
       this.bits.push({ el, sharp: c, soft, ux: dx / len, uy: dy / len, len, dx: 0, dy: 0, dl: 0.06 * Math.min(1, len / 320), s1: 1.3, r1: 0, f: 1 });
     });
-    // the puffs: each keeps what it shows of itself (less the puffs in front of it), down to the flat underside
+    // the puffs: each keeps what it shows of itself (less the puffs in front of it), down to the bottom of the belly
     CLOUD_PUFFS.forEach(([x, y, r, z]) => cut(x - r - F, y - r - F, x + r + F, Math.min(y + r + F, A.base + 2), x, Math.min(y, A.base - 30), (g, X, Y, disc, c) => {
       g.globalCompositeOperation = 'destination-in';
       disc(x, y, r);
@@ -679,7 +681,7 @@ const CloudBurst = {
       g.globalCompositeOperation = 'destination-out';
       CLOUD_PUFFS.forEach(([x2, y2, r2, z2]) => { if (z2 > z && Math.hypot(x2 - x, y2 - y) < r + r2 + F) disc(x2, y2, r2); });
     }));
-    // the flat base, in four lengths: what lies under the puffs' line, and what shows between them above it
+    // the bottom, in four lengths: whatever of the belly no puff's circle holds
     [[0, 190], [190, 380], [380, 570], [570, A.w]].forEach(([x0, x1]) => cut(x0 - F, A.base - 46, x1 + F, A.h, (x0 + x1) / 2, A.base - 6, (g, X, Y, disc, c) => {
       g.globalCompositeOperation = 'destination-in';
       const l = X(x0 - F / 2), r = X(x1 + F / 2), lg = g.createLinearGradient(l, 0, r, 0), f = (F * (X(1) - X(0))) / (r - l);
@@ -749,7 +751,7 @@ const CloudBurst = {
   gather(k) {
     if (!this.on) return;
     const T = Motion.BEAT.CLOUD_IN, t = k * T, end = T * 0.8;
-    this.clOp(Ease.inOutQuad(clamp((k - 0.62) / 0.3, 0, 1)).toFixed(3)); // the picture comes in under them
+    this.clOp(Ease.inOutQuad(clamp((k - 0.45) / 0.35, 0, 1)).toFixed(3)); // the picture comes in under them, once they are nearly in place (it fills the seams between them: the cloud forms whole)
     const out = Ease.inQuad(clamp((k - 0.84) / 0.16, 0, 1)); // …and they hand over to it
     for (const b of this.bits) {
       const u = clamp((t - b.gd) / (end - b.gd), 0, 1), e = Ease.outCubic(u), q = 1 - e, show = Ease.outQuad(Math.min(1, u / 0.35)) * (1 - out);
@@ -1700,7 +1702,7 @@ function updateBalls(dt, t) {
 //  EQUATION UI — tokens glide (FLIP) when the equation changes
 // =====================================================================
 const EqUI = {
-  el: null, maxW: 440, maxH: 124, // (the cloud's body, with a margin: the equation always stays inside the cloud)
+  el: null, maxW: 440, maxH: 112, // (the cloud's body, with a margin: the equation always stays inside the cloud)
   init() { this.el = $('#eq'); this.el.style.transformOrigin = '50% 50%'; },
   fit() {
     this.el.style.transform = 'translate(-50%,-50%)';

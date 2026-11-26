@@ -120,17 +120,20 @@ img{-webkit-user-drag:none;user-select:none}
 /* ---------- the equation cloud: the question sits right on the cloud ---------- */
 /* (far off in the sky: Cloud.apply draws it, label and equation included, at CLOUD_FAR. Its top sits clear under
    the question board at the top of the screen (#capPos; the user, 26 Nov 2026: "the panel in upper side of the
-   cloud… should not overlap with the cloud"), also while the camera leans in: CLOUD_HIT / CLOUD_MID follow it) */
-#cloud{position:absolute;left:500px;top:108px;width:656px;height:300px;transform-origin:50% 62%;will-change:transform}
-/* the cloud art (tools/paint_cloud.py): painted like the clouds of the deck picture, so it belongs to that sky: a big
-   dome, puffs stepping down, a soft blue underside that melts into the sky (no thin wisps running out of it: the
-   user, 26 Nov 2026, "fix the string of the cloud… it should blend with the background"); lit by the sun */
+   cloud… should not overlap with the cloud"), also while the camera leans in, and its round belly floats clear above
+   the far hills, with sky under it ("like the cloud is really in the sky"): CLOUD_HIT / CLOUD_MID follow it) */
+#cloud{position:absolute;left:500px;top:91px;width:656px;height:300px;transform-origin:50% 62%;will-change:transform}
+/* the cloud art (tools/paint_cloud.py): painted after the cloud the user sent (26 Nov 2026: "make cloud like this i
+   want"), a glossy cartoon cumulus: a round dome, puffs either side and low at the ends, a belly of round bumps, one
+   soft white body lit from above with glossy highlights along its top and a soft blue underside. Whole and round all
+   the way round, no flat cut-off underside, no thin wisps ("fix the string of the cloud… it should blend with the
+   background", "the downside of the cloud is like we cut that… it should come properly") */
 #cloud .cl{position:absolute;left:-52px;top:10px;width:760px;height:281px}
 /* its warm rim light on the sun's side (tools/cloud_rim.py: a picture laid exactly over it) and a soft haze where it
    meets the sky (design review, 23 Nov 2026: "a warm rim light on the sun side (top right), and a soft haze where it
    meets the sky"); both come and go with the cloud's picture (CloudBurst.clOp) */
 #cloud .clr{position:absolute;left:-52px;top:10px;width:760px;height:281px;pointer-events:none}
-#cloud .chz{position:absolute;left:-90px;top:132px;width:836px;height:230px;border-radius:50%;pointer-events:none;background:radial-gradient(closest-side,rgba(242,251,255,.62),rgba(242,251,255,.3) 52%,rgba(242,251,255,0))}
+#cloud .chz{position:absolute;left:40px;top:140px;width:576px;height:150px;border-radius:50%;pointer-events:none;background:radial-gradient(closest-side,rgba(242,251,255,.45),rgba(242,251,255,.2) 55%,rgba(242,251,255,0))}
 /* No box: the question sits right on the cloud (the user asked to remove the card on 19 Nov). During play there is no
    label, only the equation (the user removed "Find the value of x" on 19 Nov); at the end a small dark label
    (the same dark glass + gold ring as Skip and the caption) reads "Your score", under the cloud's top bump. The equation
@@ -140,13 +143,13 @@ img{-webkit-user-drag:none;user-select:none}
 #qCard{position:absolute;left:0;top:0;width:656px;height:0;pointer-events:none}
 #qTab{position:absolute;left:328px;top:80px;translate:-50% -50%;padding:7px 24px;border-radius:99px;background:var(--glass);box-shadow:0 0 0 3px #ffd23d,0 5px 12px rgba(20,10,60,.24);color:#fff;font-size:25px;line-height:1.2;letter-spacing:.01em;white-space:nowrap}
 #qTab:empty{display:none}
-#eqBox{position:absolute;left:328px;top:178px;width:0;height:0} /* (the middle of the cloud's body) */
+#eqBox{position:absolute;left:328px;top:178px;width:0;height:0} /* (where the cloud's body is widest) */
 /* the equation and the question board's words: Poppins Bold (700), as in the user's Distance Formula game (the user,
    26 Nov 2026: "use Poppins, like distance formula… we are using x like this"); its x is set as mathematics, as
    Distance Formula sets it (.xv, #cap .mx). The orbs' numbers keep Trig Text (the user's font, 19 Nov), its one weight */
 #eq,#cap .txt{font-family:'Poppins',system-ui,sans-serif;font-weight:700}
 .ball b{font-family:'Trig Text','Poppins',system-ui,sans-serif;font-weight:400}
-#eq{position:absolute;left:0;top:0;transform:translate(-50%,-50%);display:flex;align-items:center;white-space:nowrap;font-size:84px;line-height:1;letter-spacing:-.01em;font-variant-numeric:lining-nums;color:var(--ink);transform-origin:0 0}
+#eq{position:absolute;left:0;top:0;transform:translate(-50%,-50%);display:flex;align-items:center;white-space:nowrap;font-size:78px;line-height:1;letter-spacing:-.01em;font-variant-numeric:lining-nums;color:var(--ink);transform-origin:0 0}
 #eq.wob{animation:eqwob .45s ease-in-out 3}
 @keyframes eqwob{25%{rotate:-3deg}75%{rotate:3deg}}
 .tk{display:inline-flex;align-items:center;justify-content:center;position:relative;flex:none}
@@ -242,7 +245,7 @@ img{-webkit-user-drag:none;user-select:none}
 .cbits canvas{position:absolute;display:block}
 /* the light in the cloud's heart (Cloud.core): it builds as the cloud draws in its breath before the cloudburst, and
    flashes out at the pop. Warm, so it shows on the white cloud */
-#cloud .ccore{position:absolute;left:340px;top:200px;width:600px;height:320px;margin:-160px 0 0 -300px;border-radius:50%;opacity:0;pointer-events:none;
+#cloud .ccore{position:absolute;left:328px;top:151px;width:560px;height:260px;margin:-130px 0 0 -280px;border-radius:50%;opacity:0;pointer-events:none;
   background:radial-gradient(closest-side,rgba(255,255,255,1),rgba(255,246,206,.92) 26%,rgba(255,214,110,.55) 55%,rgba(255,200,90,0))}
 /* the vignette (Vignette): the screen's edges darken while the cage cracks, so the eye goes to it */
 #vig{position:fixed;inset:0;pointer-events:none;opacity:0;background:radial-gradient(ellipse 72% 68% at 50% 36%,rgba(16,8,46,0) 42%,rgba(16,8,46,.42) 78%,rgba(16,8,46,.7) 100%)}
