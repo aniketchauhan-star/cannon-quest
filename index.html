@@ -156,7 +156,12 @@ img{-webkit-user-drag:none;user-select:none}
 /* x: the letter, in x's own violet (its cage stands on the deck), set as mathematics the way Distance Formula sets
    it: Latin Modern Math's italic x (TeX's own; 'Swifty Math', build.sh), its own weight, never a made-up bold. A
    little larger than the words round it, so its small TeX x-height stands as tall as Poppins' */
-.xv{color:#7a22d6;margin:0 .06em 0 .02em;font-family:'Swifty Math','Poppins',system-ui,sans-serif;font-style:italic;font-weight:400;font-synthesis:style;font-size:1.22em}
+/* Each piece of the equation is centred in its own box (#eq, .tk: align-items:center), and the maths font sets its x
+   lower in its box than Poppins sets its digits, so the x sat ~.11em under the digits' line (the user, 26 Nov 2026:
+   "3x = 18… the x is downside and 3 in upside"). top lifts it onto their baseline (measured on every round's
+   equation: its feet level with the 3's, the 1's, the 7's), and the italic x's own room on its right is taken back
+   (margin -.01em), so the gap after it matches the gaps round = and + */
+.xv{color:#7a22d6;position:relative;top:-.09em;margin:0 -.01em 0 .02em;font-family:'Swifty Math','Poppins',system-ui,sans-serif;font-style:italic;font-weight:400;font-synthesis:style;font-size:1.22em}
 .op{margin:0 .17em}
 .eqs{margin:0 .24em}
 .paren{transform:scaleY(1.12);margin:0 .02em}
@@ -286,7 +291,29 @@ img{-webkit-user-drag:none;user-select:none}
 #fireBtn.hint .fgl{animation:fhintL .9s ease-in-out 3}
 @keyframes fhint{50%{transform:scale(1.1)}}
 @keyframes fhintL{50%{opacity:.8}}
-#fireBtn.press{transform:scale(.9)}
+#fireBtn.press{transform:scale(.97)}
+/* FIRE looks and feels like a button you can press (the user, 26 Nov 2026: "the fire button should pop out so it
+   should look like a button. Currently is static button… so user can see and think this is a touch button"). The
+   pill (.fbody) stands a little proud of its recess with a soft shadow under it (.fsh), lit or grey. While it can be
+   pressed it pops up every 2.2 s: it rises and swells (ease-out) as its shadow spreads and pales under it, drops back
+   (ease-in) with a small settle, and a gleam crosses its face (.fgleam). Pressed, it sinks into the cannon and its
+   shadow tightens. Transform + opacity only (animation skill); none of the loop under reduced motion; it freezes
+   with the game (.scnPause) */
+#fireBtn .fbody{position:absolute;inset:0;transform:translateY(-2%);transition:transform .1s ease-out}
+#fireBtn .fsh{position:absolute;left:5%;right:5%;top:24%;bottom:-10%;border-radius:999px;background:rgba(64,22,0,.62);filter:blur(5px);pointer-events:none;transform-origin:50% 100%}
+#fireBtn .fgleam{position:absolute;inset:7% 3.5% 12%;border-radius:999px;overflow:hidden;pointer-events:none}
+#fireBtn .fgleam i{position:absolute;top:-30%;bottom:-30%;left:0;width:20%;background:linear-gradient(100deg,rgba(255,255,255,0),rgba(255,255,255,.8) 50%,rgba(255,255,255,0));opacity:0;transform:translateX(-150%) skewX(-18deg)}
+#fireBtn:not(.off) .fbody{animation:fpop 2.2s infinite}
+#fireBtn:not(.off) .fsh{animation:fpopS 2.2s infinite}
+#fireBtn:not(.off) .fgleam i{animation:fgleam 2.2s infinite}
+@keyframes fpop{0%,50%{transform:translateY(-2%) scale(1);animation-timing-function:cubic-bezier(.2,.7,.3,1)}62%{transform:translateY(-10%) scale(1.08);animation-timing-function:cubic-bezier(.6,0,.8,.45)}74%{transform:translateY(1%) scale(.98);animation-timing-function:ease-out}84%,100%{transform:translateY(-2%) scale(1)}}
+@keyframes fpopS{0%,50%{transform:scale(1);opacity:1;animation-timing-function:cubic-bezier(.2,.7,.3,1)}62%{transform:scale(1.1,1.18);opacity:.5;animation-timing-function:cubic-bezier(.6,0,.8,.45)}74%{transform:scale(.97);opacity:1;animation-timing-function:ease-out}84%,100%{transform:scale(1);opacity:1}}
+@keyframes fgleam{0%,55%{opacity:0;transform:translateX(-150%) skewX(-18deg)}59%{opacity:1}80%{opacity:1;transform:translateX(600%) skewX(-18deg)}81%,100%{opacity:0;transform:translateX(600%) skewX(-18deg)}}
+#fireBtn.press .fbody{animation:none;transform:translateY(6%) scale(.95)}
+#fireBtn.press .fsh{animation:none;transform:scale(.92,.8);opacity:.9}
+#fireBtn.press .fgleam i{animation:none}
+.scnPause #fireBtn *{animation-play-state:paused !important}
+@media (prefers-reduced-motion:reduce){#fireBtn .fbody,#fireBtn .fsh,#fireBtn .fgleam i{animation:none !important}}
 #fireBtn::before{content:'';position:absolute;inset:-32% -6%} /* (a taller tap area: the pill is short on a phone) */
 #fireBtn.gone{opacity:0;pointer-events:none;transition:opacity .35s ease-in} /* (the end card) */
 
@@ -524,7 +551,7 @@ html:not(.fit) #stage,html:not(.fit) #stageTop{visibility:hidden} /* (until fitS
       <div id="cannon">
         <div id="cannonBody"><img id="c1" data-src="assets/img/cannon1.webp" alt=""><img id="c2" data-src="assets/img/cannon2.webp" alt="" style="display:none"></div>
         <div id="sockFx"></div>
-        <button id="fireBtn" class="off" data-i18n-attr="aria-label:btnFire"><i class="fgl"></i><img class="p1" data-src="assets/img/fire.webp" alt="" data-i18n-attr="alt:btnFire"><img class="p1 gr" data-src="assets/img/fire.webp" alt=""><img class="p2" data-src="assets/img/fire2.webp" alt="" data-i18n-attr="alt:btnFire"><img class="p2 gr" data-src="assets/img/fire2.webp" alt=""><span class="ft" data-i18n="btnFire"></span></button>
+        <button id="fireBtn" class="off" data-i18n-attr="aria-label:btnFire"><i class="fgl"></i><i class="fsh"></i><span class="fbody"><img class="p1" data-src="assets/img/fire.webp" alt="" data-i18n-attr="alt:btnFire"><img class="p1 gr" data-src="assets/img/fire.webp" alt=""><img class="p2" data-src="assets/img/fire2.webp" alt="" data-i18n-attr="alt:btnFire"><img class="p2 gr" data-src="assets/img/fire2.webp" alt=""><i class="fgleam"><i></i></i><span class="ft" data-i18n="btnFire"></span></span></button>
       </div>
       <img id="rack" class="spr" data-src="assets/img/rack.webp" alt="">
       <div id="bshadows"></div>
