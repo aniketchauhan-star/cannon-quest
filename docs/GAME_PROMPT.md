@@ -193,10 +193,10 @@ The whole sequence is computed **before anything moves**: the equation after eve
 
 | Step | Spotlight on | Voice line key (caption + VO) |
 |---|---|---|
-| 1 | the equation on the cloud | `tutEquation`: "This is the equation." |
-| 2 | the cannon (body + FIRE) | `tutCannon`: "This is the cannon." |
-| 3 | the orbs in the tray (a glow runs along them) | `tutOrbs`: "These are the orbs." |
-| 4 | the glowing −5 orb, a hand tapping it (the cannon's socket also clear). Tapped (or dragged, or its key), it flies into the cannon | `tutTapOrb`: "Tap the −5 orb." |
+| 1 | the equation on the cloud | `tutEquation`: "Here’s the equation." |
+| 2 | the cannon (body + FIRE) | `tutCannon`: "This is your cannon." |
+| 3 | the orbs in the tray (a glow runs along them) | `tutOrbs`: "These are your orbs." |
+| 4 | the glowing −5 orb, a hand tapping it (the cannon's socket also clear). Tapped (or dragged, or its key), it flies into the cannon | `tutTapOrb`: "Tap the −5 orb to free x!" |
 | 5 | the FIRE button (the loaded socket also clear), a hand tapping it. The player taps FIRE (or presses Enter) and the cannon fires the −5 at the cloud | `tutTapFire`: "Now tap FIRE." |
 
 There is no other tutorial (the user, 19 + 20 Nov 2026: "only in this screen"): the two-socket rounds start straight away, with their 1 / 2 markers on the cannon. It plays every time the game is opened; Play again in the same visit skips it.

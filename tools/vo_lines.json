@@ -17,8 +17,8 @@
     "voFreed3",
     "voFreed4",
     "voStuck1",
-    "voStuck2",
     "voRetry",
+    "voStuck2",
     "voShowHow",
     "voEndAll",
     "voEndMost",
@@ -36,6 +36,19 @@
     "review": [
       "voRetry",
       "voShowHow"
+    ],
+    "update": [
+      "tutEquation",
+      "tutCannon",
+      "tutOrbs",
+      "tutTapOrb",
+      "voNext2",
+      "voFreed3",
+      "voStuck1",
+      "voRetry",
+      "voShowHow",
+      "voEndAll",
+      "voEndMost"
     ]
   },
   "when": {

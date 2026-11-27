@@ -363,13 +363,13 @@ const Caption = {
     }
     return ws;
   },
-  // ONE size for the board at the top, all game long: as wide as the widest line it can say there (every voiced line
-  // but the end screen's and the voice-only ones), measured once in its font (the user, 26 Nov 2026: "do not remove
+  // ONE size for the board at the top, all game long: as wide as the widest line it can say there (every line, recorded
+  // or not yet, but the end screen's and the voice-only ones), measured once in its font (the user, 26 Nov 2026: "do not remove
   // the question tablet. The question tablet should constant"), so it never grows, shrinks or glides between lines
   W: 0,
   wide() {
     if (this.W) return this.W;
-    const keys = typeof VO_FILES !== 'undefined' ? VO_FILES.filter((k) => !/^voEnd/.test(k) && !VO.ONLY_SAID.test(k)) : [];
+    const keys = typeof VO_KEYS !== 'undefined' ? VO_KEYS.filter((k) => !/^voEnd/.test(k) && !VO.ONLY_SAID.test(k)) : [];
     let w = 0;
     for (const k of keys) { this.build(T(k)); this.fit(); w = Math.max(w, parseFloat(this.txt.style.width) || 0); }
     if (!document.fonts || document.fonts.status === 'loaded') this.W = w; // (kept once measured in the board's own font)
@@ -462,8 +462,10 @@ const Caption = {
 // not AI generated"): no TTS studio, no AI voice, and not the device's own voice either. The clips are cut from
 // a recording of the lines read aloud (docs/VO_RECORD.txt) by tools/vo_split.py: I18n.voice(key) =
 // assets/VO/en/<key>.webm. VO_FILES (build.sh, from tools/vo_takes.json, the record of each cut) lists the keys
-// that have a clip; VO_WORDS, when each word of a clip starts. A line with no clip yet, or a clip the browser
-// can't play, is not voiced: no voice, so no board, and its pause stays.
+// that have a clip; VO_WORDS, when each word of a clip starts. A line with no clip yet (its words changed, the new
+// ones not recorded: the user's new lines, 27 Nov 2026) is not voiced, but its words still come on the board, at a
+// speaking pace, so the game's text is always there; its voice joins once it is recorded. A clip the browser can't
+// play is the same: no voice, the board's words at a speaking pace. Sound off: no voice, no board.
 // Every clip plays a little slower than it was read (VO.RATE, the user, 25 Nov 2026: "I want slow voice… in all I
 // want in slow voice"), its pitch kept, so it is still the same natural voice, only calmer. The board's words keep
 // time with it (they follow the clip's own clock).
@@ -531,27 +533,29 @@ const VO = {
   token: 0, missing: new Set(), cur: null, finish: null, busy: null,
   has(key) { return typeof VO_FILES !== 'undefined' && VO_FILES.includes(key) && !this.missing.has(key); },
   // say a line by key: its recorded clip, and the board, whose words come as they are said (and which lifts away a
-  // moment after: Caption.said); resolves when it has been said, or at once when stopped. No voice (sound off, no clip
-  // yet, a clip that fails): no board, the pause stays
+  // moment after: Caption.said); resolves when it has been said, or at once when stopped. No clip yet (or a clip that
+  // fails): the board's words come at a speaking pace, unvoiced. Sound off: no board, the pause stays
   async say(key, hold = 0.5) {
     const text = T(key), my = ++this.token;
     if (this.cur) { try { this.cur.pause(); } catch (e) { /* ignore */ } this.cur = null; } // never let two lines overlap
     if (this.finish) this.finish();
     Said.begin(my, text, key);
     const clip = VO.has(key);
-    if (clip && !this.ONLY_SAID.test(key)) Caption.stay(); // (a line that follows at once: the board, if up, waits for it, and its words change when this voice starts)
+    const shown = SILENT || !Sound.muted; // (the board comes with the line: voiced, or not recorded yet)
+    if (shown && !this.ONLY_SAID.test(key)) Caption.stay(); // (a line that follows at once: the board, if up, waits for it, and its words change when this voice starts)
     if (clip) Music.duck(true);
     const est = (0.9 + text.length * 0.058) / this.RATE, t0 = performance.now(); // (how long it takes to say, at RATE)
     const spoken = new Promise((resolve) => {
       let done = false;
       const finish = () => { if (!done) { done = true; if (this.finish === finish) this.finish = null; if (my === this.token) Said.end(); Caption.said(); resolve(); } };
       this.finish = finish;
-      if (SILENT) { if (clip) Said.go(); wait(est).then(finish); return; } // a test robot: no sound, but a recorded line's board runs as if spoken
-      if (Sound.muted || !clip) { wait(est).then(finish); return; }
+      if (SILENT || !clip) { if (shown) Said.go(); wait(est).then(finish); return; } // a test robot (no sound), or a line not recorded yet: its board runs as if spoken
+      if (Sound.muted) { wait(est).then(finish); return; }
       wait(est + 2.5).then(finish); // (in case a clip's 'ended' never comes)
       let a = null;
-      const fail = () => { // a clip that can't play: the line's pause still runs its course, unvoiced
+      const fail = () => { // a clip that can't play: the line's pause still runs its course, unvoiced (its board too)
         this.missing.add(key); if (Said.clip === a) Said.clip = null;
+        Said.go();
         if (a && this.cur === a && !done) wait(Math.max(0, est - (performance.now() - t0) / 1000)).then(finish);
       };
       a = I18n.say(key, { onended: finish, onerror: fail, rate: this.RATE });

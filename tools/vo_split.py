@@ -265,8 +265,8 @@ def write_script(group=None):
     ]
     if group:
         out += [
-            "These are only the %s's lines: record them now, and the rest of the game later (docs/VO_RECORD.txt)." % group,
-            "The same person reads both, so the game keeps one voice.",
+            "These are only the %s's lines (every line of the game: docs/VO_RECORD.txt)." % group,
+            "The same person who reads the rest reads these too, so the game keeps one voice.",
         ]
     out += [
         "",

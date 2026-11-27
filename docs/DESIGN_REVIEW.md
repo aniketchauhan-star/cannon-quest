@@ -63,5 +63,5 @@ Status of each point in the review, in its own order. "Done" items are in the bu
 | "x" label on the cage | **Done.** An "x" tag on the deck cage, and x is written as x in the equation. |
 
 ## Still to do outside the code
-- **Voice:** two new lines need recording in the same voice. The script is `docs/VO_RECORD_REVIEW.txt`. Until they are recorded, the retry shows no words (its "Try again!" panel was taken out, 25 Nov 2026) and the shown way only its "Watch how!" banner.
+- **Voice:** two new lines need recording in the same voice ("Not quite! Try again." and "Watch how it’s done.", new words of 27 Nov 2026). They are in `docs/VO_RECORD_UPDATE.txt` with the other new lines (or alone: `docs/VO_RECORD_REVIEW.txt`). Until they are recorded, their words show on the board unvoiced.
 - **Art (optional):** a tray redrawn in the cannon's front-on viewing angle, and a sad x without its cage if x's struggle loop should come back on the title. The ChatGPT prompts are at the end of `docs/ASSET_PROMPTS.md`.

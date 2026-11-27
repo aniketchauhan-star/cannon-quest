@@ -2,8 +2,8 @@ CANNON QUEST: THE VOICE SCRIPT: REVIEW ONLY
 2 lines, about 10 seconds to read
 
 Every line in the game is said in one real person's voice: yours, or a teammate's. No AI voice.
-These are only the review's lines: record them now, and the rest of the game later (docs/VO_RECORD.txt).
-The same person reads both, so the game keeps one voice.
+These are only the review's lines (every line of the game: docs/VO_RECORD.txt).
+The same person who reads the rest reads these too, so the game keeps one voice.
 
 HOW TO RECORD
 - One person reads all the lines, in their own natural voice.
@@ -21,10 +21,10 @@ HOW TO RECORD
 
 THE LINES
 
- 1. Not quite. Try again, you can do it.
+ 1. Not quite! Try again.
     (the shot missed: the same equation comes back for one more try (no hint: the player works it out again); warm and encouraging)
 
- 2. Watch how it's done.
+ 2. Watch how it’s done.
     (the second try missed too: the game shows the way, firing the right orbs itself; calm and clear, like showing a friend)
 
 (Then: ~/.cache/crown-quest/venv/bin/python tools/vo_split.py recordings/<file> review, and ./build.sh.)

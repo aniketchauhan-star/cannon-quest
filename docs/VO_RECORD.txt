@@ -19,70 +19,70 @@ HOW TO RECORD
 
 THE LINES
 
- 1. Welcome to Cannon Quest.
+ 1. Welcome to Cannon Quest!
     (the player has just tapped Play; excited, inviting)
 
- 2. Let's free x.
+ 2. Let’s free x!
     (Play again: the first equation comes back (no how-to-play this time); excited, inviting)
 
- 3. This is the equation.
+ 3. Here’s the equation.
     (first game: the spotlight is on the equation; calm and clear, like showing a friend)
 
- 4. This is the cannon.
+ 4. This is your cannon.
     (first game: the spotlight is on the cannon; calm and clear, like showing a friend)
 
- 5. These are the orbs.
+ 5. These are your orbs.
     (first game: the spotlight is on the orbs in the tray; calm and clear, like showing a friend)
 
- 6. Tap the −5 orb.
+ 6. Tap the −5 orb to free x!
     (first game: a hand taps the -5 orb; once tapped it flies into the cannon; calm and clear, like showing a friend; say −5 as "minus five")
 
- 7. Now tap FIRE.
+ 7. Now tap FIRE!
     (first game: the -5 is in the cannon; a hand taps the FIRE button; calm and clear, like showing a friend)
 
- 8. Here comes the next one.
+ 8. Here comes the next one!
     (a new equation comes; excited, inviting)
 
- 9. New equation. Can you free x?
+ 9. Another x is trapped. Free it!
     (a new equation comes; excited, inviting)
 
-10. Ready? Load up and fire.
+10. Load up and fire!
     (a new equation comes; excited, inviting)
 
-11. Last one. Make it count.
+11. Last one. Make it count!
     (the last equation comes; excited, inviting)
 
-12. Boom. x is free.
+12. Boom! x is free!
     (the shot worked: x jumps out of the cage; big and happy: celebrate!)
 
-13. Yes. You did it.
+13. You did it!
     (the shot worked: x jumps out of the cage; big and happy: celebrate!)
 
-14. Brilliant. That's how it's done.
+14. Brilliant shot!
     (the shot worked: x jumps out of the cage; big and happy: celebrate!)
 
-15. Awesome shot.
+15. Awesome shot!
     (the shot worked: x jumps out of the cage; big and happy: celebrate!)
 
-16. Oh no. x is still stuck.
+16. Oh no! x is still trapped.
     (the shot missed: x is still in the cage (a retry comes next); gentle and kind, never like "wrong")
 
-17. Not this time. x is still locked in.
-    (the retry missed too: x is still in the cage (the game shows the way next); gentle and kind, never like "wrong")
-
-18. Not quite. Try again, you can do it.
+17. Not quite! Try again.
     (the shot missed: the same equation comes back for one more try (no hint: the player works it out again); warm and encouraging)
 
-19. Watch how it's done.
+18. x is still locked in!
+    (the retry missed too: x is still in the cage (the game shows the way next); gentle and kind, never like "wrong")
+
+19. Watch how it’s done.
     (the second try missed too: the game shows the way, firing the right orbs itself; calm and clear, like showing a friend)
 
-20. Amazing. You freed x every single time.
+20. Amazing! You freed x every time!
     (the end: the player freed x every time; big and happy: celebrate!)
 
-21. Great job. You freed most of them.
+21. Great job! You freed x in most rounds.
     (the end: the player freed x most times; big and happy: celebrate!)
 
-22. Good try. Play again to free them all.
+22. Good try! Play again to free them all.
     (the end: the player freed x only a few times; warm and encouraging)
 
 (Made by: python3 tools/vo_split.py --script, from tools/vo_lines.json and locales/locales.json.)
