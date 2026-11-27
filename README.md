@@ -1,164 +1,111 @@
-# Cannon Quest
+<div align="center">
 
-A 2D algebra game built from your art. Load operation balls into the cannon, fire, and free **x** from its cage.
-It is based on the *Cannon Quest* deck, the POD A stand-up brief (16 Nov 2026), and the mockups and asset sheets you supplied.
+# 💥 Cannon Quest
 
-## Play
-- Double-click **`index.html`** in Chrome, Edge or Safari. It works fully offline: the fonts (Poppins SemiBold and Bold, the math x, and Trig Text for the orbs) are built into the page.
-- Keep the `assets/`, `js/`, `libs/` and `locales/` folders next to `index.html`.
-- Works best in landscape. On a phone held upright, a "turn your device" hint appears; tap "Play anyway" to dismiss it.
+**Load operation orbs into a cannon, fire at the equation, and free x from its cage.**
 
-**Controls**
-- Drag a ball into the cannon to load it: near the cannon the nearest empty socket glows and draws the ball in, and let go there, it drops in and fills the socket. Let go anywhere else and it flies back to the tray. On the two-socket cannon you can drop a ball straight into socket 1 or 2. With the cannon full, drop a ball on a loaded socket to swap it in: the ball that was there flies back to the tray.
-- Tapping still works too: tap a ball to load it. With the cannon full, tapping another ball swaps it in for the ball loaded last, which flies back to the tray (no need to unload first). Tap a loaded ball to send it back, or drag it out. No × is drawn on a loaded ball (the user, 25 Nov 2026).
-- Tap **FIRE** to fire. Tapped too early, it shakes and says what is missing ("Load 2 orbs first.").
-- No buttons in the corners: no Pause, no Sound, no Skip (the user, 26 Nov 2026: "yh upar do buttons ki need ni hai. Skip ki bhi"). The tutorial plays through. While x is being freed, a tap anywhere on the scene jumps to the next question.
-- The game freezes by itself while its tab is hidden, and goes on when it comes back.
-- No round speaker or "x" tag is drawn anywhere in play: the question board is only its words, and x's cage carries no label (the user, 25 Nov 2026).
-- Keyboard: `1`–`8` load a ball (also during the tutorial), `Backspace` removes the last one, `Enter` fires.
+[![Live demo](https://img.shields.io/badge/▶_Play-live_demo-00C7B7?style=for-the-badge)](https://cannon-quest.vercel.app)
+![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=flat-square&logo=html5&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=flat-square&logo=javascript&logoColor=black)
+![GSAP](https://img.shields.io/badge/GSAP-88CE02?style=flat-square&logo=greensock&logoColor=black)
 
-## What's in the game
-- **Design review of 23 Nov 2026 (@Karan):** done; what changed for each point is in `docs/DESIGN_REVIEW.md`.
-- **Start screen:** your mockup `art/start_screen/start_mockup.png`, built from your sheet `art/start_screen/start_sheet.png`. Every piece sits where the mockup puts it, on the game's own deck background.
-  - The CANNON QUEST plaque is at the top, the wooden cannon at the bottom left, and the golden cage at the bottom right with x inside it. Play sits on the deck between them, off the rope line, 220 art px (1.25× the 176 you chose; the review asked for 1.5×), with a breathing glow, a slow pulse and its ripple.
-  - x cries in its cage: your crying-x art (`x_cry`, the same as in the game), so x has its face and tears from the first second (review: "give the title X the same eyes and a sad idle animation"). Its old struggle loop was made for the plain letter x and went with it.
-  - The pieces come in one after another, each with its own real recorded sound (CC0, see `CREDITS.md`; `Title.IN` and `Title.cues` in `src/35_title.js`, `Sound.signLand` / `rollIn` / `cannonLand` / `cageLand` / `cork` in `src/20_audio.js`):
-    - the CANNON QUEST sign drops from the sky with a swish and bounces into place with a wooden knock;
-    - the cannon slides in from the left over the deck (a soft roll) and plants itself with a heavy thud and a puff of dust;
-    - the golden cage falls with a swish and bounces on the deck: a metal clang on wood, then smaller clinks;
-    - Play pops up (a cork pop), floats a little over its shadow and pulses a soft ripple. x starts struggling once everything is in (3 s).
-  - A browser keeps a page silent until its first tap or key (its autoplay rule). So on a first visit opened straight from a link or from disk, the entrance may play without sound; from the first tap anywhere, x's struggle is heard (`Sound.listen`). An app's web view, or a browser that already trusts the site, plays the entrance with its sounds. The six entrance clips come with the page in their own small file (`js/sfx_title.js`, 35 KB), so they are ready when it plays.
-  - Pressing Play fires the cannon, bursts the button, and sends the logo up, the cannon left and the cage right.
-  - Under reduced motion everything is simply in place and x shows one still frame.
-  - To recut the pieces: `tools/cut_start_screen.py` (EDSR 2×; the cage and x 4×) prints each piece's box for `TL` in `src/35_title.js`.
-- **Background:** your deck picture `art/background/new_background.png`, exactly as you made it: blue sky (its five painted clouds are left out: the only cloud in the game is the equation's), mountains, the forest with its big trees, the rope railing on wooden posts, and the wooden deck the cannon and the tray stand on. (`art/background/new_background_sheet.png` is the parts sheet you sent with it.)
-  - It is cut into layers that move at different speeds as the camera moves and shakes (parallax): the sky drifts least, then the mountains, then the trees, and the deck moves with the cannon. With the camera at rest they stack back into your picture pixel for pixel. Each layer carries a little hidden picture under the edge of the layer in front, so no gap ever shows.
-  - The scene is alive (`src/32_scenery.js`). It runs on transform and opacity only, mostly as CSS keyframes, so it stays smooth even when the game is busy. It freezes on pause, and under reduced motion it stands still (no birds, no falling leaves).
-    - **Sun:** top right, with the sky brightening toward it, a soft bloom and two slowly counter-turning glare layers (`sun_glow` / `sun_rays`, drawn by `tools/make_sun.py`).
-    - **Jungle:** low mist drifting between the trees, soft shafts of sunlight from the sun that slowly brighten and fade, sunlit specks floating up, and now and then a golden leaf tumbling down from the big trees. The pieces and their places are `MIST`, `SHAFTS` and `LEAF_FROM` at the top of `src/32_scenery.js`.
-    - **Birds:** a few, not many. Every 9–18 s a flock of 1 to 3 small birds crosses the sky between the hills and the treetops (behind the big trees and the equation cloud), flapping a few beats, then gliding (`Birds`).
-    - **Wind:** the two leafy plants behind the railing sway in the wind, a gust crossing from left to right.
-  - To rebuild the layers: `tools/upscale2x.py` (EDSR) makes `art/background/new_background_2x.png`, then `tools/cut_deck_bg.py` cuts it into `assets/img/bg_*.webp` and prints each layer's box for the CSS. Each layer's parallax amount is in `PARALLAX` in `src/30_stage.js`.
-- **Equation cloud:** smaller (about 80%) and high in the sky, well clear of the cannon. It floats 3.5 px up and down every ~5 s and drifts slowly; a warm rim light on its sun side (`cloud_rim.webp`, made by `tools/cloud_rim.py`) and a soft haze where it meets the sky.
-  - The equation is 20% bigger (84 px) and x is written as the letter **x** in x's violet: x's cage stands on the deck now, wearing an "x" tag, so the equation reads as written algebra.
-  - When a number is added to a bracket, the simplified line is shown: "3(x + 2) − 6 = 15" → "3x + 6 − 6 = 15" → "3x = 15" (`expandStep` in `src/10_core.js`).
-- **Six rounds, easy to hard** (`ROUNDS`): one step (x + 5 = 7, 3x = 18), two steps (2x + 3 = 11, x/3 + 2 = 6), then a challenge (2x + 7 = 1, 3(x + 2) = 21). No level banners (the user took the "Level 2 / Two steps" banner out, 25 Nov 2026) and no progress dots (also taken out, 25 Nov 2026).
-- **x's moods, from your three pictures** (23 Nov, made in ChatGPT; kept in `art/sprite_sheets/x_moods/`, cut by `tools/cut_x_sprites.py`):
-  - **Crying in its cage** (`cry_in_cage.png`, 6 frames): x in its cage on the deck, right of the cannon (`DeckCage`: the cannon's target), cries the whole time it is stuck. It looks sad, its tears well up and roll, it squeezes its eyes shut, wails, sobs and sniffles, then it starts again (about 2.5 s a loop). The same crying cage is on the start screen.
-  - **Dancing** (`dance.png`, 6 frames): the freed x dances by "= 2". It crouches, hops with its fists up, winks and waves, then crouches, hops with its arms out and waves: two hops a loop, to the music's beat. The sheet draws two of the frames a hop higher, so the game lines all six up on x's feet and makes each hop itself, smoothly rising and falling, with a little squash as it lands.
-  - **Free, by its broken cage** (`free.png`): x on the end card.
-  - The six frames of each sheet are lined up so nothing jumps: the crying ones on their cage (it stands perfectly still and only x moves), the dancing ones on x's body. The frames turn on the game's clock (`Sprite` in `src/30_stage.js`): they freeze on pause, and under *reduce motion* each mood shows one still frame.
-- **Cannon blast:** as the ball sinks in, sparks of its colour are drawn into the barrel and a glow swells there. Then a white-hot flash and a starburst at the mouth, an orange fireball that cools to red, a shock ring in the air and another running out over the deck, falling embers, and thick grey smoke. The ball flies with a comet's tail of its own colour, and so do its two copies on their way to each side of the equation; each hit and landing gets a starburst, and the terms that cancel burst into golden sparkles. The smoke billows out, rolls sideways, then rises and drifts off on the breeze. The sound is real recordings only: a close gun crack, a recorded boom with its rumble, and a distant echo (see `CREDITS.md`). The ball's whoosh is a real swung metal tube.
-  - Pressing Play bursts the start screen away. The cloud then floats down, the cannon pops up and the tray slides in.
-- **Six rounds from the deck.** Every operation is applied to both whole sides, with exact fractions and negatives. Any route that isolates x is accepted.
-- **Freeing x** (you asked on 23 Nov: "the cage is burst, like cage broken, and then x comes out… after 5 seconds the cloud is fade and burst", then "extreme… slow animation of cage crack and x come out from them, and cloudburst after x compose"). **Since the design review (23 Nov, later) it happens on the deck:** "x = 2" lights up, a bolt of light flies from the x on the cloud to x's cage, the cage cracks (three pushes), bursts, x rises out of the light and lands. **One by one since 25 Nov** (you: "the animation should come one by one… cage broken, then the x come out… then go to the right side, and then cloud is burst, equation will change. And again x cage come"): x dances a moment where its cage stood (`BEAT.CHEER` 1 s), hops away to the right along the boards and off the screen (two hops and a long leap, `BEAT.HOP_OFF` 1.6 s, `DeckCage.leaveTL`), and only then does the cloud burst; a moment of clear sky (`BEAT.BREATH`), the next equation's cloud forms with its new orbs, and only then does the new cage drop onto the deck, and play starts when it has landed. Nothing in this chain overlaps any more. The review made it fast (about 8 s from FIRE to the next equation); you found that too fast (25 Nov: "make it slow so that user can understand"), so every beat of the shot and the freeing is about 1.6× longer again, and "x = 2" now glows on the cloud for 1.4 s, to be read, before the bolt flies (`Motion.BEAT`: shot ~6.5 s, then ~5.5 s until x lands). A tap anywhere skips the celebration. The older, slower stages below are kept as notes; their beats are in `Motion.BEAT`:
-  - **Close-up:** the screen's edges darken, a low rumble starts, and the camera closes in on the cage (zoom 1.7–1.8, still centred on the cloud). The cage starts to glow, and x stops crying and looks up.
-  - **The cage cracks, slowly:** x pushes on its bars three times. Each push lands with a snap and a groan, chips of gold fly, and **glowing cracks** run out over the cage's gold from where x's hands are, with light leaking through them. The cracks stay on the gold: they never cross x or its gloves (`assets/img/cage_crack.webp` is the cage as it shows round x). A fan of golden light rays wakes behind the cage. After the third push the cracks race over the whole cage and it trembles.
-  - **It bursts along its cracks:** a flash and a starburst, rings of light, sparks of gold, purple and white, and the cage's **shards** tumble away. Some come toward you and some fly away; they hang in the air (heavy air drag, no slow-motion), spin and fade. The cracks are exactly where it comes apart: one fracture pattern (`Fracture` in `src/30_stage.js`) gives both. Every shard is the cage's own picture: your crying cage with x taken out (`assets/img/cage_empty.webp`, cut by `tools/cut_x_sprites.py`).
-  - **x comes out:** it rises out of the light with its fists up (white-hot at first), hovers while sparkles circle it, then comes down where it stood in the cage, with a ring of gold at its feet. **"= 2"** lights up with the fanfare, a starburst, and confetti from both sides of the cloud.
-  - **x = 2** stays on the cloud for 5 seconds (`Motion.BEAT.HOLD`) while x dances beside it, with a soft halo of rays behind x and twinkles round it.
-  - **Cloudburst:** the cloud draws in its breath. It squeezes and trembles, a warm light builds in its heart, sparks are pulled in, and "x = 2" is drawn into the light. Then it **bursts in place**: a flash, a starburst and two shock rings, its own puffs blasting outward (swelling, turning, melting into mist), white vapour, golden sparks and a short shower of glittering rain.
-  - The next cloud **forms from its puffs** in the same spot: they drift in from round it, blurred, and come together sharp, and the equation pops in with a twinkle. A cloud never sails in or out sideways.
-- **Not freeing x:** the cage rattles with sparks flying off its bars while x keeps crying ("Oh no. x is still stuck.", never "wrong"). Then **one retry** (review: "offer one retry, then show the correct path step by step"): the equation glides back and the fired orbs drop back into their cups, and no orb glows: the player works it out again on their own (the user, 26 Nov 2026: don't give the answer after the first miss, only after the second). No "Try again!" panel (the user took it out, 25 Nov 2026). If the retry misses too, the game shows the way: the right orbs glow and fly into the cannon one by one and it fires them, every step played out, down to x freed (that x doesn't count).
-- **End screen** (the user, 25 Nov 2026: "no need of this amazing panel… Quest complete in a good text, in upper side… X dancing in the between, and the cage behind… broken"; it replaced the design review's results card). The tray slides away, the cannon shrinks away into smoke, and the last cloud has burst, so the sky is clear: **"Quest complete."** drops in at the top word by word, lettered like the game's logo (yellow-to-orange face, orange edge, dark-teal outline), with fireworks either side (one more for each x freed). x's broken cage (`cage_broken.webp`, cut from the user's picture of x free by `tools/cut_broken_cage.py`) drops into the middle of the deck, x jumps out of it and dances in front of it, and only once x has danced a while (two dance loops, about 3 s: the user, 25 Nov 2026, "add a play again in last after x dancing") does **Play again** pop up under x, with the start screen's Play sound and a puff of glitter, then **Home** beside it. Play again is a size bigger, and until it is tapped its white ring ripples out and a gleam crosses it now and then. None freed: x still sad in its cage, in the middle. Home starts the page again on the start screen (without the tutorial, in this visit).
-  - x stands on the deck to the right. If you freed at least one x, it is your picture of x free and dancing by its broken cage: it jumps up onto the deck, lands with a squash, a puff of dust and its shadow, then hops on every beat, leaning one way, then the other. If you freed none, x is still in its cage there, crying ("Play again to free them all!"). `EndX` in `src/30_stage.js`; it goes when you tap Play again.
-- **Grounded scene:** the cannon and the ball tray cast soft shadows on the deck, balls sit down into their cups, and a loaded ball fills its cannon socket edge to edge, centred, with no dark gap round it (you asked on 20 Nov: "fully absorb in circle, no negative space"). Its orb is 1.015 × the opening (`CANNON.seat`), so its edge tucks about a pixel under the gold ring's inner lip and nothing shows outside the ring. As it lands it swells a touch and settles (no squash, which would open a gap). The FIRE button fills the recess in the cannon's gold bezel exactly, centred on it (`CANNON.fire`, measured in the cannon art).
-- **First-time spotlight tutorial:** only ONE, on the first screen (x + 5 = 7) and on no other screen. Everything else is dimmed, but never blurred, so the equation can always be read (you asked on 23 Nov). What is being shown gets a gold ring:
-  1. the equation on the cloud ("This is the equation.");
-  2. the cannon ("This is the cannon.");
-  3. the orbs in the tray, which glow one after another ("These are the orbs.");
-  4. the −5 orb glows and a hand taps it ("Tap the −5 orb."). The cannon's socket stays clear too. Only the −5 can be loaded (tapped, dragged, or by its key); any other orb gives a soft "nope". Once it is tapped it flies into the cannon;
-  5. the FIRE button, with the loaded −5 beside it, and a hand taps FIRE ("Now tap FIRE."). Only FIRE answers now (or Enter); the player taps it and the cannon fires the −5 at the cloud.
-  - Nothing else is a tutorial. The first two-socket round shows "1" and "2" chips over its sockets until it fires (review: "number the chambers in the first two-step round"); after that they don't come back.
-  - It plays every time the game is opened (or reloaded), in its first game. Play again, in the same visit, goes straight into play. (It used to play only once per browser, which hid it after the first showing.)
-  - A hint appears after 7 seconds of inactivity.
-- **Voice-over:** one real person's voice through the whole game, played a little slower than it was read (0.82×, `VO.RATE` in `src/20_audio.js`, pitch kept: you asked on 25 Nov for a slow voice everywhere), with captions, in this order: a welcome as Play is tapped, the five tutorial lines (first game only), a short intro on each round without a tutorial ("Last one. Make it count." on round 6), a reaction as the cage bursts open ("Boom. x is free.") or rattles ("Oh no. x is still stuck.", never "wrong"), the retry and the shown way ("Not quite. Try again, you can do it.", "Watch how it's done."), and an end line that matches the score. Variants take turns, and a line waits for the one before it to finish. Skip silences a shot's line. The 22 lines are listed, with each one's mood, in `tools/vo_lines.json`. The words come from x's speech bubble.
-  - **No AI voice, ever** (since 20 Nov 2026: "natural voiceovers, not AI generated"). Every clip is cut from a person reading the lines aloud. No TTS studio, no AI voice, and not the device's own voice: the game has no code that makes a voice.
-  - To record: read `docs/VO_RECORD.txt` (the 22 lines in order, each with when it's said and how it should feel) into a phone in one go, and put the file in `recordings/` (kept out of git). `~/.cache/crown-quest/venv/bin/python tools/vo_split.py recordings/<file> --check` finds every line, and the same without `--check` cuts it into `assets/VO/en/<key>.webm`. Then run `./build.sh`. A stumble is fine: say the whole line again, and the last take is used. Another recording of a few lines: give their keys after the file, in the order they're read.
-  - **Just the tutorial first:** `docs/VO_RECORD_TUTORIAL.txt` has only the welcome + the five tutorial lines (about 20 seconds). Record it, then `~/.cache/crown-quest/venv/bin/python tools/vo_split.py recordings/<file> tutorial` and `./build.sh`. Each tutorial step then waits for its line, with the caption word by word. The group is `groups.tutorial` in `tools/vo_lines.json`, and `python3 tools/vo_split.py --script tutorial` rewrites its script. Use the same voice as the rest of the game.
-  - `tools/vo_split.py` writes each cut down in `tools/vo_takes.json` (which recording, where, the words heard, and when each word starts). `./build.sh` lists only those clips, so a clip that didn't come from a recording is never played. The word starts make the caption's words pop in exactly as they are said.
-  - A line without a recorded clip has no voice, and so no caption either.
-  - **Recorded (20 Nov 2026):** the first 20 lines, from the user's recording `recordings/1.mp3` (40.9 s, one take, kept out of git). `tools/vo_split.py` heard every word of every line; the clips are 1.3–3.7 s each, about 230 KB in all.
-  - **To record (23 Nov 2026):** the 2 lines the review's retry added, `voRetry` and `voShowHow`: `docs/VO_RECORD_REVIEW.txt` (a few seconds), then `~/.cache/crown-quest/venv/bin/python tools/vo_split.py recordings/<file> review` and `./build.sh`. Until then those two moments have no voice (the retry shows no words: its "Try again!" panel was taken out on 25 Nov 2026; the shown way still shows its short "Watch how." banner).
-- **Motion:** time-based and GSAP-driven (bundled in `libs/`, no CDN), moving only position, scale, rotation and fade. Each shot and its result play as one timeline that **Skip** jumps to the end. With the device's *reduce motion* setting on, everything appears in place at once: no shake, particles, idle loops or camera drift.
-- **Camera and screen shake** (spec: `docs/GAME_PROMPT.md`):
-  - **Each shot:** the camera leans in on the cannon as it squats, then the cannon fires. The screen shakes, kicks back and punches in, the cannon stretches and jiggles, and the tray balls hop.
-  - **After the shot:** the camera follows the ball up to the cloud. The game freezes for 60 ms on impact and the cloud squashes, then the camera holds on the equation, zoomed in, while it's read.
-  - **When x is freed:** the camera closes in on the cage (centred on the cloud) and creeps closer while it cracks. Each push jolts it a little, the burst shakes it hard, and it eases back to 1.2 while x lands. It returns to the base framing only after the cloud has burst, so the cloud never slides sideways on screen. (With *reduce motion* on, the camera cuts instead and goes no closer than 1.18.)
-  - **While you choose balls,** the camera stays still. The background edge never shows on any screen shape.
-- **Smoothness:**
-  - Flying balls are drawn above the particles, so a ball's label stays readable through the blast.
-  - Particles don't create new memory each frame.
-  - Slower devices automatically get fewer particles and a simpler tutorial dim, changed only between shots.
-- **Words by key:** every line of text and every voice clip is looked up by a key (`T('key')`), with the English in `locales/locales.json`. `index.html?lan=xx` picks a language once one is added.
-- **Type and UI:** **Poppins SemiBold (600)** for buttons and labels; **Poppins Bold (700)** for the equation on the cloud and the question board's words, with the letter x set as mathematics (Latin Modern Math's italic x, as in the Distance Formula game; 26 Nov 2026); **Trig Text** (the user's font, 19 Nov) for the numbers on the orbs, including its own ÷. No outlines on text. Skip, the socket chips (1, 2) and the short hints share one look: a dark-glass chip with a thin gold edge.
-  - **Orbs by operation** (review: "colour has no meaning… code colour by operation type"): + orange, − cyan, × green, ÷ violet (`OP_ART`). The dark label keeps at least 4.9:1 contrast on all four (WCAG AA is 4.5:1; measured on the art). A cup whose orb is away shows a faint ghost of it, and the tray's glowing cyan slot is gone (`tools/erase_tray_slot.py`).
-  - **Caption = x's speech bubble** (review: "turn it into a speech bubble from a character… the caged X"): your question template `art/ui/question_template.png` (an orange wooden frame with a dark-brown outline and a cream panel) with a tail in its wood pointing at x on the deck (`Caption.follow` keeps it by x and on screen), with big (36 px) dark-brown words on the cream so they always read. It is drawn in the template's own proportions, so its whole thick wooden frame and grain show: a 9-slice (`assets/img/question_board.webp`, cut by `tools/cut_question_board.py`) painted into a canvas in whole screen pixels by `Caption.paint` in `src/20_audio.js` (`BOARD` holds the slice lines), so the pieces meet with no seams. The corners stay as drawn and the frame stretches to the words. It hugs its words (as wide as its longest line, one or two lines, at most 560 wide so it stays clear of the cannon) and stays centred on its spot. It sits above the cannon smoke, so the words are never hidden. A one-letter word (x) never ends a line.
-  - **It comes only with the voice, word by word.** The board stays hidden until a line's voice actually starts (its recorded clip plays). Then it rises in with the first word, and each word pops in as it is said. If no voice starts (sound off, no clip recorded yet, a clip that fails), no board shows. The board is sized for the whole line before its first word, so it never grows while the words come. The word clock (`Said` in `src/20_audio.js`) follows each word's start in the recording (`VO_WORDS`, heard by `tools/vo_split.py`), or spreads the words over the clip's length where it has none.
-  - When a new line comes in, the old words fade out, the board glides to its new size and place, and the new words come as they are said (`Caption` in `src/20_audio.js`). Test robots (`navigator.webdriver`) make no sound, but the board still runs as if the lines were spoken.
-  - **Once a line has been said, the board lifts away** (you, 26 Nov 2026: "yh instruction jab bol diya hta dena"): it keeps the line for 1 s to be read (`Motion.BEAT.SAID`), then goes (`Caption.said`). Lines that follow straight on (the tutorial's "This is the equation." → "This is the cannon." → …) keep it up between them. The two instructions the player has to carry out, "Tap the −5 orb." and "Now tap FIRE." (`VO.KEEP`), stay until the shot, and the shot lifts the board away ("Tap fire wala instruction fire ke baad hta dena"). The cheers as x is freed ("Boom. x is free.", "Yes. You did it.", "Brilliant. That's how it's done.", "Awesome shot."; `VO.ONLY_SAID`) are only said and never come on the board ("Boom! x is free yh sirf VO mei rhene do").
+<img src="art/start_screen/start_mockup.png" width="100%" alt="Cannon Quest title screen: the Cannon Quest logo above a wooden deck, with a teal and gold cannon on the left, a round Play button in the middle and a purple x locked in a golden cage on the right">
 
-## Files
-```
-cannon quest/
-├── index.html            ← open this to play
-├── js/  libs/  locales/  ← the game's code, GSAP and words (index.html needs these)
-├── assets/               ← sprites, sound effects, music and voice clips the game loads
-├── src/                  ← the game's source; ./build.sh turns it into index.html + js/script.js
-├── tools/                ← scripts: voice clips, background, words
-├── art/                  ← the art you supplied (the game doesn't load it; sprites are cut from it)
-├── docs/                 ← notes, such as the prompts for new art
-├── claude/skills/        ← your skills (localization, animation, compression…)
-├── build.sh  README.md  CREDITS.md  CLAUDE.md
+</div>
+
+## About
+
+Cannon Quest is a 2D algebra game about solving linear equations. A purple **x** is locked in a
+golden cage, inside an equation such as **x + 5 = 7**. The player loads operation orbs (+5, −5, ×3,
+÷3 …) into a cannon and fires. Each shot applies its operation to **both whole sides** of the
+equation, and when x stands alone the cage bursts open. It is designed for learners aged about
+11–15. The learning goal is simple: whatever you do to one side, you do to the other, and you
+undo operations in reverse order to isolate x.
+
+## Highlights
+
+- **Six rounds, easy to hard:** one step (x + 5 = 7, 3x = 18), two steps (2x + 3 = 11,
+  x/3 + 2 = 6), then a challenge (2x + 7 = 1, 3(x + 2) = 21)
+- **Real algebra on screen.** Each orb splits into two identical terms that land on both sides,
+  cancelling terms vanish, and bracket steps are shown simplified. Exact fractions and negatives
+  are used, and any route that isolates x is accepted
+- **Orbs colour-coded by operation:** + orange, − cyan, × green, ÷ violet, with high-contrast labels
+- **Gentle feedback.** A miss is never called "wrong". The first miss gets a retry, and a second
+  miss shows the solution step by step
+- **A big win moment.** The cage cracks slowly, x bursts out and dances, and the cloud explodes into
+  puffs before the next equation forms
+- **Spotlight tutorial** on the first screen (equation, cannon, orbs, tap −5, tap FIRE), with a
+  hand to show each step and an idle hint after a few seconds
+- **Recorded voice-over** with captions that appear word by word, plus recorded CC0 sound effects
+  and background music
+- **Game feel:** camera lean-ins, screen shake and cannon-blast particles, all built from GSAP
+  timelines. Reduced-motion is supported, and slower devices automatically get fewer particles
+- **Works offline** from `index.html`, with fonts and sound effects embedded. Every string is
+  looked up by key, so the game is ready for translation (`?lan=xx`)
+
+## How to play
+
+1. Press **Play** and read the equation on the cloud.
+2. Tap or drag an orb from the tray into the cannon. Two-socket cannons take two orbs, fired in order.
+3. Tap **FIRE**. The orb's operation is applied to both sides of the equation.
+4. Get **x** alone to free it from the cage. After six rounds, the quest is complete.
+
+Keyboard: `1`–`8` load an orb, `Backspace` removes the last one, `Enter` fires.
+
+## Tech stack
+
+- **HTML5, CSS3 and vanilla JavaScript**, written as source files in `src/` and joined by `build.sh`
+- **GSAP 3.15.0**, bundled locally in `libs/` for all animation
+- **Web Audio** playback of Opus (`.webm`) sound effects, music and voice clips
+- **WebP** sprites and a key-based i18n layer (`js/i18n.js`, `locales/locales.json`)
+- **Tooling:** Node.js for the build, and Python (Pillow, NumPy, SciPy, OpenCV) with FFmpeg for
+  cutting art, voice clips and music
+
+## Run locally
+
+```bash
+git clone https://github.com/aniketchauhan-star/cannon-quest.git
+cd cannon-quest
+npx serve .
 ```
 
-**The game (keep these next to `index.html`)**
-| Path | What it is |
-|---|---|
-| `index.html`, `js/script.js` | The game, built from `src/` by `./build.sh` |
-| `js/sfx_title.js` | The start screen's six entrance sounds (`TITLE_SFX` in `build.sh`), embedded the same way. The page loads it with itself, so they are ready when the entrance plays |
-| `js/sfx.js` | The other sound effects (`assets/sfx/*.webm`), embedded by `build.sh` so they also play from disk. The game fetches it once the start screen is up |
-| (no loading screen) | Opening the link shows the start screen as soon as its own pictures are in (about 1.3 s on 4G; at once from disk). `src/00_head.html` preloads the scripts, the words and every start-screen picture first. The play scene's pictures (`data-src` in the markup, `Pics.GAME` in `src/40_game.js`) and `js/sfx.js` are fetched only once the start screen shows, so they never slow it. `Title.exit` waits for them if Play is tapped first |
-| `locales/locales.json` | Every word the game shows or says, by key (English). `locales.js` is a generated copy for opening from disk |
-| `js/i18n.js` | Looks words and voice clips up by key (`T('key')`, `I18n.voice('key')`) |
-| `libs/gsap.min.js` | GSAP 3.15.0, the animation library, bundled locally |
-| `assets/fonts/` | Poppins SemiBold + Bold (`poppins-600-latin*.woff2`, `poppins-700-latin*.woff2`) and Trig Text (`trigtext-regular.woff2`), SIL OFL; the math x (`swifty-math.woff2`, GUST Font License). `build.sh` embeds them into `index.html` (as `src/02_fonts.html`), because Chrome blocks font files on pages opened from disk |
-| `assets/img/` | The sprites, cut from the sheets in `art/` and upscaled (EDSR super-resolution) so they stay sharp on retina screens. Start-screen sprites are named `t_*`; `bg_*.webp` are the background layers. All images are WebP |
-| `assets/sfx/` | Recorded sound effects (CC0 / public domain), Opus `.webm` |
-| `assets/music/` | Background music (`battle.webm`): "War on Water: Chapter 1" by yd, an orchestral naval-battle march (85 bpm), with real wind, shore waves, gulls and distant cannon fire mixed in by `tools/mix_bgm.py`. One seamless loop, all CC0 (Opus `.webm`) |
-| `assets/VO/en/` | Voice clips, one per key (`<key>.webm`), cut from a real person's recording |
+Then open the address it prints, or simply double-click `index.html`. The game is already built.
+After editing anything in `src/` or `locales/locales.json`, rebuild with:
 
-**Working files (the game doesn't need these to run)**
-| Path | What it is |
-|---|---|
-| `src/` | The game's source code and page, in the order `build.sh` joins them |
-| `build.sh` | Rebuilds `index.html` (with the font embedded at the `<!--FONTS-->` line of `src/00_head.html`), `js/script.js`, `js/sfx_title.js`, `js/sfx.js` and `locales/locales.js` from `src/` and `locales/locales.json` |
-| `tools/` | `cloud_rim.py` (the cloud's warm rim light), `erase_tray_slot.py` (took the glowing cyan slot off the tray), `vo_split.py` (cuts a recording of the lines into the voice clips; `--script` writes `docs/VO_RECORD.txt`), `vo_data.mjs` (run by `build.sh`: which lines have a recorded clip), `gen_locales.mjs` (run by `build.sh`), `cut_single_cannon.py` (cuts the 1-socket cannon and its FIRE button), `cut_double_cannon.py` (cuts the 2-socket cannon and its FIRE button), `cut_ui_elements.py` (cuts the tray and balls), `cut_start_screen.py` (cuts the start screen), `hd_upscale.py` (makes the sprites HD), `cut_glints.py` (the start screen's gold glints; `OUT cage` cuts only the crying cage's, without cv2), `cut_question_board.py` (the caption board), `upscale2x.py` + `cut_deck_bg.py` (the background layers), `mix_bgm.py` (the background music with its nature sounds and distant cannon fire), `cut_x_sprites.py` (x's moods: the crying and dancing frames, the end card's picture, and the empty cage the shards come from; it prints the numbers for `SPR` and `CAGE` in `src/30_stage.js`) |
-| `art/sprite_sheets/` | `single_cannon.png`: the 1-socket cannon with its FIRE pill (`tools/cut_single_cannon.py`). `double_cannon.png`: the 2-socket cannon with its own FIRE pill (`tools/cut_double_cannon.py`). `ui_elements.png`: the UI sheet the tray and balls are cut from (`tools/cut_ui_elements.py`; its wooden cannon was used until 23 Nov). `new.png`: the cloud, cage, x and buttons (`tools/cut_new_art.py`; its caged x and free x were used until 23 Nov). `x_moods/`: your three x pictures of 23 Nov, `cry_in_cage.png`, `dance.png` and `free.png` (`tools/cut_x_sprites.py`). `1.png`–`4.png`: older glossy sheets. `flat_sprites.png`: a flat-art sheet that was tried and dropped |
-| `art/start_screen/` | `start_sheet.png` (the start-screen sheet: logo, cannon, Play button, cage, x; cut by `tools/cut_start_screen.py`) and `start_mockup.png` (the layout it follows). Older, no longer used: `thumbnail.png` and `play_button.png` |
-| `art/background/` | `new_background.png` (the background, cut into layers by `tools/cut_deck_bg.py`), `new_background_2x.png` (it at 2×, EDSR) and `new_background_sheet.png` (its parts sheet). Older, no longer used: `background_layers.png` (the lake-and-plaza layer sheet) and `5.png` (the first one-piece background) |
-| `docs/ASSET_PROMPTS.md` | The image prompts for the flat-art sprite sheet |
-| `claude/skills/` | Your skills for game projects: localization, animation, translation, compression |
+```bash
+./build.sh
+```
 
-## Editing
-After changing anything in `src/`, run `./build.sh`.
-| What to change | Where |
-|---|---|
-| Any word on screen, or a voice line's text | `locales/locales.json` (then `./build.sh`) |
-| Voice clips | A person records `docs/VO_RECORD.txt`, then `~/.cache/crown-quest/venv/bin/python tools/vo_split.py recordings/<file>`, then `./build.sh` (see Voice-over above). A voiced line's words changed: `python3 tools/vo_split.py --script` and record that line again. The voiced keys, each line's moment and mood are in `tools/vo_lines.json` |
-| Animation timing (durations, easing, Skip, reduced motion) | `Motion` in `src/12_motion.js`; each shot's timeline is `addShot` in `src/40_game.js` |
-| Camera framing for each shot (wind-up, follow, read) | `SHOT_CAM` above `addShot` in `src/40_game.js` |
-| Shake strength, camera smoothing, zoom limits | `CAM` at the top of the camera rig in `src/30_stage.js`; each hit's numbers are in the `Stage.hit({…})` calls |
-| Equations, ball choices, socket counts | `ROUNDS` in `src/10_core.js` |
-| Positions and sizes of the cloud, cannon, tray and holes | top of `src/30_stage.js` (art-space is 1672 × 941, the same as the mockup) |
-| Start-screen layout and timing | `TL` at the top of `src/35_title.js` |
-| A sprite | Replace the file in `assets/img/` and keep the name |
-| Background music | Download the six CC0 files listed at the top of `tools/mix_bgm.py` into one folder, then `PY tools/mix_bgm.py FOLDER` (NumPy, SciPy, ffmpeg) writes `assets/music/battle.webm`. The levels of the wind, waves, gulls and distant cannon shots, and where each shot falls (bar, beat), are in `main()` |
-| Caption board | `python tools/cut_question_board.py` (Pillow + NumPy) recuts `art/ui/question_template.png` into `assets/img/question_board.webp` and prints the slice lines for `BOARD` in `src/20_audio.js` and the cream panel's inset for `#cap`'s padding in `src/00_head.html` |
-| Cannons, FIRE button | `PY tools/cut_single_cannon.py art/sprite_sheets/single_cannon.png OUT` (cannon1, cannon1_front, fire) and `PY tools/cut_double_cannon.py art/sprite_sheets/double_cannon.png OUT` (cannon2, cannon2_front, fire2), then `cwebp -m 6 -q 90 -alpha_q 100` each PNG into `assets/img/`. Both cut onto one canvas with one mapping (1226×898, 0.84 px per art px), so a round's morph swaps only the top. Each prints its cannon's numbers for `CANNON` (holes, foot, fire) at the top of `src/30_stage.js`. The art is already ~3 px per game px, so they skip the HD step below. PY = a Python with SciPy and Pillow (`~/.cache/bj-voices/venv/bin/python` on this Mac) |
-| Tray, balls | `python tools/cut_ui_elements.py art/sprite_sheets/ui_elements.png EDSR_x2.pb OUT` (a Python with OpenCV's `dnn_superres`, SciPy and Pillow), then `cwebp -m 6 -q 90 -alpha_q 100` each PNG into `assets/img/`. It prints the numbers for `RACK` at the top of `src/30_stage.js` |
-| HD pictures (after any recut above, or of the start screen; not the cannons or FIRE) | `PY tools/hd_upscale.py OUT rack:3236 rack_front:rack ball_0:336 … ball_7:336 pause:264 play:264 sound:266 bg_plantL:286 bg_plantR:233 t_cannon:1314 t_cage:955 t_cage_front:t_cage t_x:487 t_logo:2452 playbtn:440`, then `cwebp -m 6 -q 90 -alpha_q 100` each PNG into `assets/img/`, then `tools/cut_glints.py` (the start screen's glints, from the HD cannon and cage). It upscales with Real-ESRGAN's illustration model (RealESRGAN_x4plus_anime_6B, on the Mac's GPU through PyTorch) to about 2.5 picture px per art px, so the sprites stay sharp on retina screens with the camera zoomed in. `name:width` upscales; `layer:name` cuts a front layer from its picture's HD version, so they line up exactly. Proportions never change, so nothing moves in the game. PY = a Python with torch, NumPy and Pillow (`~/.cache/bj-voices/venv/bin/python` on this Mac); weights in `~/.cache/esrgan-weights/`. Run it on the cut pictures once only (not on its own output). The background layers and the caption board are left as they are |
+## Project structure
 
-The cannon comes in 1- and 2-socket versions, both your own art (`art/sprite_sheets/single_cannon.png` and `double_cannon.png`, 23 Nov), so rounds can use up to 2 sockets. On the 2-socket cannon your gold arrow between the sockets shows the order, and the game's 1 and 2 markers sit on the gold side bands just above their rivets. FIRE uses each cannon's own yellow pill (`fire.webp` on the 1-socket cannon, `fire2.webp` on the 2-socket one), its word white with a thin brown edge as you drew it (grey when the button is off). If you supply 3- and 4-socket cannon art, the deck's bonus banks can be added back.
+```
+cannon-quest/
+├── index.html      # the built game page (open this to play)
+├── js/             # built game script, embedded sound effects, i18n helper
+├── libs/           # GSAP, bundled locally
+├── locales/        # every on-screen and spoken line, by key (English)
+├── assets/         # sprites (WebP), sound effects, music, voice clips and fonts
+├── src/            # game source; build.sh joins it into index.html and js/script.js
+├── tools/          # scripts that cut sprites, voice clips and the music loop
+├── art/            # source art sheets and mockups (not loaded by the game)
+├── docs/           # voice-over scripts, design review notes, developer notes
+├── build.sh        # rebuilds the game from src/ and locales/
+└── CREDITS.md      # music, sound effect, font and library credits
+```
 
-See `CREDITS.md` for the audio licences.
+For the full behaviour of every screen, editing tables and asset pipelines, see
+[docs/DEVELOPER-NOTES.md](docs/DEVELOPER-NOTES.md). The design review and what changed for each
+point are in [docs/DESIGN_REVIEW.md](docs/DESIGN_REVIEW.md).
+
+## Credits
+
+- Design & development: **Aniket Chauhan**, UI/UX Designer & Developer
+- Design review feedback: Karan
+- Music: "War on Water: Chapter 1" by yd (CC0), mixed with CC0 nature and cannon recordings by
+  Joseph Sardin (BigSoundBank)
+- Sound effects: CC0 and public-domain recordings from Kenney, rubberduck, BigSoundBank and
+  Wikimedia Commons
+- Fonts: Poppins and Trig Text (SIL Open Font License), Swifty Math (GUST Font License)
+- Animation: GSAP by GreenSock
+
+Full sources and licences are listed in [CREDITS.md](CREDITS.md).
